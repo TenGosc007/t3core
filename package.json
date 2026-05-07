@@ -1,6 +1,6 @@
 {
   "name": "t3core",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "tic tac toe core - tttc - t3c",
   "main": "dist/index.js",
   "scripts": {
