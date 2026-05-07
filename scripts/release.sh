@@ -17,6 +17,8 @@ PACKAGE_NAME=$(node -p "require('./package.json').name")
 VERSION=$(node -p "require('./package.json').version")
 TAG="v$VERSION"
 
+git tag "$TAG"
+
 echo "🔍  Pre-release checks for $PACKAGE_NAME@$VERSION"
 echo "---------------------------------------------------"
 
@@ -43,8 +45,6 @@ npm publish --dry-run
 
 echo ""
 echo "✅  All checks passed. Creating git tag $TAG..."
-git tag "$TAG"
-echo "🏷️   Tag $TAG created locally."
 echo ""
 echo "Push it with:"
 echo "  git push origin main --tags"
