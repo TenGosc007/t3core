@@ -17,7 +17,10 @@ PACKAGE_NAME=$(node -p "require('./package.json').name")
 VERSION=$(node -p "require('./package.json').version")
 TAG="v$VERSION"
 
+echo ""
+echo "Check if the new tag already exists"
 git tag "$TAG"
+echo ""
 
 echo "🔍  Pre-release checks for $PACKAGE_NAME@$VERSION"
 echo "---------------------------------------------------"
