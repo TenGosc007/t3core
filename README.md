@@ -52,7 +52,7 @@ game.reset();
 Run the interactive console game:
 
 ```bash
-npx tic-tac-toe-core
+npx t3core
 ```
 
 ## Exports
