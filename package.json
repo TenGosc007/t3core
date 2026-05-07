@@ -20,6 +20,10 @@
   ],
   "author": "tengosc",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TenGosc007/t3core"
+  },
   "type": "commonjs",
   "engines": {
     "node": ">=16.0.0"
