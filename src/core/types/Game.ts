@@ -14,12 +14,18 @@ export const PlayerMoveStatus = {
 export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
 
+export const GameEvent = {
+  PLAYER_MOVE: "PLAYER_MOVE",
+} as const;
+export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
+
 export interface IGame {
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
   savePlayerSelection: (field: number) => void;
   reset: () => void;
   isFieldSelected: (field: number) => boolean;
+  isFieldSelectedByIndex: (index: number) => boolean;
   savePlayerMove: (index: number) => PlayerMoveStatus;
   getBoard: () => (number | PlayerSymbol)[];
 }
