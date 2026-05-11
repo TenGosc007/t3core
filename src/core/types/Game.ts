@@ -16,10 +16,33 @@ export type PlayerMoveStatus =
 
 export const GameEvent = {
   PLAYER_MOVE: "PLAYER_MOVE",
+  RESET: "RESET",
 } as const;
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
+export type GameEventPayload = {
+  board: (number | PlayerSymbol)[];
+  currentPlayer: PlayerSymbol;
+  gameStatus: GameStatus;
+};
+
+export type GameEventMap = {
+  [GameEvent.PLAYER_MOVE]: [payload: GameEventPayload & { index: number }];
+  [GameEvent.RESET]: [payload: GameEventPayload];
+};
+
+export type EventEmitHandler<K extends keyof GameEventMap> = {
+  event: K;
+  fn: (...args: GameEventMap[K]) => void;
+};
+
+export type EventEmit = <K extends keyof GameEventMap>(
+  emitter: EventEmitHandler<K>,
+) => void;
+
 export interface IGame {
+  on: EventEmit;
+  off: EventEmit;
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
   savePlayerSelection: (field: number) => void;

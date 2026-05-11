@@ -15,6 +15,16 @@ export { DEFAULT_GAME_SYMBOLS } from "./constants";
 export type { IGame } from "./types/Game";
 
 /**
+ * Game event names: `PLAYER_MOVE`, `RESET`.
+ */
+export { GameEvent } from "./types/Game";
+
+/**
+ * Typed event map for EventEmitter3 — use with `Game` listeners.
+ */
+export type { GameEventMap, GameEventPayload } from "./types/Game";
+
+/**
  * Union type representing possible game states:
  * - `{ status: 'running' }` - Game in progress
  * - `{ status: 'win', winner: TSymbol }` - A player won
