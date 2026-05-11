@@ -16,7 +16,7 @@ export class Board implements IBoard {
    * @type {number[] | PlayerSymbol[]}
    */
   getFields() {
-    return this.fields;
+    return [...this.fields];
   }
 
   /**
