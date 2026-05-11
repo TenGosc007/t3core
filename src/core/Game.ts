@@ -1,8 +1,8 @@
-import type { GameStatus, IGame } from "./types/Game";
 import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol";
 
 import { Board } from "./Board";
 import { DEFAULT_GAME_SYMBOLS } from "./constants";
+import { PlayerMoveStatus, type GameStatus, type IGame } from "./types/Game";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
 export class Game implements IGame {
@@ -66,19 +66,52 @@ export class Game implements IGame {
    * Checks if a field is already selected by a player.
    * @param field The field number to check.
    * @returns `true` if the field is selected, `false` otherwise.
+   * @deprecated Use `isFieldSelectedByIndex` instead.
    */
   isFieldSelected(field: number) {
     return typeof this._board.getFieldByNumber(field) === "string";
   }
 
   /**
+   * Checks if a field is already selected by a player.
+   * @param index The index of the field to check.
+   * @returns `true` if the field is selected, `false` otherwise.
+   */
+  isFieldSelectedByIndex(index: number) {
+    return typeof this._board.getFieldByIndex(index) === "string";
+  }
+
+  /**
    * Saves a player's selection on the board.
    * @param field The field number to mark.
+   * @deprecated Use `savePlayerMove` instead.
    */
   savePlayerSelection(field: number) {
     this._board.setFieldByNumber(field, this._currentPlayer);
     this._togglePlayer();
     this._updateGameStatus();
+  }
+
+  /**
+   * Saves a player's selection on the board by index.
+   * @param index The index of the field to mark.
+   */
+  savePlayerMove(index: number) {
+    if (this.isFieldSelected(index + 1)) {
+      console.warn("Field is already selected");
+      return PlayerMoveStatus.ALREADY_SELECTED;
+    }
+
+    if (this._gameStatus.status !== "running") {
+      console.warn("Game is not running");
+      return PlayerMoveStatus.GAME_NOT_RUNNING;
+    }
+
+    this._board.setFieldByIndex(index, this._currentPlayer);
+    this._togglePlayer();
+    this._updateGameStatus();
+
+    return PlayerMoveStatus.SUCCESS;
   }
 
   /**
