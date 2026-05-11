@@ -7,7 +7,6 @@ import { DEFAULT_GAME_SYMBOLS } from "./constants";
 import {
   GameEvent,
   PlayerMoveStatus,
-  type EventEmitHandler,
   type GameEventMap,
   type GameStatus,
   type IGame,
@@ -30,7 +29,7 @@ export class Game implements IGame {
 
   private _updateGameStatus() {
     const board = this._board;
-    const winner = getWinnerFromFields(board.getFields());
+    const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
 
     if (winner) {
@@ -69,7 +68,7 @@ export class Game implements IGame {
    * @type {(number | PlayerSymbol)[]}
    */
   get board() {
-    return this._board.getFields();
+    return this._board.fields;
   }
 
   /**
@@ -78,7 +77,10 @@ export class Game implements IGame {
    * @param fn The function to call when the event is emitted.
    * @returns This Game instance for method chaining.
    */
-  on<K extends keyof GameEventMap>({ event, fn }: EventEmitHandler<K>): this {
+  on<K extends keyof GameEventMap>(
+    event: K,
+    fn: (...args: GameEventMap[K]) => void,
+  ): this {
     this._emitter.on(event, fn);
     return this;
   }
@@ -89,7 +91,10 @@ export class Game implements IGame {
    * @param fn The function to remove.
    * @returns This Game instance for method chaining.
    */
-  off<K extends keyof GameEventMap>({ event, fn }: EventEmitHandler<K>): this {
+  off<K extends keyof GameEventMap>(
+    event: K,
+    fn: (...args: GameEventMap[K]) => void,
+  ): this {
     this._emitter.off(event, fn);
     return this;
   }
@@ -101,7 +106,7 @@ export class Game implements IGame {
    * @deprecated Use `board` instead.
    */
   getBoard() {
-    return this._board.getFields();
+    return this._board.fields;
   }
 
   /**
@@ -155,7 +160,7 @@ export class Game implements IGame {
     this._updateGameStatus();
     this._emitter.emit(GameEvent.PLAYER_MOVE, {
       index,
-      board: this._board.getFields(),
+      board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     });
@@ -172,7 +177,7 @@ export class Game implements IGame {
     this._currentPlayer = this._symbols[0];
     this._board.reset();
     this._emitter.emit(GameEvent.RESET, {
-      board: this._board.getFields(),
+      board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     });

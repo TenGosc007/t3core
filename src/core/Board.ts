@@ -6,7 +6,7 @@ const fillFields = (_: number | PlayerSymbol, idx: number) => idx + 1;
 export const BOARD_SIZE = 9;
 
 export class Board implements IBoard {
-  private fields: (number | PlayerSymbol)[] = new Array(BOARD_SIZE)
+  private _fields: (number | PlayerSymbol)[] = new Array(BOARD_SIZE)
     .fill(0)
     .map(fillFields);
 
@@ -15,8 +15,8 @@ export class Board implements IBoard {
    * @returns The current board state.
    * @type {number[] | PlayerSymbol[]}
    */
-  getFields() {
-    return [...this.fields];
+  get fields() {
+    return this._fields;
   }
 
   /**
@@ -27,7 +27,7 @@ export class Board implements IBoard {
    * @deprecated Use `getFieldByIndex` instead.
    */
   getFieldByNumber(fieldNumber: number) {
-    return this.fields[fieldNumber - 1];
+    return this._fields[fieldNumber - 1];
   }
 
   /**
@@ -37,7 +37,7 @@ export class Board implements IBoard {
    * @type {number | TSymbol}
    */
   getFieldByIndex(index: number) {
-    return this.fields[index];
+    return this._fields[index];
   }
 
   /**
@@ -45,7 +45,7 @@ export class Board implements IBoard {
    * @returns `true` if the board is full, `false` otherwise.
    */
   isFull() {
-    return this.fields.every((field) => typeof field === "string");
+    return this._fields.every((field) => typeof field === "string");
   }
 
   /**
@@ -55,7 +55,7 @@ export class Board implements IBoard {
    * @deprecated Use `setFieldByIndex` instead.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
-    this.fields[fieldNumber - 1] = symbol;
+    this._fields[fieldNumber - 1] = symbol;
   }
 
   /**
@@ -64,13 +64,13 @@ export class Board implements IBoard {
    * @param symbol The symbol to set.
    */
   setFieldByIndex(index: number, symbol: PlayerSymbol) {
-    this.fields[index] = symbol;
+    this._fields[index] = symbol;
   }
 
   /**
    * Resets the board to its initial state.
    */
   reset() {
-    this.fields = new Array(BOARD_SIZE).fill(0).map(fillFields);
+    this._fields = new Array(BOARD_SIZE).fill(0).map(fillFields);
   }
 }

@@ -31,13 +31,9 @@ export type GameEventMap = {
   [GameEvent.RESET]: [payload: GameEventPayload];
 };
 
-export type EventEmitHandler<K extends keyof GameEventMap> = {
-  event: K;
-  fn: (...args: GameEventMap[K]) => void;
-};
-
 export type EventEmit = <K extends keyof GameEventMap>(
-  emitter: EventEmitHandler<K>,
+  event: K,
+  fn: (...args: GameEventMap[K]) => void,
 ) => void;
 
 export interface IGame {
