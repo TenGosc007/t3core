@@ -24,9 +24,20 @@ export class Board implements IBoard {
    * @param fieldNumber The field number (1-9) to get.
    * @returns The value of the field.
    * @type {number | TSymbol}
+   * @deprecated Use `getFieldByIndex` instead.
    */
   getFieldByNumber(fieldNumber: number) {
     return this.fields[fieldNumber - 1];
+  }
+
+  /**
+   * Returns the value of a field by its index.
+   * @param index The index of the field to get.
+   * @returns The value of the field.
+   * @type {number | TSymbol}
+   */
+  getFieldByIndex(index: number) {
+    return this.fields[index];
   }
 
   /**
@@ -41,9 +52,19 @@ export class Board implements IBoard {
    * Sets a field's value by its number.
    * @param fieldNumber The field number (1-9) to set.
    * @param symbol The symbol to set.
+   * @deprecated Use `setFieldByIndex` instead.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
     this.fields[fieldNumber - 1] = symbol;
+  }
+
+  /**
+   * Sets a field's value by its index.
+   * @param index The index of the field to set.
+   * @param symbol The symbol to set.
+   */
+  setFieldByIndex(index: number, symbol: PlayerSymbol) {
+    this.fields[index] = symbol;
   }
 
   /**

@@ -1,8 +1,17 @@
-import type { GameStatus, IGame } from "./types/Game";
 import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol";
+
+import EventEmitter from "eventemitter3";
 
 import { Board } from "./Board";
 import { DEFAULT_GAME_SYMBOLS } from "./constants";
+import {
+  GameEvent,
+  PlayerMoveStatus,
+  type EventEmitHandler,
+  type GameEventMap,
+  type GameStatus,
+  type IGame,
+} from "./types/Game";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
 export class Game implements IGame {
@@ -10,6 +19,7 @@ export class Game implements IGame {
   private _gameStatus: GameStatus = { status: "running" };
   private _symbols: PlayerSymbols = DEFAULT_GAME_SYMBOLS;
   private _board = new Board();
+  private _emitter = new EventEmitter<GameEventMap>();
 
   private _togglePlayer() {
     this._currentPlayer =
@@ -58,6 +68,38 @@ export class Game implements IGame {
    * @returns The current board state.
    * @type {(number | PlayerSymbol)[]}
    */
+  get board() {
+    return this._board.getFields();
+  }
+
+  /**
+   * Registers an event listener for the specified event.
+   * @param event The event to listen for.
+   * @param fn The function to call when the event is emitted.
+   * @returns This Game instance for method chaining.
+   */
+  on<K extends keyof GameEventMap>({ event, fn }: EventEmitHandler<K>): this {
+    this._emitter.on(event, fn);
+    return this;
+  }
+
+  /**
+   * Removes an event listener for the specified event.
+   * @param event The event to remove the listener from.
+   * @param fn The function to remove.
+   * @returns This Game instance for method chaining.
+   */
+  off<K extends keyof GameEventMap>({ event, fn }: EventEmitHandler<K>): this {
+    this._emitter.off(event, fn);
+    return this;
+  }
+
+  /**
+   * Returns the current board state.
+   * @returns The current board state.
+   * @type {(number | PlayerSymbol)[]}
+   * @deprecated Use `board` instead.
+   */
   getBoard() {
     return this._board.getFields();
   }
@@ -66,14 +108,25 @@ export class Game implements IGame {
    * Checks if a field is already selected by a player.
    * @param field The field number to check.
    * @returns `true` if the field is selected, `false` otherwise.
+   * @deprecated Use `isFieldSelectedByIndex` instead.
    */
   isFieldSelected(field: number) {
     return typeof this._board.getFieldByNumber(field) === "string";
   }
 
   /**
+   * Checks if a field is already selected by a player.
+   * @param index The index of the field to check.
+   * @returns `true` if the field is selected, `false` otherwise.
+   */
+  isFieldSelectedByIndex(index: number) {
+    return typeof this._board.getFieldByIndex(index) === "string";
+  }
+
+  /**
    * Saves a player's selection on the board.
    * @param field The field number to mark.
+   * @deprecated Use `savePlayerMove` instead.
    */
   savePlayerSelection(field: number) {
     this._board.setFieldByNumber(field, this._currentPlayer);
@@ -82,11 +135,46 @@ export class Game implements IGame {
   }
 
   /**
+   * Saves a player's selection on the board by index.
+   * emit PLAYER_MOVE event
+   * @param index The index of the field to mark.
+   */
+  savePlayerMove(index: number) {
+    if (this.isFieldSelected(index + 1)) {
+      console.warn("Field is already selected");
+      return PlayerMoveStatus.ALREADY_SELECTED;
+    }
+
+    if (this._gameStatus.status !== "running") {
+      console.warn("Game is not running");
+      return PlayerMoveStatus.GAME_NOT_RUNNING;
+    }
+
+    this._board.setFieldByIndex(index, this._currentPlayer);
+    this._togglePlayer();
+    this._updateGameStatus();
+    this._emitter.emit(GameEvent.PLAYER_MOVE, {
+      index,
+      board: this._board.getFields(),
+      currentPlayer: this._currentPlayer,
+      gameStatus: this._gameStatus,
+    });
+
+    return PlayerMoveStatus.SUCCESS;
+  }
+
+  /**
    * Resets the game to its initial state.
+   * emit RESET event
    */
   reset() {
     this._gameStatus = { status: "running" };
     this._currentPlayer = this._symbols[0];
     this._board.reset();
+    this._emitter.emit(GameEvent.RESET, {
+      board: this._board.getFields(),
+      currentPlayer: this._currentPlayer,
+      gameStatus: this._gameStatus,
+    });
   }
 }
