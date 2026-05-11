@@ -59,7 +59,7 @@ test("Check if the game is won", () => {
 test("PLAYER_MOVE event fires with correct payload on savePlayerMove", () => {
   const game = new Game();
   const listener = vi.fn();
-  game.on({ event: GameEvent.PLAYER_MOVE, fn: listener });
+  game.on(GameEvent.PLAYER_MOVE, listener);
 
   game.savePlayerMove(4);
 
@@ -77,7 +77,7 @@ test("RESET event fires with correct payload", () => {
   game.savePlayerMove(1);
 
   const listener = vi.fn();
-  game.on({ event: GameEvent.RESET, fn: listener });
+  game.on(GameEvent.RESET, listener);
   game.reset();
 
   expect(listener).toHaveBeenCalledOnce();
@@ -91,7 +91,7 @@ test("PLAYER_MOVE event is not fired when move is invalid", () => {
   const game = new Game();
   game.savePlayerMove(0);
   const listener = vi.fn();
-  game.on({ event: GameEvent.PLAYER_MOVE, fn: listener });
+  game.on(GameEvent.PLAYER_MOVE, listener);
 
   game.savePlayerMove(0);
 
