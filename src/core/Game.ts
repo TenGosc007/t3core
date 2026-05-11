@@ -58,6 +58,16 @@ export class Game implements IGame {
    * @returns The current board state.
    * @type {(number | PlayerSymbol)[]}
    */
+  get board() {
+    return this._board.getFields();
+  }
+
+  /**
+   * Returns the current board state.
+   * @returns The current board state.
+   * @type {(number | PlayerSymbol)[]}
+   * @deprecated Use `board` instead.
+   */
   getBoard() {
     return this._board.getFields();
   }
