@@ -9,14 +9,20 @@ export class Board implements IBoard {
   private _fields: (number | PlayerSymbol)[] = new Array(BOARD_SIZE)
     .fill(0)
     .map(fillFields);
+  private _snapshot: (number | PlayerSymbol)[] | null = null;
 
   /**
-   * Returns the current board state.
-   * @returns The current board state.
-   * @type {number[] | PlayerSymbol[]}
+   * Returns a stable snapshot of the current board state.
+   * The same array reference is returned on repeated calls until a field is
+   * mutated or the board is reset, making it safe for referential-equality
+   * checks (e.g. `useSyncExternalStore`).
+   * @returns A cached shallow copy of the board fields.
    */
   get fields() {
-    return this._fields;
+    if (!this._snapshot) {
+      this._snapshot = [...this._fields];
+    }
+    return this._snapshot;
   }
 
   /**
@@ -50,27 +56,33 @@ export class Board implements IBoard {
 
   /**
    * Sets a field's value by its number.
+   * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    * @param fieldNumber The field number (1-9) to set.
    * @param symbol The symbol to set.
    * @deprecated Use `setFieldByIndex` instead.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
     this._fields[fieldNumber - 1] = symbol;
+    this._snapshot = null;
   }
 
   /**
    * Sets a field's value by its index.
+   * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    * @param index The index of the field to set.
    * @param symbol The symbol to set.
    */
   setFieldByIndex(index: number, symbol: PlayerSymbol) {
     this._fields[index] = symbol;
+    this._snapshot = null;
   }
 
   /**
    * Resets the board to its initial state.
+   * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    */
   reset() {
     this._fields = new Array(BOARD_SIZE).fill(0).map(fillFields);
+    this._snapshot = null;
   }
 }
