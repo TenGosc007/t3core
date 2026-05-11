@@ -8,6 +8,7 @@ import {
   GameEvent,
   PlayerMoveStatus,
   type GameEventMap,
+  type GameEventPayload,
   type GameStatus,
   type IGame,
 } from "./types/Game";
@@ -19,6 +20,11 @@ export class Game implements IGame {
   private _symbols: PlayerSymbols = DEFAULT_GAME_SYMBOLS;
   private _board = new Board();
   private _emitter = new EventEmitter<GameEventMap>();
+  private _snapshot: GameEventPayload = {
+    board: this._board.fields,
+    currentPlayer: this._currentPlayer,
+    gameStatus: this._gameStatus,
+  };
 
   private _togglePlayer() {
     this._currentPlayer =
@@ -43,6 +49,15 @@ export class Game implements IGame {
     }
 
     this._gameStatus = { status: "running" };
+  }
+
+  /**
+   * Returns a stable snapshot of the current game state.
+   * The same object reference is returned between moves, making it safe
+   * as a `getSnapshot` argument for `useSyncExternalStore`.
+   */
+  get snapshot(): GameEventPayload {
+    return this._snapshot;
   }
 
   /**
@@ -158,11 +173,14 @@ export class Game implements IGame {
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
     this._updateGameStatus();
-    this._emitter.emit(GameEvent.PLAYER_MOVE, {
-      index,
+    this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
+    };
+    this._emitter.emit(GameEvent.PLAYER_MOVE, {
+      index,
+      ...this._snapshot,
     });
 
     return PlayerMoveStatus.SUCCESS;
@@ -176,10 +194,11 @@ export class Game implements IGame {
     this._gameStatus = { status: "running" };
     this._currentPlayer = this._symbols[0];
     this._board.reset();
-    this._emitter.emit(GameEvent.RESET, {
+    this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
-    });
+    };
+    this._emitter.emit(GameEvent.RESET, this._snapshot);
   }
 }

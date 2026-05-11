@@ -39,6 +39,7 @@ export type EventEmit = <K extends keyof GameEventMap>(
 export interface IGame {
   on: EventEmit;
   off: EventEmit;
+  readonly snapshot: GameEventPayload;
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
   savePlayerSelection: (field: number) => void;
