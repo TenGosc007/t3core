@@ -1,6 +1,6 @@
 {
   "name": "t3core",
-  "version": "1.1.2",
+  "version": "1.1.4",
   "description": "tic tac toe core - tttc - t3c",
   "main": "dist/index.js",
   "scripts": {
@@ -11,7 +11,8 @@
     "lint": "eslint ./src/**/*.ts",
     "ts:check": "tsc --noEmit",
     "publish:dry": "npm run build && npm publish --dry-run",
-    "release:tag": "env -i HOME=$HOME PATH=$PATH bash scripts/release.sh"
+    "release:tag": "env -i HOME=$HOME PATH=$PATH bash scripts/release.sh",
+    "new:release": "env -i HOME=$HOME PATH=$PATH bash scripts/publish-release.sh"
   },
   "keywords": [
     "tic-tac-toe",

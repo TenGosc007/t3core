@@ -1,5 +1,33 @@
 # Publishing to npm
 
+## Quick Start (Automated)
+
+Use the automated release script to perform all steps at once:
+
+```bash
+# Bump patch version (1.0.0 -> 1.0.1)
+./scripts/publish-release.sh patch
+
+# Or bump minor/major
+./scripts/publish-release.sh minor
+./scripts/publish-release.sh major
+
+# Or use a specific version
+./scripts/publish-release.sh 1.2.3
+```
+
+The script will:
+
+1. Create a release branch
+2. Update version in package.json
+3. Create release document template
+4. Run all release checks and create the git tag
+5. Provide next steps for pushing and creating PR
+
+---
+
+## Manual Publishing Steps
+
 ## One-time setup
 
 1. Go to [npmjs.com](https://www.npmjs.com) → **Access Tokens** → generate a **Granular Access Token** (or Classic **Automation** token) with publish rights for `t3core`
@@ -46,7 +74,7 @@ Brief description of the release
 
 ```bash
 # Stage changes
-git add package.json .github/releases/v1.0.4.md
+git add .
 
 # Run the release script to create the tag
 yarn release:tag
