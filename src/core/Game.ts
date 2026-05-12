@@ -37,6 +37,7 @@ export class Game implements IGame {
     const board = this._board;
     const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
+    const isNotRunning = this._gameStatus.status !== "running";
 
     if (winner) {
       this._gameStatus = { status: "win", winner };
@@ -48,7 +49,9 @@ export class Game implements IGame {
       return;
     }
 
-    this._gameStatus = { status: "running" };
+    if (isNotRunning) {
+      this._gameStatus = { status: "running" };
+    }
   }
 
   /**
