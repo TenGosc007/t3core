@@ -20,6 +20,11 @@ export type { IGame } from "./types/Game";
 export { GameEvent } from "./types/Game";
 
 /**
+ * Result status of a player move: `success`, `already_selected`, `game_not_running`.
+ */
+export { PlayerMoveStatus } from "./types/Game";
+
+/**
  * Typed event map for EventEmitter3 — use with `Game` listeners.
  */
 export type { GameEventMap, GameEventPayload } from "./types/Game";
