@@ -40,17 +40,7 @@ if [[ "$BUMP_TYPE" != "patch" && "$BUMP_TYPE" != "minor" && "$BUMP_TYPE" != "maj
   fi
 fi
 
-# Calculate new version
-if [[ "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  NEW_VERSION="$BUMP_TYPE"
-else
-  # Use npm version to calculate new version (without creating git tag)
-  NEW_VERSION=$(npm version "$BUMP_TYPE" --no-git-tag-version 2>/dev/null | tail -1 | tr -d 'v')
-  # Revert the change temporarily - we'll make it properly later
-  git checkout package.json package-lock.json 2>/dev/null || true
-fi
-
-echo "New version will be: $NEW_VERSION"
+echo "Will bump version: $BUMP_TYPE"
 
 # Check for uncommitted changes
 if [[ -n $(git status --porcelain) ]]; then
@@ -64,7 +54,7 @@ if [[ -n $(git status --porcelain) ]]; then
 fi
 
 # Confirm
-read -p "Create release v$NEW_VERSION? (y/N): " -n 1 -r
+read -p "Create release with bump type '$BUMP_TYPE'? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   echo "Aborted."
@@ -72,7 +62,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Step 1: Create release branch
-BRANCH_NAME="release/v$NEW_VERSION"
+BRANCH_NAME="release/$BUMP_TYPE"
 echo ""
 echo "Step 1: Creating release branch '$BRANCH_NAME'..."
 git checkout -b "$BRANCH_NAME"
@@ -80,12 +70,10 @@ git checkout -b "$BRANCH_NAME"
 # Step 2: Update version in package.json
 echo ""
 echo "Step 2: Updating version in package.json..."
-if [[ "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  # Manual version update
-  npm version "$NEW_VERSION" --no-git-tag-version
-else
-  npm version "$BUMP_TYPE" --no-git-tag-version
-fi
+npm version "$BUMP_TYPE" --no-git-tag-version
+
+# Get the new version after npm version updates package.json
+NEW_VERSION=$(node -p "require('./package.json').version")
 
 # Step 3: Create release document
 echo ""
@@ -98,6 +86,12 @@ TODAY=$(date +%Y-%m-%d)
 
 # Get previous version for comparison link
 PREV_TAG="v$CURRENT_VERSION"
+
+# Rename branch to include actual version
+echo ""
+echo "Renaming branch to include version..."
+BRANCH_NAME="release/v$NEW_VERSION"
+git branch -m "$BRANCH_NAME"
 
 # Create release document template
 cat > "$RELEASE_FILE" << EOF
