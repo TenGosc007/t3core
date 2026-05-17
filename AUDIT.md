@@ -58,18 +58,13 @@ src/
 
 `_symbols` jest inicjalizowane stałą `DEFAULT_GAME_SYMBOLS` (`['O', 'X']`). Obsługa niestandardowych symboli po stronie biblioteki wymagałaby generyczności klasy (`Game<T extends string>`), co komplikuje system typów. Konsument może samodzielnie zbudować mapper symboli na warstwie aplikacji — biblioteka nie musi tego obsługiwać.
 
-#### 2.4 Brak payload w evencie `RESET`
+#### 2.4 ~~Brak payload w evencie `RESET`~~ ✅
 
-```typescript
-// types/Game.ts:32
-[GameEvent.RESET]: [];  // ← brak GameEventPayload
-```
+Naprawione — `GameEventMap[RESET]` używa `[payload?: GameEventPayload]` (opcjonalny, bez breaking change). `reset()` emituje teraz `this._snapshot` jako argument.
 
-Po `reset()` słuchacz musi osobno odczytać `game.snapshot`, zamiast otrzymać nowy stan jako argument callbacku. Niekonzystentne z `PLAYER_MOVE`.
+#### 2.5 ~~`_updateGameStatus` nie czyści stanu "win"/"draw" przy reset~~ ✅
 
-#### 2.5 `_updateGameStatus` nie czyści stanu "win"/"draw" przy reset
-
-Metoda `reset()` ustawia `_gameStatus` ręcznie — to działa, ale logika resetowania stanu jest duplikowana zamiast korzystać z `_updateGameStatus`.
+Naprawione — usunięto warunek `if (isNotRunning)`, `_updateGameStatus` zawsze ustawia `running` jako fallback. `reset()` teraz woła `_updateGameStatus()` zamiast ręcznie ustawiać status.
 
 ---
 
@@ -316,7 +311,7 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 
 | # | Problem | Zalecenie |
 |---|---------|-----------|
-| W1 | Brak payload w evencie `RESET` | Dodaj `GameEventPayload` do `GameEventMap[RESET]` |
+| ~~W1~~ | ~~Brak payload w evencie `RESET`~~ | ✅ Naprawione |
 | ~~W2~~ | ~~`IGame` zawiera deprecated metody bez oznaczenia~~ | ✅ Naprawione |
 | ~~W3~~ | ~~`EventEmit` deklaruje `void` — niezgodne z fluent API~~ | ✅ Naprawione |
 | W4 | CLI używa deprecated API | Zaadresuj w repozytorium [t3core-cli](https://github.com/TenGosc007/t3core-cli) |

@@ -38,7 +38,6 @@ export class Game implements IGame {
     const board = this._board;
     const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
-    const isNotRunning = this._gameStatus.status !== "running";
 
     if (winner) {
       this._gameStatus = { status: "win", winner };
@@ -50,7 +49,7 @@ export class Game implements IGame {
       return;
     }
 
-    if (isNotRunning) {
+    if (this._gameStatus.status !== "running") {
       this._gameStatus = { status: "running" };
     }
   }
@@ -180,7 +179,7 @@ export class Game implements IGame {
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.PLAYER_MOVE, { index });
+    this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -190,14 +189,14 @@ export class Game implements IGame {
    * emit RESET event
    */
   reset() {
-    this._gameStatus = { status: "running" };
     this._currentPlayer = this._symbols[0];
     this._board.reset();
+    this._updateGameStatus();
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.RESET);
+    this._emitter.emit(GameEvent.RESET, this._snapshot);
   }
 }
