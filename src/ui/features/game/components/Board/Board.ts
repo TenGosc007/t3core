@@ -1,4 +1,4 @@
-import type { PlayerSymbol } from "@/core";
+import type { BoardField } from "@/core/types/Board";
 
 import { getGame } from "@/ui/features/game/services/gameSession";
 import { colorLabelSymbol } from "@/ui/features/game/util/colorLabelSymbol";
@@ -14,7 +14,7 @@ export const Board = () => {
   const fieldBorder = styledLabel("|", borderStyle);
 
   console.log(border);
-  fields.forEach((i: number | PlayerSymbol, idx: number) => {
+  fields.forEach((i: BoardField, idx: number) => {
     if (idx % 3 === 0) {
       console.log(
         `${fieldBorder} ${colorLabelSymbol(

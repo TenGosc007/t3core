@@ -1,3 +1,4 @@
+import type { BoardField } from "./Board";
 import type { PlayerSymbol } from "./Symbol";
 
 type GameStatusWin = { status: "win"; winner: PlayerSymbol };
@@ -21,14 +22,14 @@ export const GameEvent = {
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
 export type GameEventPayload = {
-  board: (number | PlayerSymbol)[];
+  board: BoardField[];
   currentPlayer: PlayerSymbol;
   gameStatus: GameStatus;
 };
 
 export type GameEventMap = {
-  [GameEvent.PLAYER_MOVE]: [payload: GameEventPayload & { index: number }];
-  [GameEvent.RESET]: [payload: GameEventPayload];
+  [GameEvent.PLAYER_MOVE]: [payload: { index: number }];
+  [GameEvent.RESET]: [];
 };
 
 export type EventEmit = <K extends keyof GameEventMap>(
@@ -47,5 +48,5 @@ export interface IGame {
   isFieldSelected: (field: number) => boolean;
   isFieldSelectedByIndex: (index: number) => boolean;
   savePlayerMove: (index: number) => PlayerMoveStatus;
-  getBoard: () => (number | PlayerSymbol)[];
+  getBoard: () => BoardField[];
 }

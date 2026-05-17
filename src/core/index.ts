@@ -47,3 +47,8 @@ export type { GameStatus } from "./types/Game";
  * ```
  */
 export type { PlayerSymbols, PlayerSymbol } from "./types/Symbol";
+
+/**
+ * Union type for a board cell: either a `number` (empty slot label) or a `PlayerSymbol`.
+ */
+export type { BoardField, IBoard } from "./types/Board";
