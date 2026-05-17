@@ -11,20 +11,19 @@
 
 ```
 src/
-  core/          ← eksportowany pakiet npm (t3core)
-    Board.ts
-    Game.ts
-    index.ts
-    constants/
-    types/
-    utils/
+  Board.ts
+  Game.ts
+  index.ts
+  constants/
+  types/
+  utils/
 ```
 
 > **CLI demo** zostało wydzielone do osobnego repozytorium: [t3core-cli](https://github.com/TenGosc007/t3core-cli) (`npx t3core-cli`)
 
 **Mocne strony:**
 
-- Czyste oddzielenie logiki gry (`core/`) od UI CLI — `package.json` eksportuje tylko `dist/src/core/index.ts`.
+- Logika gry żyje bezpośrednio w `src/` — `package.json` eksportuje tylko `dist/src/index.ts`.
 - Plik `index.ts` jest dobrze zaprojektowany — eksportuje klasy, typy, enumy i stałe jako spójne public API.
 - Pakiet działa jako CommonJS (`"type": "commonjs"`) z prawidłowym `exports` map.
 - CLI wydzielone do osobnego pakietu `t3core-cli` — `t3core` jest teraz czystą biblioteką bez `bin`.

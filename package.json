@@ -29,13 +29,13 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/src/core/index.d.ts",
-      "require": "./dist/src/core/index.js",
-      "default": "./dist/src/core/index.js"
+      "types": "./dist/src/index.d.ts",
+      "require": "./dist/src/index.js",
+      "default": "./dist/src/index.js"
     },
     "./package.json": "./package.json"
   },
-  "types": "./dist/src/core/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "files": [
     "dist"
   ],
