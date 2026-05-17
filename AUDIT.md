@@ -83,14 +83,9 @@ Metoda `reset()` ustawia `_gameStatus` ręcznie — to działa, ale logika reset
 
 ### Słabe strony
 
-#### 3.1 Interfejs `IBoard` nie zawiera nowych metod
+#### 3.1 ~~Interfejs `IBoard` nie zawiera nowych metod~~ ✅
 
-```typescript
-// types/Board.ts — brak:
-getFieldByIndex, setFieldByIndex
-```
-
-`IBoard` jest niekompletny — opisuje tylko deprecated API (`getFieldByNumber`, `setFieldByNumber`). Klasa `Board` implementuje `IBoard`, ale nie jest to weryfikowalne przez interfejs dla nowych metod.
+Naprawione — `IBoard` zawiera teraz `getFieldByIndex` i `setFieldByIndex`. Stare metody oznaczone `@deprecated`.
 
 #### 3.2 Stały rozmiar planszy (9)
 
@@ -109,31 +104,13 @@ getFieldByIndex, setFieldByIndex
 
 ### Słabe strony
 
-#### 4.1 `IGame` zawiera deprecated metody w kontrakcie
+#### 4.1 ~~`IGame` zawiera deprecated metody bez oznaczenia~~ ✅
 
-```typescript
-// types/Game.ts:46-48
-savePlayerSelection: (field: number) => void;
-isFieldSelected: (field: number) => boolean;
-getBoard: () => BoardField[];
-```
+Naprawione — `savePlayerSelection`, `isFieldSelected`, `getBoard` oznaczone `@deprecated` w `IGame`. Dodano brakujący getter `board`.
 
-Interfejs publiczny pakietu nadal deklaruje deprecated metody jako część kontraktu. To utrudnia ich usunięcie w przyszłości i myli konsumentów.
+#### 4.2 ~~`EventEmit` niezgodny z fluent API~~ ✅
 
-#### 4.2 `EventEmit` nie jest używany jako typ `on`/`off` w `IGame`
-
-```typescript
-// types/Game.ts:35-38
-export type EventEmit = <K extends keyof GameEventMap>(
-  event: K,
-  fn: (...args: GameEventMap[K]) => void,
-) => void;
-
-// ale w IGame:
-on: EventEmit;   // ← brak zwracanego `this`
-```
-
-`EventEmit` deklaruje `void` return — tymczasem implementacja zwraca `this` (fluent). Interfejs nie opisuje poprawnie kontraktu fluent API.
+Naprawione — `EventEmit` jest teraz generyczny: `EventEmit<T>`, a `IGame` używa `EventEmit<this>` dla `on`/`off`. Return type poprawnie opisuje chainowanie.
 
 #### 4.3 `PlayerSymbol` jest hardcoded do `'O' | 'X'`
 
@@ -333,15 +310,15 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 |---|---------|-----------|
 | ~~C1~~ | ~~`savePlayerMove` wywołuje deprecated `isFieldSelected(index + 1)`~~ | ✅ Naprawione |
 | ~~C2~~ | ~~`console.warn` w bibliotece~~ | ✅ Naprawione |
-| C3 | `IBoard` nie opisuje nowych metod | Dodaj `getFieldByIndex`, `setFieldByIndex` do interfejsu |
+| ~~C3~~ | ~~`IBoard` nie opisuje nowych metod~~ | ✅ Naprawione |
 
 ### 🟡 Ważne
 
 | # | Problem | Zalecenie |
 |---|---------|-----------|
 | W1 | Brak payload w evencie `RESET` | Dodaj `GameEventPayload` do `GameEventMap[RESET]` |
-| W2 | `IGame` zawiera deprecated metody | Oznacz je `@deprecated` w interfejsie lub usuń z kontraktu |
-| W3 | `EventEmit` deklaruje `void` — niezgodne z fluent API | Popraw typ lub usuń `EventEmit` na rzecz inline generics |
+| ~~W2~~ | ~~`IGame` zawiera deprecated metody bez oznaczenia~~ | ✅ Naprawione |
+| ~~W3~~ | ~~`EventEmit` deklaruje `void` — niezgodne z fluent API~~ | ✅ Naprawione |
 | W4 | CLI używa deprecated API | Zaadresuj w repozytorium [t3core-cli](https://github.com/TenGosc007/t3core-cli) |
 | W5 | Brak testów dla kluczowych edge cases | Dodaj brakujące scenariusze z sekcji 8 |
 

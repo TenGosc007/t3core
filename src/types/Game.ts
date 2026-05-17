@@ -32,21 +32,25 @@ export type GameEventMap = {
   [GameEvent.RESET]: [];
 };
 
-export type EventEmit = <K extends keyof GameEventMap>(
+export type EventEmit<T> = <K extends keyof GameEventMap>(
   event: K,
   fn: (...args: GameEventMap[K]) => void,
-) => void;
+) => T;
 
 export interface IGame {
-  on: EventEmit;
-  off: EventEmit;
+  on: EventEmit<this>;
+  off: EventEmit<this>;
   readonly snapshot: GameEventPayload;
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
+  readonly board: BoardField[];
+  /** @deprecated Use `savePlayerMove` instead. */
   savePlayerSelection: (field: number) => void;
   reset: () => void;
+  /** @deprecated Use `isFieldSelectedByIndex` instead. */
   isFieldSelected: (field: number) => boolean;
   isFieldSelectedByIndex: (index: number) => boolean;
   savePlayerMove: (index: number) => PlayerMoveStatus;
+  /** @deprecated Use `board` instead. */
   getBoard: () => BoardField[];
 }
