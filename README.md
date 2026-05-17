@@ -1,17 +1,20 @@
-# TIC-TAC-TOE-CORE (t3c)
+# TIC-TAC-TOE-CORE (t3core)
 
-A reusable TypeScript core library for Tic Tac Toe games with a built-in CLI.
+A reusable TypeScript core library for Tic Tac Toe games.
+
+> **Looking for the interactive CLI game?**  
+> See [t3core-cli](https://github.com/TenGosc007/t3core-cli) — `npx t3core-cli`
 
 ## Installation
 
 ```bash
-npm install t3c
+npm install t3core
 ```
 
 ## Usage as a Library
 
 ```typescript
-import { Game } from 't3c';
+import { Game } from 't3core';
 
 // Create a game with default symbols 'O' and 'X'
 const game = new Game();
@@ -37,7 +40,7 @@ game.reset();
 
 ```tsx
 import { useSyncExternalStore } from 'react';
-import { Game, GameEvent } from 't3c';
+import { Game, GameEvent } from 't3core';
 
 // Create a stable game instance (outside React or in a ref)
 const game = new Game();
@@ -96,45 +99,37 @@ function TicTacToeBoard() {
 
 #### `Game`
 
-| Property/Method | Description                    |
-| --------------- | ------------------------------ |
+| Property/Method | Description |
+| --------------- | ----------- |
 | `constructor()` | Create a new game with default symbols `['O', 'X']` |
-| `currentPlayer` | Get the current player's symbol              |
-| `gameStatus`    | Get current game status                      |
-| `board`         | Get current board state as `BoardField[]` |
-| `snapshot`      | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
-| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8   |
-| `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied           |
+| `currentPlayer` | Get the current player's symbol |
+| `gameStatus` | Get current game status |
+| `board` | Get current board state as `BoardField[]` |
+| `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
+| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8 |
+| `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
 | `on(event, fn)` | Subscribe to events (`PLAYER_MOVE`, `RESET`) |
-| `off(event, fn)` | Unsubscribe from events                     |
-| `reset()`       | Reset the game to initial state              |
-| `getBoard()`    | **Deprecated.** Use `board` instead          |
+| `off(event, fn)` | Unsubscribe from events |
+| `reset()` | Reset the game to initial state |
+| `getBoard()` | **Deprecated.** Use `board` instead |
 | `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead |
 | `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead |
-
-## CLI Usage
-
-Run the interactive console game:
-
-```bash
-npx t3core
-```
 
 ## Exports
 
 ```typescript
 // Core class
-export { Game } from 't3c';
+export { Game } from 't3core';
 
 // Constants
-export { DEFAULT_GAME_SYMBOLS } from 't3c';
+export { DEFAULT_GAME_SYMBOLS } from 't3core';
 
 // Types
-export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3c';
-export type { GameEventMap, GameEventPayload } from 't3c';
-export type { BoardField, IBoard } from 't3c';
-export type { PlayerMoveStatus } from 't3c';
+export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
+export type { GameEventMap, GameEventPayload } from 't3core';
+export type { BoardField, IBoard } from 't3core';
+export type { PlayerMoveStatus } from 't3core';
 
 // Events
-export { GameEvent } from 't3c';
+export { GameEvent } from 't3core';
 ```
