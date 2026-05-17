@@ -6,8 +6,14 @@ const fillFields = (_: BoardField, idx: number) => idx + 1;
 export const BOARD_SIZE = 9;
 
 export class Board implements IBoard {
-  private _fields: BoardField[] = new Array(BOARD_SIZE).fill(0).map(fillFields);
+  private readonly _size: number;
+  private _fields: BoardField[];
   private _snapshot: BoardField[] | null = null;
+
+  constructor(size: number = BOARD_SIZE) {
+    this._size = size;
+    this._fields = new Array(this._size).fill(0).map(fillFields);
+  }
 
   /**
    * Returns a stable snapshot of the current board state.
@@ -80,7 +86,7 @@ export class Board implements IBoard {
    * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    */
   reset() {
-    this._fields = new Array(BOARD_SIZE).fill(0).map(fillFields);
+    this._fields = new Array(this._size).fill(0).map(fillFields);
     this._snapshot = null;
   }
 }

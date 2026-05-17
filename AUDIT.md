@@ -82,9 +82,9 @@ Naprawione — usunięto warunek `if (isNotRunning)`, `_updateGameStatus` zawsze
 
 Naprawione — `IBoard` zawiera teraz `getFieldByIndex` i `setFieldByIndex`. Stare metody oznaczone `@deprecated`.
 
-#### 3.2 Stały rozmiar planszy (9)
+#### 3.2 ~~Stały rozmiar planszy (9)~~ ✅
 
-`BOARD_SIZE = 9` jest hardcoded. Choć tic-tac-toe zawsze ma planszę 3x3, dla biblioteki ogólnego przeznaczenia (potencjalnie różne warianty) brak konfigurowalności jest ograniczeniem.
+Naprawione — `Board` przyjmuje opcjonalny parametr `size` (domyślnie `9`). `Game` przyjmuje `options: GameOptions = {}` z polem `boardSize?: number`. `GameOptions` wyeksportowane z publicznego API.
 
 ---
 

@@ -15,17 +15,27 @@ import {
 } from "./types/Game";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
+export type GameOptions = {
+  boardSize?: number;
+};
+
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];
   private _gameStatus: GameStatus = { status: "running" };
   private _symbols: PlayerSymbols = DEFAULT_GAME_SYMBOLS;
-  private _board = new Board();
+  private _board: Board;
+
   private _emitter = new EventEmitter<GameEventMap>();
-  private _snapshot: GameEventPayload = {
-    board: this._board.fields,
-    currentPlayer: this._currentPlayer,
-    gameStatus: this._gameStatus,
-  };
+  private _snapshot: GameEventPayload;
+
+  constructor(options: GameOptions = {}) {
+    this._board = new Board(options.boardSize);
+    this._snapshot = {
+      board: this._board.fields,
+      currentPlayer: this._currentPlayer,
+      gameStatus: this._gameStatus,
+    };
+  }
 
   private _togglePlayer() {
     this._currentPlayer =
