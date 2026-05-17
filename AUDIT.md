@@ -46,24 +46,17 @@ src/
 
 ### Słabe strony
 
-#### 2.1 Niespójność deprecated API
+#### 2.1 ~~Niespójność deprecated API~~ ✅
 
-`savePlayerMove` (nowe API) wewnętrznie wywołuje `isFieldSelected(index + 1)` — czyli **deprecated metodę** opartą na numerowaniu 1-9, mimo że sama operuje na indeksach 0-8:
+~~`savePlayerMove` wewnętrznie wywoływało `isFieldSelected(index + 1)`.~~ Naprawione — używa teraz `this.isFieldSelectedByIndex(index)`.
 
-```typescript
-// Game.ts:167
-if (this.isFieldSelected(index + 1)) {  // ← wywołuje deprecated metodę
-```
+#### 2.2 ~~`console.warn` w bibliotece~~ ✅
 
-To jest **błąd logiczny / techniczny dług**. Powinno być `this.isFieldSelectedByIndex(index)`.
+~~`savePlayerMove` logowało do konsoli przy błędnym użyciu.~~ Naprawione — oba `console.warn` usunięte; zwracany `PlayerMoveStatus` jest wystarczający.
 
-#### 2.2 `console.warn` w bibliotece
+#### 2.3 Konfigurowalność symboli — świadoma decyzja
 
-`savePlayerMove` loguje do konsoli (`console.warn`) w przypadku błędnego użycia. Biblioteka nie powinna pisać do `stdout/stderr` — konsument powinien sam zdecydować jak obsłużyć `PlayerMoveStatus.ALREADY_SELECTED`.
-
-#### 2.3 Brak konfigurowalności symboli
-
-`_symbols` jest inicjalizowane stałą `DEFAULT_GAME_SYMBOLS` i **nie można ich zmienić** — brak konstruktora przyjmującego opcje. Dodanie niestandardowych symboli (np. `['🐱', '🐶']`) jest niemożliwe bez fork-owania kodu.
+`_symbols` jest inicjalizowane stałą `DEFAULT_GAME_SYMBOLS` (`['O', 'X']`). Obsługa niestandardowych symboli po stronie biblioteki wymagałaby generyczności klasy (`Game<T extends string>`), co komplikuje system typów. Konsument może samodzielnie zbudować mapper symboli na warstwie aplikacji — biblioteka nie musi tego obsługiwać.
 
 #### 2.4 Brak payload w evencie `RESET`
 
@@ -338,8 +331,8 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 
 | # | Problem | Zalecenie |
 |---|---------|-----------|
-| C1 | `savePlayerMove` wywołuje deprecated `isFieldSelected(index + 1)` | Zamień na `this.isFieldSelectedByIndex(index)` |
-| C2 | `console.warn` w bibliotece | Usuń — zwracany `PlayerMoveStatus` wystarczy |
+| ~~C1~~ | ~~`savePlayerMove` wywołuje deprecated `isFieldSelected(index + 1)`~~ | ✅ Naprawione |
+| ~~C2~~ | ~~`console.warn` w bibliotece~~ | ✅ Naprawione |
 | C3 | `IBoard` nie opisuje nowych metod | Dodaj `getFieldByIndex`, `setFieldByIndex` do interfejsu |
 
 ### 🟡 Ważne
@@ -356,11 +349,11 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 
 | # | Problem | Zalecenie |
 |---|---------|-----------|
-| N1 | Brak konfigurowalnych symboli | Dodaj opcjonalny parametr konstruktora `options: { symbols?: PlayerSymbols }` |
+| N1 | Konfiguracja symboli | Świadoma decyzja — konsument obsługuje mapping na warstwie aplikacji; generyczność klasy zbyt komplikuje typy |
 | ~~N2~~ | ~~CLI bin w bibliotece~~ | ✅ *Naprawione — CLI wydzielone do [t3core-cli](https://github.com/TenGosc007/t3core-cli), `bin` usunięte* |
 | N3 | `gameSession.ts` niemożliwy do testowania | Zaadresuj w [t3core-cli](https://github.com/TenGosc007/t3core-cli) |
 | N4 | Brak historii ruchów | Rozważ Command pattern dla undo/replay |
-| N5 | `PlayerSymbol` hardcoded | Uczyń generycznym: `Game<T extends string = 'O' | 'X'>` |
+| N5 | `PlayerSymbol` hardcoded | Świadoma decyzja — patrz N1 |
 
 ---
 

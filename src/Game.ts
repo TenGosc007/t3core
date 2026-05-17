@@ -164,13 +164,11 @@ export class Game implements IGame {
    * @param index The index of the field to mark.
    */
   savePlayerMove(index: number) {
-    if (this.isFieldSelected(index + 1)) {
-      console.warn("Field is already selected");
+    if (this.isFieldSelectedByIndex(index)) {
       return PlayerMoveStatus.ALREADY_SELECTED;
     }
 
     if (this._gameStatus.status !== "running") {
-      console.warn("Game is not running");
       return PlayerMoveStatus.GAME_NOT_RUNNING;
     }
 
