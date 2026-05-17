@@ -1,15 +1,13 @@
-import type { IBoard } from "./types/Board";
+import type { BoardField, IBoard } from "./types/Board";
 import type { PlayerSymbol } from "./types/Symbol";
 
-const fillFields = (_: number | PlayerSymbol, idx: number) => idx + 1;
+const fillFields = (_: BoardField, idx: number) => idx + 1;
 
 export const BOARD_SIZE = 9;
 
 export class Board implements IBoard {
-  private _fields: (number | PlayerSymbol)[] = new Array(BOARD_SIZE)
-    .fill(0)
-    .map(fillFields);
-  private _snapshot: (number | PlayerSymbol)[] | null = null;
+  private _fields: BoardField[] = new Array(BOARD_SIZE).fill(0).map(fillFields);
+  private _snapshot: BoardField[] | null = null;
 
   /**
    * Returns a stable snapshot of the current board state.

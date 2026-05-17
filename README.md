@@ -101,7 +101,7 @@ function TicTacToeBoard() {
 | `constructor()` | Create a new game with default symbols `['O', 'X']` |
 | `currentPlayer` | Get the current player's symbol              |
 | `gameStatus`    | Get current game status                      |
-| `board`         | Get current board state as `(number \| PlayerSymbol)[]` |
+| `board`         | Get current board state as `BoardField[]` |
 | `snapshot`      | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8   |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied           |
@@ -132,6 +132,7 @@ export { DEFAULT_GAME_SYMBOLS } from 't3c';
 // Types
 export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3c';
 export type { GameEventMap, GameEventPayload } from 't3c';
+export type { BoardField, IBoard } from 't3c';
 export type { PlayerMoveStatus } from 't3c';
 
 // Events

@@ -1,3 +1,4 @@
+import type { BoardField } from "./types/Board";
 import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol";
 
 import EventEmitter from "eventemitter3";
@@ -83,7 +84,7 @@ export class Game implements IGame {
   /**
    * Returns the current board state.
    * @returns The current board state.
-   * @type {(number | PlayerSymbol)[]}
+   * @type {BoardField[]}
    */
   get board() {
     return this._board.fields;
@@ -120,10 +121,10 @@ export class Game implements IGame {
   /**
    * Returns the current board state.
    * @returns The current board state.
-   * @type {(number | PlayerSymbol)[]}
+   * @type {BoardField[]}
    * @deprecated Use `board` instead.
    */
-  getBoard() {
+  getBoard(): BoardField[] {
     return this._board.fields;
   }
 
