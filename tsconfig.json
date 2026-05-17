@@ -13,6 +13,6 @@
     "rootDir": ".",
     "declaration": true
   },
-  "include": ["src/core/**/*.ts", "*.mts"],
+  "include": ["src/**/*.ts", "*.mts"],
   "exclude": ["node_modules", "dist"]
 }
