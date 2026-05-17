@@ -18,21 +18,20 @@ src/
     constants/
     types/
     utils/
-  ui/            ← CLI demo (nie jest częścią pakietu)
-    features/game/
-    screens/
-    ...
-index.ts         ← entry-point CLI
 ```
 
+> **CLI demo** zostało wydzielone do osobnego repozytorium: [t3core-cli](https://github.com/TenGosc007/t3core-cli) (`npx t3core-cli`)
+
 **Mocne strony:**
-- Czyste oddzielenie logiki gry (`core/`) od UI CLI (`ui/`) — `package.json` eksportuje tylko `dist/src/core/index.ts`.
+
+- Czyste oddzielenie logiki gry (`core/`) od UI CLI — `package.json` eksportuje tylko `dist/src/core/index.ts`.
 - Plik `index.ts` jest dobrze zaprojektowany — eksportuje klasy, typy, enumy i stałe jako spójne public API.
 - Pakiet działa jako CommonJS (`"type": "commonjs"`) z prawidłowym `exports` map.
+- CLI wydzielone do osobnego pakietu `t3core-cli` — `t3core` jest teraz czystą biblioteką bez `bin`.
 
-**Słabe strony:**
-- Repozytorium jest jednocześnie pakietem npm i aplikacją CLI demo — brak monorepo lub wyraźnego rozdziału (np. `examples/`). To może wprowadzać w błąd konsumentów pakietu.
-- `bin` w `package.json` eksponuje `dist/index.js` (CLI), co jest nieoczekiwane dla biblioteki; konsument instalujący pakiet otrzymuje też zbędny bin.
+~~**Słabe strony:**~~
+~~- Repozytorium jest jednocześnie pakietem npm i aplikacją CLI demo — brak monorepo lub wyraźnego rozdziału.~~  ✅ *Naprawione — CLI przeniesione do [t3core-cli](https://github.com/TenGosc007/t3core-cli)*
+~~- `bin` w `package.json` eksponuje `dist/index.js` (CLI), co jest nieoczekiwane dla biblioteki.~~  ✅ *Naprawione — pole `bin` usunięte z `package.json`*
 
 ---
 
@@ -230,7 +229,7 @@ Instancja `Game` nie przechodzi przez propsy — żyje w kontekście po stronie 
 | Wzorzec | Gdzie | Ocena |
 |---------|-------|-------|
 | **Observer** (EventEmitter) | `Game._emitter` | ✅ Dobrze dopasowany, typowany |
-| **Singleton** | `gameSession.ts` (CLI) | ⚠️ Poprawny dla CLI, ale globalny stan utrudnia testowanie |
+| **Singleton** | `gameSession.ts` (CLI, przeniesione do [t3core-cli](https://github.com/TenGosc007/t3core-cli)) | ℹ️ Poza zakresem tego repo |
 | **Snapshot / Memento** | `Board._snapshot`, `Game._snapshot` | ✅ Eleganckie, wspiera React |
 | **Facade** | `Game` nad `Board` | ✅ Ukrywa szczegóły implementacji planszy |
 
@@ -269,6 +268,7 @@ Obecne mutowalne `savePlayerMove` nie pozwala na cofanie ruchów (undo). Command
 ```
 
 Powinno być:
+
 ```typescript
 [GameEvent.RESET]: [payload: GameEventPayload];
 ```
@@ -321,38 +321,15 @@ test("off() removes listener", () => {
 
 ---
 
-## 9. CLI — użycie w `ui/`
+## 9. CLI — `t3core-cli`
 
-### `gameSession.ts` — Singleton
+Kod CLI (`src/ui/`, `src/app.ts`, `index.ts`) został przeniesiony do osobnego repozytorium: [https://github.com/TenGosc007/t3core-cli](https://github.com/TenGosc007/t3core-cli).
 
-```typescript
-let game: Game | null = null;
+Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny zostać tam zaadresowane:
 
-export const getGame = () => {
-  if (!game) game = createNewGame();
-  return game;
-};
-```
-
-**Dla CLI to akceptowalne** — jeden proces, jeden stan gry. Jednak:
-- Globalna zmienna modułowa utrudnia testowanie komponentów UI (brak możliwości wstrzyknięcia mocka).
-- Brak metody `destroyGame()` — reset gry woła `getGame().reset()`, ale instancja żyje dalej w module.
-
-### `PlayerEntry` używa deprecated API
-
-```typescript
-// PlayerEntry.ts:33
-game.savePlayerSelection(answer);  // ← deprecated
-```
-
-Powinno używać `savePlayerMove`.
-
-### `Board.ts` używa deprecated API
-
-```typescript
-// Board.ts:11
-const fields = game.getBoard();  // ← deprecated, zamiast game.board
-```
+- `gameSession.ts` używa Singleton z globalną zmienną modułową — utrudnia testowanie komponentów UI.
+- `PlayerEntry.ts` używa deprecated `savePlayerSelection()` zamiast `savePlayerMove()`.
+- `Board.ts` używa deprecated `getBoard()` zamiast `game.board`.
 
 ---
 
@@ -373,7 +350,7 @@ const fields = game.getBoard();  // ← deprecated, zamiast game.board
 | W1 | Brak payload w evencie `RESET` | Dodaj `GameEventPayload` do `GameEventMap[RESET]` |
 | W2 | `IGame` zawiera deprecated metody | Oznacz je `@deprecated` w interfejsie lub usuń z kontraktu |
 | W3 | `EventEmit` deklaruje `void` — niezgodne z fluent API | Popraw typ lub usuń `EventEmit` na rzecz inline generics |
-| W4 | CLI używa deprecated API | Zaktualizuj `PlayerEntry` i `Board.ts` CLI do nowego API |
+| W4 | CLI używa deprecated API | Zaadresuj w repozytorium [t3core-cli](https://github.com/TenGosc007/t3core-cli) |
 | W5 | Brak testów dla kluczowych edge cases | Dodaj brakujące scenariusze z sekcji 8 |
 
 ### 🟢 Nice-to-have
@@ -381,8 +358,8 @@ const fields = game.getBoard();  // ← deprecated, zamiast game.board
 | # | Problem | Zalecenie |
 |---|---------|-----------|
 | N1 | Brak konfigurowalnych symboli | Dodaj opcjonalny parametr konstruktora `options: { symbols?: PlayerSymbols }` |
-| N2 | CLI bin w bibliotece | Przenieś CLI do `examples/` lub osobnego pakietu |
-| N3 | `gameSession.ts` niemożliwy do testowania | Dodaj możliwość wstrzyknięcia instancji `Game` |
+| ~~N2~~ | ~~CLI bin w bibliotece~~ | ✅ *Naprawione — CLI wydzielone do [t3core-cli](https://github.com/TenGosc007/t3core-cli), `bin` usunięte* |
+| N3 | `gameSession.ts` niemożliwy do testowania | Zaadresuj w [t3core-cli](https://github.com/TenGosc007/t3core-cli) |
 | N4 | Brak historii ruchów | Rozważ Command pattern dla undo/replay |
 | N5 | `PlayerSymbol` hardcoded | Uczyń generycznym: `Game<T extends string = 'O' | 'X'>` |
 
@@ -392,6 +369,6 @@ const fields = game.getBoard();  // ← deprecated, zamiast game.board
 
 `t3core` to **dobrze zaprojektowana biblioteka core** dla gry tic-tac-toe. Główne zalety to czysta enkapsulacja, snapshot pattern wspierający React, typowane eventy i separacja logiki od UI.
 
-**Kluczowe problemy** to: błąd w `savePlayerMove` wywołującym deprecated metodę (C1), `console.warn` w bibliotece (C2), niekompletny `IBoard` (C3) oraz niespójności deprecated API w interfejsach i użyciu CLI.
+**Kluczowe problemy** to: błąd w `savePlayerMove` wywołującym deprecated metodę (C1), `console.warn` w bibliotece (C2), niekompletny `IBoard` (C3) oraz niespójności deprecated API w interfejsach. Problemy związane z CLI (W4, N3) zostały przeniesione do [t3core-cli](https://github.com/TenGosc007/t3core-cli).
 
 **Problem Next.js** nie wymaga przepisywania klasy — wystarczy używać `game.snapshot` jako prop i trzymać instancję `Game` w `useRef` lub Context po stronie klienta. `useSyncExternalStore` jest już natywnie wspierany przez istniejący design klasy.
