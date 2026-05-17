@@ -4,7 +4,6 @@
     "module": "Node16",
     "moduleResolution": "node16",
     "ignoreDeprecations": "6.0",
-    "baseUrl": ".",
     "types": ["node"],
     "strict": true,
     "esModuleInterop": true,
@@ -12,11 +11,8 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "rootDir": ".",
-    "declaration": true,
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "declaration": true
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],
+  "include": ["src/core/**/*.ts", "*.mts"],
   "exclude": ["node_modules", "dist"]
 }
