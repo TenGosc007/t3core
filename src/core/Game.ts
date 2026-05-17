@@ -182,10 +182,7 @@ export class Game implements IGame {
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.PLAYER_MOVE, {
-      index,
-      ...this._snapshot,
-    });
+    this._emitter.emit(GameEvent.PLAYER_MOVE, { index });
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -203,6 +200,6 @@ export class Game implements IGame {
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.RESET, this._snapshot);
+    this._emitter.emit(GameEvent.RESET);
   }
 }

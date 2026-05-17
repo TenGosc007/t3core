@@ -28,8 +28,8 @@ export type GameEventPayload = {
 };
 
 export type GameEventMap = {
-  [GameEvent.PLAYER_MOVE]: [payload: GameEventPayload & { index: number }];
-  [GameEvent.RESET]: [payload: GameEventPayload];
+  [GameEvent.PLAYER_MOVE]: [payload: { index: number }];
+  [GameEvent.RESET]: [];
 };
 
 export type EventEmit = <K extends keyof GameEventMap>(
