@@ -16,8 +16,11 @@ export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
 
 export const GameEvent = {
+  /** @deprecated Use `STATE_CHANGE` instead. */
   PLAYER_MOVE: "PLAYER_MOVE",
+  /** @deprecated Use `STATE_CHANGE` instead. */
   RESET: "RESET",
+  STATE_CHANGE: "STATE_CHANGE",
 } as const;
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
@@ -28,8 +31,11 @@ export type GameEventPayload = {
 };
 
 export type GameEventMap = {
+  /** @deprecated Use `STATE_CHANGE` instead. */
   [GameEvent.PLAYER_MOVE]: [payload: GameEventPayload & { index: number }];
+  /** @deprecated Use `STATE_CHANGE` instead. */
   [GameEvent.RESET]: [payload?: GameEventPayload];
+  [GameEvent.STATE_CHANGE]: [payload: GameEventPayload];
 };
 
 export type EventEmit<T> = <K extends keyof GameEventMap>(
