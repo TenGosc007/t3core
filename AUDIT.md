@@ -1,6 +1,6 @@
 # Audyt architektury i kodu — `t3core`
 
-> **Wersja pakietu:** 1.1.4 · **Data audytu:** 2026-05-17  
+> **Wersja pakietu:** 1.2.1 · **Data audytu:** 2026-05-18  
 > **Zakres:** pełna analiza kodu biblioteki core, wzorców projektowych, typów, testów oraz rekomendacje refactoringu
 
 ---
@@ -107,9 +107,9 @@ Naprawione — `savePlayerSelection`, `isFieldSelected`, `getBoard` oznaczone `@
 
 Naprawione — `EventEmit` jest teraz generyczny: `EventEmit<T>`, a `IGame` używa `EventEmit<this>` dla `on`/`off`. Return type poprawnie opisuje chainowanie.
 
-#### 4.3 `PlayerSymbol` jest hardcoded do `'O' | 'X'`
+#### 4.3 `PlayerSymbol` jest hardcoded do `'O' | 'X'` — świadoma decyzja
 
-Typ pochodzi bezpośrednio z `DEFAULT_GAME_SYMBOLS as const`. Nie ma możliwości stworzenia `Game` z innymi symbolami w sposób typesafe.
+Typ pochodzi bezpośrednio z `DEFAULT_GAME_SYMBOLS as const`. Jest to ta sama kwestia co **2.3** — patrz tam po uzasadnienie.
 
 ---
 
@@ -152,6 +152,7 @@ const game = new Game(); // singleton po stronie klienta
 export function useGame() {
   const state = useSyncExternalStore(
     (callback) => {
+      // callback has signature () => void - React calls getSnapshot() after each event
       game.on(GameEvent.PLAYER_MOVE, callback);
       game.on(GameEvent.RESET, callback);
       return () => {
@@ -159,12 +160,16 @@ export function useGame() {
         game.off(GameEvent.RESET, callback);
       };
     },
-    () => game.snapshot,
-    () => game.snapshot, // server snapshot (SSR)
+    () => game.snapshot,        // client snapshot
+    () => game.snapshot,        // server snapshot (SSR)
   );
 
   return { state, game };
 }
+
+// For direct event usage (non-React), payload contains full state:
+// game.on(GameEvent.PLAYER_MOVE, ({ board, currentPlayer, gameStatus, index }) => { ... })
+// game.on(GameEvent.RESET, (payload) => { ... })
 ```
 
 `Game` ma `snapshot` z stabilnymi referencjami i EventEmitter — to **idealny external store** dla `useSyncExternalStore`.
@@ -199,22 +204,20 @@ Instancja `Game` nie przechodzi przez propsy — żyje w kontekście po stronie 
 
 ### Potencjalne ulepszenia
 
-#### Factory / Builder dla `Game`
+#### ~~Factory / Builder dla `Game`~~ ✅
 
-Brak możliwości konfiguracji gry (symbole, rozmiar) sugeruje potrzebę fabryki:
+Zaimplementowano konstruktor z opcjonalnym parametrem opcji `GameOptions`:
 
 ```typescript
-// Propozycja
-const game = Game.create({ symbols: ['🐱', '🐶'] });
-// lub
-const game = new GameBuilder().withSymbols(['A', 'B']).build();
+const game = new Game();                  // domyślna plansza 9 pól
+const game = new Game({ boardSize: 16 }); // plansza 4x4
 ```
 
-Alternatywnie wystarczy konstruktor z opcjonalnym parametrem opcji.
+`GameOptions` jest wyeksportowane z publicznego API. Symbole pozostają hardcoded — świadoma decyzja (patrz 2.3).
 
-#### Command Pattern dla ruchów
+#### Command Pattern dla ruchów *(planowane v1.5)*
 
-Obecne mutowalne `savePlayerMove` nie pozwala na cofanie ruchów (undo). Command pattern pozwoliłby na historię ruchów — przydatne dla AI lub replay.
+Obecne mutowalne `savePlayerMove` nie pozwala na cofanie ruchów (undo). Command pattern pozwoliłby na historię ruchów — przydatne dla AI lub replay. Zaplanowane do implementacji w wersji 1.5.
 
 ---
 
@@ -225,23 +228,32 @@ Obecne mutowalne `savePlayerMove` nie pozwala na cofanie ruchów (undo). Command
 - Wybór `eventemitter3` jest uzasadniony (lekka, typowana, zero zależności).
 - Typowana `GameEventMap` to dobre podejście.
 
-### Problem: brak payload w `RESET`
+### ~~Problem: brak payload w `RESET`~~ ✅
+
+Naprawione — `GameEventMap[RESET]` używa opcjonalnego payload:
 
 ```typescript
-[GameEvent.RESET]: [];  // słuchacz nie otrzymuje nowego stanu
+[GameEvent.RESET]: [payload?: GameEventPayload];
 ```
 
-Powinno być:
+Spójność z `PLAYER_MOVE` zachowana. Payload opcjonalny — brak breaking change dla słuchaczy `() => void`.
+
+### Ulepszenie: `EventEmit<T>` — generyczny return type ✅
+
+`EventEmit` jest teraz generyczny:
 
 ```typescript
-[GameEvent.RESET]: [payload: GameEventPayload];
+export type EventEmit<T> = <K extends keyof GameEventMap>(
+  event: K,
+  fn: (...args: GameEventMap[K]) => void,
+) => T;
 ```
 
-Spójność z `PLAYER_MOVE` i użyteczność dla `useSyncExternalStore`.
+`IGame` używa `EventEmit<this>` dla `on`/`off` — return type poprawnie opisuje fluent API (chainowanie).
 
-### Problem: `off()` wymaga referencji do funkcji
+### ~~Problem: `off()` wymaga referencji do funkcji~~ ✅
 
-Standardowy problem z EventEmitter — anonimowe funkcje strzałkowe nie mogą być usunięte. Warto to zaznaczyć w dokumentacji.
+Udokumentowane w README — ostrzeżenie o konieczności używania nazwanych funkcji (nie anonimowych strzałek) przy subskrypcji eventów.
 
 ---
 
@@ -257,31 +269,11 @@ Standardowy problem z EventEmitter — anonimowe funkcje strzałkowe nie mogą b
 | `PLAYER_MOVE` event | ✅ |
 | `RESET` event | ✅ |
 | Zablokowanie ruchu na zajętym polu | ✅ |
-| Ruch po zakończeniu gry | ❌ |
-| Deprecated `savePlayerSelection` | ❌ |
-| `isFieldSelected` vs `isFieldSelectedByIndex` | ❌ |
-| Wielokrotny reset (reset → gra → reset) | ❌ |
-| `off()` — usunięcie listenera | ❌ |
-
-### Brakujące testy (krytyczne)
-
-```typescript
-test("savePlayerMove returns GAME_NOT_RUNNING after win", () => {
-  const game = new Game();
-  // ... doprowadź do wygranej
-  const result = game.savePlayerMove(8);
-  expect(result).toBe(PlayerMoveStatus.GAME_NOT_RUNNING);
-});
-
-test("off() removes listener", () => {
-  const game = new Game();
-  const listener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, listener);
-  game.off(GameEvent.PLAYER_MOVE, listener);
-  game.savePlayerMove(0);
-  expect(listener).not.toHaveBeenCalled();
-});
-```
+| Ruch po zakończeniu gry | ✅ |
+| Deprecated `savePlayerSelection` | ✅ |
+| `isFieldSelected` vs `isFieldSelectedByIndex` | ✅ |
+| Wielokrotny reset (reset → gra → reset) | ✅ |
+| `off()` — usunięcie listenera | ✅ |
 
 ---
 
@@ -315,7 +307,7 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 | ~~W2~~ | ~~`IGame` zawiera deprecated metody bez oznaczenia~~ | ✅ Naprawione |
 | ~~W3~~ | ~~`EventEmit` deklaruje `void` — niezgodne z fluent API~~ | ✅ Naprawione |
 | W4 | CLI używa deprecated API | Zaadresuj w repozytorium [t3core-cli](https://github.com/TenGosc007/t3core-cli) |
-| W5 | Brak testów dla kluczowych edge cases | Dodaj brakujące scenariusze z sekcji 8 |
+| ~~W5~~ | ~~Brak testów dla kluczowych edge cases~~ | ✅ Naprawione — wszystkie scenariusze z sekcji 8 pokryte (17 testów łącznie) |
 
 ### 🟢 Nice-to-have
 
@@ -333,6 +325,6 @@ Poniższe obserwacje z pierwotnego audytu dotyczą teraz tamtego repo i powinny 
 
 `t3core` to **dobrze zaprojektowana biblioteka core** dla gry tic-tac-toe. Główne zalety to czysta enkapsulacja, snapshot pattern wspierający React, typowane eventy i separacja logiki od UI.
 
-**Kluczowe problemy** to: błąd w `savePlayerMove` wywołującym deprecated metodę (C1), `console.warn` w bibliotece (C2), niekompletny `IBoard` (C3) oraz niespójności deprecated API w interfejsach. Problemy związane z CLI (W4, N3) zostały przeniesione do [t3core-cli](https://github.com/TenGosc007/t3core-cli).
+**Wszystkie krytyczne problemy (C1-C3) oraz ważne problemy (W1-W3, W5) zostały naprawione.** Pozostałe: CLI używa deprecated API (W4) oraz singleton w CLI (N3) do zaadresowania w [t3core-cli](https://github.com/TenGosc007/t3core-cli). Historia ruchów (N4) zaplanowana na v1.5.
 
 **Problem Next.js** nie wymaga przepisywania klasy — wystarczy używać `game.snapshot` jako prop i trzymać instancję `Game` w `useRef` lub Context po stronie klienta. `useSyncExternalStore` jest już natywnie wspierany przez istniejący design klasy.

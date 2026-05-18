@@ -132,3 +132,30 @@ test("multiple resets work correctly", () => {
   expect(game.currentPlayer).toBe("O");
   expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
 });
+
+test("deprecated savePlayerSelection still works (1-9 numbering)", () => {
+  const game = new Game();
+  game.savePlayerSelection(5); // field 5 = index 4
+  expect(game.isFieldSelectedByIndex(4)).toBe(true);
+  expect(game.board[4]).toBe("O");
+});
+
+test("isFieldSelected and isFieldSelectedByIndex are equivalent", () => {
+  const game = new Game();
+  game.savePlayerMove(4);
+
+  // isFieldSelected uses 1-9 numbering, isFieldSelectedByIndex uses 0-8
+  expect(game.isFieldSelected(5)).toBe(true); // field 5
+  expect(game.isFieldSelectedByIndex(4)).toBe(true); // index 4
+
+  expect(game.isFieldSelected(1)).toBe(false);
+  expect(game.isFieldSelectedByIndex(0)).toBe(false);
+});
+
+test("deprecated getBoard returns same as board getter", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(4);
+
+  expect(game.getBoard()).toEqual(game.board);
+});
