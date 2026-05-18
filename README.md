@@ -36,6 +36,18 @@ console.log(game.board); // ['O', 2, 3, 4, 'X', 6, 7, 8, 9]
 game.reset();
 ```
 
+### Next.js / Server Components
+
+> **Note:** `Game` instances are not serializable — do not pass them as props across the server → client boundary. Keep the instance on the client side (e.g. in `useRef` or module scope) and pass only the plain snapshot object through props:
+>
+> ```tsx
+> // ✅ pass plain state
+> <GameBoard state={game.snapshot} />
+>
+> // ❌ will throw — class instances are not serializable
+> <GameBoard game={game} />
+> ```
+
 ### React Integration with `useSyncExternalStore`
 
 ```tsx
@@ -101,19 +113,47 @@ function TicTacToeBoard() {
 
 | Property/Method | Description |
 | --------------- | ----------- |
-| `constructor()` | Create a new game with default symbols `['O', 'X']` |
+| `constructor(options?)` | Create a new game. `options.boardSize` sets board size (default: `9`) |
 | `currentPlayer` | Get the current player's symbol |
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `BoardField[]` |
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8 |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
-| `on(event, fn)` | Subscribe to events (`PLAYER_MOVE`, `RESET`) |
-| `off(event, fn)` | Unsubscribe from events |
+| `on(event, fn)` | Subscribe to events (`PLAYER_MOVE`, `RESET`). Returns `this` for chaining |
+| `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state |
 | `getBoard()` | **Deprecated.** Use `board` instead |
 | `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead |
 | `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead |
+
+### Events
+
+Subscribe to game events with typed payloads:
+
+```typescript
+import { Game, GameEvent } from 't3core';
+
+const game = new Game();
+
+// PLAYER_MOVE — includes full snapshot + move index
+game.on(GameEvent.PLAYER_MOVE, ({ board, currentPlayer, gameStatus, index }) => {
+  console.log(`Player moved at index ${index}`);
+  console.log('New state:', { board, currentPlayer, gameStatus });
+});
+
+// RESET — optional payload with new state
+game.on(GameEvent.RESET, (payload) => {
+  console.log('Game reset:', payload?.gameStatus); // { status: 'running' }
+});
+
+// Remember to use named functions (not arrow functions) if you need to unsubscribe later
+function onMove({ index }) {
+  console.log('Move at', index);
+}
+game.on(GameEvent.PLAYER_MOVE, onMove);
+game.off(GameEvent.PLAYER_MOVE, onMove); // works
+```
 
 ## Exports
 

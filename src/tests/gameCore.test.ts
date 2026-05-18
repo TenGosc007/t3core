@@ -66,9 +66,12 @@ test("PLAYER_MOVE event fires with correct payload on savePlayerMove", () => {
   expect(listener).toHaveBeenCalledOnce();
   const payload = listener.mock.calls[0][0];
   expect(payload.index).toBe(4);
+  expect(payload.board).toBeDefined();
+  expect(payload.currentPlayer).toBeDefined();
+  expect(payload.gameStatus).toBeDefined();
 });
 
-test("RESET event fires", () => {
+test("RESET event fires with snapshot payload", () => {
   const game = new Game();
   game.savePlayerMove(0);
   game.savePlayerMove(1);
@@ -78,6 +81,10 @@ test("RESET event fires", () => {
   game.reset();
 
   expect(listener).toHaveBeenCalledOnce();
+  const payload = listener.mock.calls[0][0];
+  expect(payload.gameStatus).toEqual({ status: "running" });
+  expect(payload.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(payload.currentPlayer).toBe("O");
 });
 
 test("PLAYER_MOVE event is not fired when move is invalid", () => {
@@ -89,4 +96,66 @@ test("PLAYER_MOVE event is not fired when move is invalid", () => {
   game.savePlayerMove(0);
 
   expect(listener).not.toHaveBeenCalled();
+});
+
+test("savePlayerMove returns GAME_NOT_RUNNING after game is won", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(3);
+  game.savePlayerMove(1);
+  game.savePlayerMove(4);
+  game.savePlayerMove(2);
+
+  expect(game.gameStatus).toEqual({ status: "win", winner: "O" });
+  const result = game.savePlayerMove(8);
+  expect(result).toBe("game_not_running");
+});
+
+test("off() removes listener", () => {
+  const game = new Game();
+  const listener = vi.fn();
+  game.on(GameEvent.PLAYER_MOVE, listener);
+  game.off(GameEvent.PLAYER_MOVE, listener);
+  game.savePlayerMove(0);
+
+  expect(listener).not.toHaveBeenCalled();
+});
+
+test("multiple resets work correctly", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.reset();
+  game.savePlayerMove(4);
+  game.reset();
+
+  expect(game.gameStatus.status).toBe("running");
+  expect(game.currentPlayer).toBe("O");
+  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+});
+
+test("deprecated savePlayerSelection still works (1-9 numbering)", () => {
+  const game = new Game();
+  game.savePlayerSelection(5); // field 5 = index 4
+  expect(game.isFieldSelectedByIndex(4)).toBe(true);
+  expect(game.board[4]).toBe("O");
+});
+
+test("isFieldSelected and isFieldSelectedByIndex are equivalent", () => {
+  const game = new Game();
+  game.savePlayerMove(4);
+
+  // isFieldSelected uses 1-9 numbering, isFieldSelectedByIndex uses 0-8
+  expect(game.isFieldSelected(5)).toBe(true); // field 5
+  expect(game.isFieldSelectedByIndex(4)).toBe(true); // index 4
+
+  expect(game.isFieldSelected(1)).toBe(false);
+  expect(game.isFieldSelectedByIndex(0)).toBe(false);
+});
+
+test("deprecated getBoard returns same as board getter", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(4);
+
+  expect(game.getBoard()).toEqual(game.board);
 });

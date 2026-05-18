@@ -15,17 +15,27 @@ import {
 } from "./types/Game";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
+export type GameOptions = {
+  boardSize?: number;
+};
+
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];
   private _gameStatus: GameStatus = { status: "running" };
   private _symbols: PlayerSymbols = DEFAULT_GAME_SYMBOLS;
-  private _board = new Board();
+  private _board: Board;
+
   private _emitter = new EventEmitter<GameEventMap>();
-  private _snapshot: GameEventPayload = {
-    board: this._board.fields,
-    currentPlayer: this._currentPlayer,
-    gameStatus: this._gameStatus,
-  };
+  private _snapshot: GameEventPayload;
+
+  constructor(options: GameOptions = {}) {
+    this._board = new Board(options.boardSize);
+    this._snapshot = {
+      board: this._board.fields,
+      currentPlayer: this._currentPlayer,
+      gameStatus: this._gameStatus,
+    };
+  }
 
   private _togglePlayer() {
     this._currentPlayer =
@@ -38,7 +48,6 @@ export class Game implements IGame {
     const board = this._board;
     const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
-    const isNotRunning = this._gameStatus.status !== "running";
 
     if (winner) {
       this._gameStatus = { status: "win", winner };
@@ -50,7 +59,7 @@ export class Game implements IGame {
       return;
     }
 
-    if (isNotRunning) {
+    if (this._gameStatus.status !== "running") {
       this._gameStatus = { status: "running" };
     }
   }
@@ -164,13 +173,11 @@ export class Game implements IGame {
    * @param index The index of the field to mark.
    */
   savePlayerMove(index: number) {
-    if (this.isFieldSelected(index + 1)) {
-      console.warn("Field is already selected");
+    if (this.isFieldSelectedByIndex(index)) {
       return PlayerMoveStatus.ALREADY_SELECTED;
     }
 
     if (this._gameStatus.status !== "running") {
-      console.warn("Game is not running");
       return PlayerMoveStatus.GAME_NOT_RUNNING;
     }
 
@@ -182,7 +189,7 @@ export class Game implements IGame {
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.PLAYER_MOVE, { index });
+    this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -192,14 +199,14 @@ export class Game implements IGame {
    * emit RESET event
    */
   reset() {
-    this._gameStatus = { status: "running" };
     this._currentPlayer = this._symbols[0];
     this._board.reset();
+    this._updateGameStatus();
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.RESET);
+    this._emitter.emit(GameEvent.RESET, this._snapshot);
   }
 }

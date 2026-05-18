@@ -5,6 +5,12 @@
 export { Game } from "./Game";
 
 /**
+ * Options for configuring a `Game` instance.
+ * @property boardSize - Number of fields on the board (default: 9).
+ */
+export type { GameOptions } from "./Game";
+
+/**
  * Default player symbols ['O', 'X'] for convenience.
  */
 export { DEFAULT_GAME_SYMBOLS } from "./constants";
