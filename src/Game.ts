@@ -169,7 +169,8 @@ export class Game implements IGame {
 
   /**
    * Saves a player's selection on the board by index.
-   * emit PLAYER_MOVE event
+   * Emits {@link GameEvent.STATE_CHANGE} event.
+   * Also emits {@link GameEvent.PLAYER_MOVE} event (deprecated).
    * @param index The index of the field to mark.
    */
   savePlayerMove(index: number) {
@@ -190,13 +191,15 @@ export class Game implements IGame {
       gameStatus: this._gameStatus,
     };
     this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
+    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
 
     return PlayerMoveStatus.SUCCESS;
   }
 
   /**
    * Resets the game to its initial state.
-   * emit RESET event
+   * Emits {@link GameEvent.STATE_CHANGE} event.
+   * Also emits {@link GameEvent.RESET} event (deprecated).
    */
   reset() {
     this._currentPlayer = this._symbols[0];
@@ -208,5 +211,6 @@ export class Game implements IGame {
       gameStatus: this._gameStatus,
     };
     this._emitter.emit(GameEvent.RESET, this._snapshot);
+    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
   }
 }

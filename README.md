@@ -61,11 +61,9 @@ function useTicTacToe() {
   const state = useSyncExternalStore(
     // Subscribe function
     (callback) => {
-      game.on(GameEvent.PLAYER_MOVE, callback);
-      game.on(GameEvent.RESET, callback);
+      game.on(GameEvent.STATE_CHANGE, callback);
       return () => {
-        game.off(GameEvent.PLAYER_MOVE, callback);
-        game.off(GameEvent.RESET, callback);
+        game.off(GameEvent.STATE_CHANGE, callback);
       };
     },
     // Get snapshot function
@@ -120,7 +118,7 @@ function TicTacToeBoard() {
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8 |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
-| `on(event, fn)` | Subscribe to events (`PLAYER_MOVE`, `RESET`). Returns `this` for chaining |
+| `on(event, fn)` | Subscribe to events (`STATE_CHANGE`, `PLAYER_MOVE` ⚠️, `RESET` ⚠️). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state |
 | `getBoard()` | **Deprecated.** Use `board` instead |
@@ -136,24 +134,28 @@ import { Game, GameEvent } from 't3core';
 
 const game = new Game();
 
-// PLAYER_MOVE — includes full snapshot + move index
-game.on(GameEvent.PLAYER_MOVE, ({ board, currentPlayer, gameStatus, index }) => {
-  console.log(`Player moved at index ${index}`);
-  console.log('New state:', { board, currentPlayer, gameStatus });
-});
-
-// RESET — optional payload with new state
-game.on(GameEvent.RESET, (payload) => {
-  console.log('Game reset:', payload?.gameStatus); // { status: 'running' }
+// STATE_CHANGE — emitted after every move and reset
+game.on(GameEvent.STATE_CHANGE, ({ board, currentPlayer, gameStatus }) => {
+  console.log('State changed:', { board, currentPlayer, gameStatus });
 });
 
 // Remember to use named functions (not arrow functions) if you need to unsubscribe later
-function onMove({ index }) {
-  console.log('Move at', index);
+function onStateChange(payload) {
+  console.log('State changed:', payload);
 }
-game.on(GameEvent.PLAYER_MOVE, onMove);
-game.off(GameEvent.PLAYER_MOVE, onMove); // works
+game.on(GameEvent.STATE_CHANGE, onStateChange);
+game.off(GameEvent.STATE_CHANGE, onStateChange); // works
 ```
+
+> ⚠️ **Deprecated events** — still emitted for backwards compatibility, will be removed in a future major version:
+>
+> ```typescript
+> // PLAYER_MOVE — deprecated, use STATE_CHANGE instead
+> game.on(GameEvent.PLAYER_MOVE, ({ board, currentPlayer, gameStatus, index }) => { ... });
+>
+> // RESET — deprecated, use STATE_CHANGE instead
+> game.on(GameEvent.RESET, (payload) => { ... });
+> ```
 
 ## Exports
 
