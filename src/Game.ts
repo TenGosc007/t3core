@@ -49,9 +49,6 @@ export class Game implements IGame {
     const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
 
-    console.log("winner", winner);
-    console.log("isDraw", isDraw);
-
     if (winner) {
       this._gameStatus = { status: "win", winner };
       return;
@@ -65,6 +62,17 @@ export class Game implements IGame {
     if (this._gameStatus.status !== "running") {
       this._gameStatus = { status: "running" };
     }
+  }
+
+  _updateGameState() {
+    this._updateGameStatus();
+    this._snapshot = {
+      board: this._board.fields,
+      currentPlayer: this._currentPlayer,
+      gameStatus: this._gameStatus,
+    };
+    this._emitter.emit(GameEvent.RESET, this._snapshot);
+    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
   }
 
   /**
@@ -100,6 +108,13 @@ export class Game implements IGame {
    */
   get board() {
     return this._board.fields;
+  }
+
+  /**
+   * Returns the number of moves made in the current game.
+   */
+  get movesCount() {
+    return this._board.snapshotCount;
   }
 
   /**
@@ -187,16 +202,20 @@ export class Game implements IGame {
 
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
-    this._updateGameStatus();
-    this._snapshot = {
-      board: this._board.fields,
-      currentPlayer: this._currentPlayer,
-      gameStatus: this._gameStatus,
-    };
-    this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
-    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
+    this._updateGameState();
 
     return PlayerMoveStatus.SUCCESS;
+  }
+
+  /**
+   * Restores the game to a previous state by index.
+   * @param index The index of the state to restore.
+   */
+  backToMove(index: number) {
+    const board = this._board;
+    board.restoreBoardHistoryAt(index);
+    this._currentPlayer = this._symbols[index % 2];
+    this._updateGameState();
   }
 
   /**
@@ -207,13 +226,6 @@ export class Game implements IGame {
   reset() {
     this._currentPlayer = this._symbols[0];
     this._board.reset();
-    this._updateGameStatus();
-    this._snapshot = {
-      board: this._board.fields,
-      currentPlayer: this._currentPlayer,
-      gameStatus: this._gameStatus,
-    };
-    this._emitter.emit(GameEvent.RESET, this._snapshot);
-    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
+    this._updateGameState();
   }
 }

@@ -50,6 +50,7 @@ export interface IGame {
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
   readonly board: BoardField[];
+  readonly movesCount: number;
   /** @deprecated Use `savePlayerMove` instead. */
   savePlayerSelection: (field: number) => void;
   reset: () => void;
@@ -59,4 +60,5 @@ export interface IGame {
   savePlayerMove: (index: number) => PlayerMoveStatus;
   /** @deprecated Use `board` instead. */
   getBoard: () => BoardField[];
+  backToMove: (index: number) => void;
 }

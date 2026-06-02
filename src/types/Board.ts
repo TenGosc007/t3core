@@ -4,7 +4,7 @@ export type BoardField = number | PlayerSymbol;
 
 export interface IBoard {
   fields: BoardField[];
-  historySize: number;
+  snapshotCount: number;
   /** @deprecated Use `getFieldByIndex` instead. */
   getFieldByNumber: (fieldNumber: number) => BoardField;
   /** @deprecated Use `setFieldByIndex` instead. */

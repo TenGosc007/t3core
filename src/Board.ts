@@ -36,8 +36,8 @@ export class Board implements IBoard {
   /**
    * Returns the number of snapshots stored in the board history.
    */
-  get historySize() {
-    return this._boardSnapshots.length;
+  get snapshotCount() {
+    return this._boardSnapshots.length - 1;
   }
 
   /**
@@ -91,6 +91,7 @@ export class Board implements IBoard {
     const newFields = [...this._curretnFields];
     newFields[index] = symbol;
     this._boardSnapshots.push(newFields);
+    this._curretnFields = newFields;
     this._snapshot = null;
   }
 
