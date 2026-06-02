@@ -159,3 +159,47 @@ test("deprecated getBoard returns same as board getter", () => {
 
   expect(game.getBoard()).toEqual(game.board);
 });
+
+test("savePlayerMove creates board history snapshots", () => {
+  const game = new Game();
+  expect(game.movesCount).toBe(0);
+
+  game.savePlayerMove(0);
+  expect(game.movesCount).toBe(1);
+
+  game.savePlayerMove(1);
+  expect(game.movesCount).toBe(2);
+});
+
+test("backToMove reverts to previous state", () => {
+  const game = new Game();
+  game.savePlayerMove(4); // move 0: O at index 4
+  game.savePlayerMove(0); // move 1: X at index 0
+  game.savePlayerMove(2); // move 2: O at index 2
+
+  expect(game.board[4]).toBe("O");
+  expect(game.board[0]).toBe("X");
+  expect(game.board[2]).toBe("O");
+
+  game.backToMove(1); // back to after move 0: only O at 4
+
+  expect(game.board[4]).toBe("O");
+  expect(game.board[0]).toBe(1);
+  expect(game.board[2]).toBe(3);
+});
+
+test("savePlayerMove truncates history after backToMove when making new move", () => {
+  const game = new Game();
+  game.savePlayerMove(0); // move 0: O at index 0
+  game.savePlayerMove(1); // move 1: X at index 1
+  game.savePlayerMove(2); // move 2: O at index 2
+  expect(game.movesCount).toBe(3);
+
+  game.backToMove(1); // back to after move 1, current player becomes X
+  expect(game.movesCount).toBe(3);
+
+  game.savePlayerMove(4); // X at index 4
+  expect(game.movesCount).toBe(2);
+  expect(game.board[4]).toBe("X");
+  expect(game.board[2]).toBe(3);
+});

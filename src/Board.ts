@@ -12,6 +12,7 @@ export class Board implements IBoard {
   private _snapshot: BoardField[] | null = null;
   private _boardSnapshots: BoardField[][];
   private _curretnFields: BoardField[];
+  private _currentSnapshotIndex: number | null = null;
 
   constructor(size: number = BOARD_SIZE) {
     this._size = size;
@@ -90,20 +91,29 @@ export class Board implements IBoard {
   setFieldByIndex(index: number, symbol: PlayerSymbol) {
     const newFields = [...this._curretnFields];
     newFields[index] = symbol;
+
+    if (this._currentSnapshotIndex != null) {
+      this._boardSnapshots = this._boardSnapshots.slice(
+        0,
+        this._currentSnapshotIndex + 1,
+      );
+    }
+
     this._boardSnapshots.push(newFields);
     this._curretnFields = newFields;
     this._snapshot = null;
+    this._currentSnapshotIndex = null;
   }
 
   /**
    * Restores the board to a historical state at the given index.
-   * All history entries after `index` are discarded, and the current fields
-   * are updated to the entry at `index`. Invalidates the cached snapshot.
+   * The current fields are updated to the snapshot at `index`, and future
+   * moves will truncate history from this point. Invalidates the cached snapshot.
    * @param index The history index to restore (0-based).
    */
   restoreBoardHistoryAt(index: number) {
-    this._boardSnapshots.splice(index + 1);
-    this._curretnFields = getLastArrayItem(this._boardSnapshots);
+    this._curretnFields = this._boardSnapshots[index];
+    this._currentSnapshotIndex = index;
     this._snapshot = null;
   }
 
@@ -115,5 +125,6 @@ export class Board implements IBoard {
     this._boardSnapshots = [new Array(this._size).fill(0).map(fillFields)];
     this._curretnFields = getLastArrayItem(this._boardSnapshots);
     this._snapshot = null;
+    this._currentSnapshotIndex = null;
   }
 }
