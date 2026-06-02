@@ -49,6 +49,9 @@ export class Game implements IGame {
     const winner = getWinnerFromFields(board.fields);
     const isDraw = board.isFull() && !winner;
 
+    console.log("winner", winner);
+    console.log("isDraw", isDraw);
+
     if (winner) {
       this._gameStatus = { status: "win", winner };
       return;
