@@ -116,13 +116,15 @@ function TicTacToeBoard() {
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `BoardField[]` |
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
-| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8 |
+| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
+| `movesCount` | Number of moves made in the current game |
+| `backToMove(index: number)` | Restore the board to a previous history state at the given index |
 | `on(event, fn)` | Subscribe to events (`STATE_CHANGE`, `PLAYER_MOVE` ⚠️, `RESET` ⚠️). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state |
 | `getBoard()` | **Deprecated.** Use `board` instead |
-| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead |
+| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead. Uses 1-9 field numbering; does not emit events |
 | `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead |
 
 ### Events
@@ -134,7 +136,7 @@ import { Game, GameEvent } from 't3core';
 
 const game = new Game();
 
-// STATE_CHANGE — emitted after every move and reset
+// STATE_CHANGE — emitted after every savePlayerMove, backToMove, and reset
 game.on(GameEvent.STATE_CHANGE, ({ board, currentPlayer, gameStatus }) => {
   console.log('State changed:', { board, currentPlayer, gameStatus });
 });
@@ -150,10 +152,10 @@ game.off(GameEvent.STATE_CHANGE, onStateChange); // works
 > ⚠️ **Deprecated events** — still emitted for backwards compatibility, will be removed in a future major version:
 >
 > ```typescript
-> // PLAYER_MOVE — deprecated, use STATE_CHANGE instead
+> // PLAYER_MOVE — emitted only by savePlayerMove, includes the played index
 > game.on(GameEvent.PLAYER_MOVE, ({ board, currentPlayer, gameStatus, index }) => { ... });
 >
-> // RESET — deprecated, use STATE_CHANGE instead
+> // RESET — emitted only by reset()
 > game.on(GameEvent.RESET, (payload) => { ... });
 > ```
 
