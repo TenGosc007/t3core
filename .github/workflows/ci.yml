@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,6 +31,8 @@ jobs:
           coverage: coverage/coverage-final.json
           format: sarif
           auto-changed-since: true
+          comment: true
+          github-token: ${{ github.token }}
 
       - uses: github/codeql-action/upload-sarif@v4
         if: always()
