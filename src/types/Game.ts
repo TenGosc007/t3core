@@ -16,9 +16,9 @@ export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
 
 export const GameEvent = {
-  /** @deprecated Use `STATE_CHANGE` instead. */
+  /** @deprecated Use `STATE_CHANGE` instead. Still emitted by `savePlayerMove` with `index` in payload. */
   PLAYER_MOVE: "PLAYER_MOVE",
-  /** @deprecated Use `STATE_CHANGE` instead. */
+  /** @deprecated Use `STATE_CHANGE` instead. Still emitted by `reset()`. */
   RESET: "RESET",
   STATE_CHANGE: "STATE_CHANGE",
 } as const;

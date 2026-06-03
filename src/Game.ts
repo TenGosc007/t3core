@@ -115,6 +115,7 @@ export class Game implements IGame {
 
   /**
    * Returns the number of moves made in the current game.
+   * @returns The number of moves made.
    */
   get movesCount() {
     return this._board.snapshotCount;
@@ -179,8 +180,8 @@ export class Game implements IGame {
 
   /**
    * Saves a player's selection on the board.
-   * @param field The field number to mark.
-   * @deprecated Use `savePlayerMove` instead.
+   * @param field The field number to mark (1-9 numbering).
+   * @deprecated Use `savePlayerMove(index)` instead (0-8 index-based). Does not emit events or update the snapshot.
    */
   savePlayerSelection(field: number) {
     this._board.setFieldByNumber(field, this._currentPlayer);

@@ -21,7 +21,7 @@ export { DEFAULT_GAME_SYMBOLS } from "./constants";
 export type { IGame } from "./types/Game";
 
 /**
- * Game event names: `PLAYER_MOVE`, `RESET`.
+ * Game event names: `STATE_CHANGE`, `PLAYER_MOVE` (deprecated), `RESET` (deprecated).
  */
 export { GameEvent } from "./types/Game";
 

@@ -123,6 +123,8 @@ echo "Please edit the release notes before continuing."
 # Open editor for release notes
 if [[ -n "${EDITOR:-}" ]]; then
   $EDITOR "$RELEASE_FILE"
+elif command -v windsurf &> /dev/null; then
+  windsurf "$RELEASE_FILE"
 elif command -v devin &> /dev/null; then
   devin "$RELEASE_FILE"
 elif command -v code &> /dev/null; then
