@@ -6,8 +6,10 @@
     "build": "tsc && tsc-alias",
     "build:watch": "tsc -w && tsc-alias -w",
     "test": "vitest",
+    "test:coverage": "vitest --coverage --run",
     "lint": "eslint ./src/**/*.ts",
     "ts:check": "tsc --noEmit",
+    "fallow": "fallow health --coverage coverage/coverage-final.json",
     "publish:dry": "npm run build && npm publish --dry-run",
     "release:tag": "env -i HOME=$HOME PATH=$PATH bash scripts/release.sh",
     "new:release": "env -i HOME=$HOME PATH=$PATH bash scripts/publish-release.sh"
@@ -43,10 +45,12 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^25.6.0",
+    "@vitest/coverage-v8": "4.1.5",
     "eslint": "^10.3.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-perfectionist": "^5.9.0",
+    "fallow": "^2.87.0",
     "globals": "^17.6.0",
     "jiti": "^2.6.1",
     "tsc-alias": "^1.8.17",
