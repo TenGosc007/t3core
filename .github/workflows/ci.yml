@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - run: yarn install --frozen-lockfile
+
+      - run: yarn test:coverage
+
+      - uses: fallow-rs/fallow@v2
+        with:
+          command: health
+          coverage: coverage/coverage-final.json
+          format: sarif
+          auto-changed-since: true
+          comment: true
+          github-token: ${{ github.token }}
+
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: fallow-results.sarif

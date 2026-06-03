@@ -1,18 +1,23 @@
 import type { BoardField, IBoard } from "./types/Board";
 import type { PlayerSymbol } from "./types/Symbol";
 
+import { getLastArrayItem } from "./utils/getLastArrayItem";
+
 const fillFields = (_: BoardField, idx: number) => idx + 1;
 
 export const BOARD_SIZE = 9;
 
 export class Board implements IBoard {
   private readonly _size: number;
-  private _fields: BoardField[];
   private _snapshot: BoardField[] | null = null;
+  private _boardSnapshots: BoardField[][];
+  private _currentFields: BoardField[];
+  private _currentSnapshotIndex: number | null = null;
 
   constructor(size: number = BOARD_SIZE) {
     this._size = size;
-    this._fields = new Array(this._size).fill(0).map(fillFields);
+    this._boardSnapshots = [new Array(this._size).fill(0).map(fillFields)];
+    this._currentFields = getLastArrayItem(this._boardSnapshots);
   }
 
   /**
@@ -24,9 +29,16 @@ export class Board implements IBoard {
    */
   get fields() {
     if (!this._snapshot) {
-      this._snapshot = [...this._fields];
+      this._snapshot = [...this._currentFields];
     }
     return this._snapshot;
+  }
+
+  /**
+   * Returns the number of snapshots stored in the board history.
+   */
+  get snapshotCount() {
+    return this._boardSnapshots.length - 1;
   }
 
   /**
@@ -37,7 +49,7 @@ export class Board implements IBoard {
    * @deprecated Use `getFieldByIndex` instead.
    */
   getFieldByNumber(fieldNumber: number) {
-    return this._fields[fieldNumber - 1];
+    return this._currentFields[fieldNumber - 1];
   }
 
   /**
@@ -47,7 +59,7 @@ export class Board implements IBoard {
    * @type {number | TSymbol}
    */
   getFieldByIndex(index: number) {
-    return this._fields[index];
+    return this._currentFields[index];
   }
 
   /**
@@ -55,7 +67,7 @@ export class Board implements IBoard {
    * @returns `true` if the board is full, `false` otherwise.
    */
   isFull() {
-    return this._fields.every((field) => typeof field === "string");
+    return this._currentFields.every((field) => typeof field === "string");
   }
 
   /**
@@ -66,18 +78,42 @@ export class Board implements IBoard {
    * @deprecated Use `setFieldByIndex` instead.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
-    this._fields[fieldNumber - 1] = symbol;
+    this._currentFields[fieldNumber - 1] = symbol;
     this._snapshot = null;
   }
 
   /**
-   * Sets a field's value by its index.
+   * Sets a field's value by its index and updates the board history.
    * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    * @param index The index of the field to set.
    * @param symbol The symbol to set.
    */
   setFieldByIndex(index: number, symbol: PlayerSymbol) {
-    this._fields[index] = symbol;
+    const newFields = [...this._currentFields];
+    newFields[index] = symbol;
+
+    if (this._currentSnapshotIndex != null) {
+      this._boardSnapshots = this._boardSnapshots.slice(
+        0,
+        this._currentSnapshotIndex + 1,
+      );
+    }
+
+    this._boardSnapshots.push(newFields);
+    this._currentFields = newFields;
+    this._snapshot = null;
+    this._currentSnapshotIndex = null;
+  }
+
+  /**
+   * Restores the board to a historical state at the given index.
+   * The current fields are updated to the snapshot at `index`, and future
+   * moves will truncate history from this point. Invalidates the cached snapshot.
+   * @param index The history index to restore (0-based).
+   */
+  restoreBoardHistoryAt(index: number) {
+    this._currentFields = this._boardSnapshots[index];
+    this._currentSnapshotIndex = index;
     this._snapshot = null;
   }
 
@@ -86,7 +122,9 @@ export class Board implements IBoard {
    * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    */
   reset() {
-    this._fields = new Array(this._size).fill(0).map(fillFields);
+    this._boardSnapshots = [new Array(this._size).fill(0).map(fillFields)];
+    this._currentFields = getLastArrayItem(this._boardSnapshots);
     this._snapshot = null;
+    this._currentSnapshotIndex = null;
   }
 }
