@@ -203,3 +203,101 @@ test("savePlayerMove truncates history after backToMove when making new move", (
   expect(game.board[4]).toBe("X");
   expect(game.board[2]).toBe(3);
 });
+
+test("savePlayerMove returns ALREADY_SELECTED on occupied field", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  const result = game.savePlayerMove(0);
+  expect(result).toBe("already_selected");
+});
+
+test("STATE_CHANGE event fires on savePlayerMove", () => {
+  const game = new Game();
+  const listener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, listener);
+  game.savePlayerMove(0);
+  expect(listener).toHaveBeenCalledOnce();
+  const payload = listener.mock.calls[0][0];
+  expect(payload.board).toBeDefined();
+  expect(payload.currentPlayer).toBeDefined();
+  expect(payload.gameStatus).toBeDefined();
+});
+
+test("STATE_CHANGE event fires on reset", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  const listener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, listener);
+  game.reset();
+  expect(listener).toHaveBeenCalledOnce();
+});
+
+test("STATE_CHANGE event fires on backToMove", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(1);
+  const listener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, listener);
+  game.backToMove(1);
+  expect(listener).toHaveBeenCalledOnce();
+});
+
+test("RESET event does not fire on savePlayerMove", () => {
+  const game = new Game();
+  const listener = vi.fn();
+  game.on(GameEvent.RESET, listener);
+  game.savePlayerMove(0);
+  expect(listener).not.toHaveBeenCalled();
+});
+
+test("RESET event does not fire on backToMove", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(1);
+  const listener = vi.fn();
+  game.on(GameEvent.RESET, listener);
+  game.backToMove(1);
+  expect(listener).not.toHaveBeenCalled();
+});
+
+test("PLAYER_MOVE event does not fire after game is won", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(3);
+  game.savePlayerMove(1);
+  game.savePlayerMove(4);
+  game.savePlayerMove(2);
+  expect(game.gameStatus.status).toBe("win");
+  const listener = vi.fn();
+  game.on(GameEvent.PLAYER_MOVE, listener);
+  game.savePlayerMove(8);
+  expect(listener).not.toHaveBeenCalled();
+});
+
+test("snapshot reference is stable between moves", () => {
+  const game = new Game();
+  const before = game.snapshot;
+  const again = game.snapshot;
+  expect(before).toBe(again);
+});
+
+test("snapshot reference changes after a move", () => {
+  const game = new Game();
+  const before = game.snapshot;
+  game.savePlayerMove(0);
+  expect(game.snapshot).not.toBe(before);
+});
+
+test("_gameStatus reference is preserved when game stays running", () => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  const statusAfterFirst = game.gameStatus;
+  game.savePlayerMove(1);
+  expect(game.gameStatus).toBe(statusAfterFirst);
+});
+
+test("Game constructor accepts custom board size", () => {
+  const game = new Game({ boardSize: 4 });
+  expect(game.board.length).toBe(4);
+  expect(game.board).toEqual([1, 2, 3, 4]);
+});
