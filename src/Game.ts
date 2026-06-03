@@ -58,19 +58,23 @@ export class Game implements IGame {
       return;
     }
 
+    // Preserve the existing reference if the game is already running to avoid
+    // unnecessary object allocations and maintain referential stability.
     if (this._gameStatus.status !== "running") {
       this._gameStatus = { status: "running" };
     }
   }
 
-  _updateGameState() {
+  _updateGameState(index?: number) {
     this._updateGameStatus();
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    this._emitter.emit(GameEvent.RESET, this._snapshot);
+    if (index !== undefined) {
+      this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
+    }
     this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
   }
 
@@ -201,7 +205,7 @@ export class Game implements IGame {
 
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
-    this._updateGameState();
+    this._updateGameState(index);
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -226,5 +230,6 @@ export class Game implements IGame {
     this._currentPlayer = this._symbols[0];
     this._board.reset();
     this._updateGameState();
+    this._emitter.emit(GameEvent.RESET, this._snapshot);
   }
 }

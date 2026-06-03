@@ -11,13 +11,13 @@ export class Board implements IBoard {
   private readonly _size: number;
   private _snapshot: BoardField[] | null = null;
   private _boardSnapshots: BoardField[][];
-  private _curretnFields: BoardField[];
+  private _currentFields: BoardField[];
   private _currentSnapshotIndex: number | null = null;
 
   constructor(size: number = BOARD_SIZE) {
     this._size = size;
     this._boardSnapshots = [new Array(this._size).fill(0).map(fillFields)];
-    this._curretnFields = getLastArrayItem(this._boardSnapshots);
+    this._currentFields = getLastArrayItem(this._boardSnapshots);
   }
 
   /**
@@ -29,7 +29,7 @@ export class Board implements IBoard {
    */
   get fields() {
     if (!this._snapshot) {
-      this._snapshot = [...this._curretnFields];
+      this._snapshot = [...this._currentFields];
     }
     return this._snapshot;
   }
@@ -49,7 +49,7 @@ export class Board implements IBoard {
    * @deprecated Use `getFieldByIndex` instead.
    */
   getFieldByNumber(fieldNumber: number) {
-    return this._curretnFields[fieldNumber - 1];
+    return this._currentFields[fieldNumber - 1];
   }
 
   /**
@@ -59,7 +59,7 @@ export class Board implements IBoard {
    * @type {number | TSymbol}
    */
   getFieldByIndex(index: number) {
-    return this._curretnFields[index];
+    return this._currentFields[index];
   }
 
   /**
@@ -67,7 +67,7 @@ export class Board implements IBoard {
    * @returns `true` if the board is full, `false` otherwise.
    */
   isFull() {
-    return this._curretnFields.every((field) => typeof field === "string");
+    return this._currentFields.every((field) => typeof field === "string");
   }
 
   /**
@@ -78,7 +78,7 @@ export class Board implements IBoard {
    * @deprecated Use `setFieldByIndex` instead.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
-    this._curretnFields[fieldNumber - 1] = symbol;
+    this._currentFields[fieldNumber - 1] = symbol;
     this._snapshot = null;
   }
 
@@ -89,7 +89,7 @@ export class Board implements IBoard {
    * @param symbol The symbol to set.
    */
   setFieldByIndex(index: number, symbol: PlayerSymbol) {
-    const newFields = [...this._curretnFields];
+    const newFields = [...this._currentFields];
     newFields[index] = symbol;
 
     if (this._currentSnapshotIndex != null) {
@@ -100,7 +100,7 @@ export class Board implements IBoard {
     }
 
     this._boardSnapshots.push(newFields);
-    this._curretnFields = newFields;
+    this._currentFields = newFields;
     this._snapshot = null;
     this._currentSnapshotIndex = null;
   }
@@ -112,7 +112,7 @@ export class Board implements IBoard {
    * @param index The history index to restore (0-based).
    */
   restoreBoardHistoryAt(index: number) {
-    this._curretnFields = this._boardSnapshots[index];
+    this._currentFields = this._boardSnapshots[index];
     this._currentSnapshotIndex = index;
     this._snapshot = null;
   }
@@ -123,7 +123,7 @@ export class Board implements IBoard {
    */
   reset() {
     this._boardSnapshots = [new Array(this._size).fill(0).map(fillFields)];
-    this._curretnFields = getLastArrayItem(this._boardSnapshots);
+    this._currentFields = getLastArrayItem(this._boardSnapshots);
     this._snapshot = null;
     this._currentSnapshotIndex = null;
   }
