@@ -3,7 +3,7 @@
   "version": "1.4.2",
   "description": "Reusable TypeScript core library for Tic Tac Toe games",
   "scripts": {
-    "build": "tsc && tsc-alias",
+    "build": "rm -rf dist && tsc && tsc-alias",
     "build:watch": "tsc -w && tsc-alias -w",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
