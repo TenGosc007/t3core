@@ -3,8 +3,10 @@
   "version": "1.4.2",
   "description": "Reusable TypeScript core library for Tic Tac Toe games",
   "scripts": {
-    "build": "tsc && tsc-alias",
+    "build": "rm -rf dist && tsc && tsc-alias",
     "build:watch": "tsc -w && tsc-alias -w",
+    "build:tsup": "tsup",
+    "build:tsup:watch": "tsup --watch",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
     "lint": "eslint ./src/**/*.ts",
@@ -32,13 +34,14 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/src/index.d.ts",
-      "require": "./dist/src/index.js",
-      "default": "./dist/src/index.js"
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./package.json": "./package.json"
   },
-  "types": "./dist/src/index.d.ts",
+  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
@@ -53,7 +56,7 @@
     "fallow": "^2.87.0",
     "globals": "^17.6.0",
     "jiti": "^2.6.1",
-    "tsc-alias": "^1.8.17",
+    "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.5"
