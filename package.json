@@ -1,6 +1,6 @@
 {
   "name": "t3core",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Reusable TypeScript core library for Tic Tac Toe games",
   "scripts": {
     "build": "rm -rf dist && tsc && tsc-alias",
