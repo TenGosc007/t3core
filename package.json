@@ -1,11 +1,11 @@
 {
   "name": "t3core",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Reusable TypeScript core library for Tic Tac Toe games",
   "scripts": {
     "build": "rm -rf dist && tsc && tsc-alias",
     "build:watch": "tsc -w && tsc-alias -w",
-    "build:tsup": "tsup",
+    "build:tsup": "rm -rf dist && tsup",
     "build:tsup:watch": "tsup --watch",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
@@ -35,9 +35,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/index.cjs",
-      "import": "./dist/index.js",
-      "default": "./dist/index.js"
+      "require": "./dist/index.js",
+      "import": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
   },
