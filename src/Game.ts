@@ -1,3 +1,4 @@
+import type { GameStrategy } from "./strategies";
 import type { BoardSnapshot } from "./types/Board.types";
 import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol.types";
 
@@ -5,6 +6,7 @@ import EventEmitter from "eventemitter3";
 
 import { Board } from "./Board";
 import { DEFAULT_GAME_SYMBOLS } from "./constants";
+import { GAME_STRATEGIES } from "./strategies";
 import {
   BackToMoveStatus,
   GameEvent,
@@ -16,14 +18,14 @@ import {
   type GameStatus,
   type IGame,
 } from "./types/Game.types";
-import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
 const CLASSIC_3X3_BOARD_SIZE = 9;
 
-const resolveBoardSize = (options: GameOptions): number => {
+const resolveGameStrategy = (options: GameOptions): GameStrategy => {
   const variant = options.variant ?? GameVariant.CLASSIC_3X3;
+  const strategy = GAME_STRATEGIES[variant];
 
-  if (variant !== GameVariant.CLASSIC_3X3) {
+  if (!strategy) {
     throw new RangeError(`Unsupported game variant: ${variant}`);
   }
 
@@ -36,7 +38,7 @@ const resolveBoardSize = (options: GameOptions): number => {
     );
   }
 
-  return CLASSIC_3X3_BOARD_SIZE;
+  return strategy;
 };
 
 export class Game implements IGame {
@@ -44,12 +46,14 @@ export class Game implements IGame {
   private _gameStatus: GameStatus = { status: "running" };
   private _symbols: PlayerSymbols = DEFAULT_GAME_SYMBOLS;
   private _board: Board;
+  private _strategy: GameStrategy;
 
   private _emitter = new EventEmitter<GameEventMap>();
   private _snapshot: GameEventPayload;
 
   constructor(options: GameOptions = {}) {
-    this._board = new Board(resolveBoardSize(options));
+    this._strategy = resolveGameStrategy(options);
+    this._board = new Board(this._strategy.boardSize);
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
@@ -80,7 +84,7 @@ export class Game implements IGame {
 
   private _updateGameStatus() {
     const board = this._board;
-    const winner = getWinnerFromFields(board.fields);
+    const winner = this._strategy.getWinner(board.fields);
 
     if (winner) {
       this._gameStatus = { status: "win", winner };
