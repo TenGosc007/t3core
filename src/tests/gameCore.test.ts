@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest";
 
 import { Game } from "../Game";
-import { GameEvent } from "../types/Game";
+import { GameEvent, GameVariant } from "../types/Game";
 
 /*
     O   X   O
@@ -36,6 +36,27 @@ test("Reset the game", () => {
   expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
   expect(game.gameStatus.status).toBe("running");
   expect(game.currentPlayer).toBe("O");
+});
+
+test("creates a classic 3x3 game by default", () => {
+  const game = new Game();
+
+  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+});
+
+test("creates a game from the classic 3x3 variant", () => {
+  const game = new Game({ variant: GameVariant.CLASSIC_3X3 });
+
+  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+});
+
+test("deprecated boardSize only accepts the current classic 3x3 size", () => {
+  expect(() => new Game({ boardSize: 16 })).toThrow(
+    "arbitrary board sizes are not supported",
+  );
+  expect(new Game({ boardSize: 9 }).board).toEqual(
+    new Array(9).fill(0).map((_, idx) => idx + 1),
+  );
 });
 
 /*
@@ -296,8 +317,8 @@ test("_gameStatus reference is preserved when game stays running", () => {
   expect(game.gameStatus).toBe(statusAfterFirst);
 });
 
-test("Game constructor accepts custom board size", () => {
-  const game = new Game({ boardSize: 4 });
-  expect(game.board.length).toBe(4);
-  expect(game.board).toEqual([1, 2, 3, 4]);
+test("deprecated boardSize rejects arbitrary board sizes", () => {
+  expect(() => new Game({ boardSize: 4 })).toThrow(
+    "arbitrary board sizes are not supported",
+  );
 });

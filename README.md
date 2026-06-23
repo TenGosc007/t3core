@@ -111,7 +111,7 @@ function TicTacToeBoard() {
 
 | Property/Method | Description |
 | --------------- | ----------- |
-| `constructor(options?)` | Create a new game. `options.boardSize` sets board size (default: `9`) |
+| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`) |
 | `currentPlayer` | Get the current player's symbol |
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `BoardField[]` |
@@ -167,6 +167,9 @@ export { Game } from 't3core';
 
 // Constants
 export { DEFAULT_GAME_SYMBOLS } from 't3core';
+
+// Variants
+export { GameVariant } from 't3core';
 
 // Types
 export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';

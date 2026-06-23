@@ -6,7 +6,7 @@ export { Game } from "./Game";
 
 /**
  * Options for configuring a `Game` instance.
- * @property boardSize - Number of fields on the board (default: 9).
+ * @property variant - Predefined game variant.
  */
 export type { GameOptions } from "./Game";
 
@@ -23,7 +23,7 @@ export type { IGame } from "./types/Game";
 /**
  * Game event names: `STATE_CHANGE`, `PLAYER_MOVE` (deprecated), `RESET` (deprecated).
  */
-export { GameEvent } from "./types/Game";
+export { GameEvent, GameVariant } from "./types/Game";
 
 /**
  * Result status of a player move: `success`, `already_selected`, `game_not_running`.
@@ -42,6 +42,11 @@ export type { GameEventMap, GameEventPayload } from "./types/Game";
  * - `{ status: 'draw' }` - Board full, no winner
  */
 export type { GameStatus } from "./types/Game";
+
+/**
+ * Union type representing supported predefined game variants.
+ */
+export type { GameVariant as GameVariantType } from "./types/Game";
 
 /**
  * Tuple type for player symbols: `[symbol1, symbol2]`.

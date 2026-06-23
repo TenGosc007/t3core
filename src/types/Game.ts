@@ -7,6 +7,11 @@ type GameStatusRunning = { status: "running" };
 
 export type GameStatus = GameStatusWin | GameStatusDraw | GameStatusRunning;
 
+export const GameVariant = {
+  CLASSIC_3X3: "classic-3x3",
+} as const;
+export type GameVariant = (typeof GameVariant)[keyof typeof GameVariant];
+
 export const PlayerMoveStatus = {
   SUCCESS: "success",
   ALREADY_SELECTED: "already_selected",
