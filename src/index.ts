@@ -7,8 +7,9 @@ export { Game } from "./Game";
 /**
  * Options for configuring a `Game` instance.
  * @property variant - Predefined game variant.
+ * @property boardSize - Deprecated. Use `variant` instead.
  */
-export type { GameOptions } from "./Game";
+export type { GameOptions } from "./types/Game";
 
 /**
  * Default player symbols ['O', 'X'] for convenience.

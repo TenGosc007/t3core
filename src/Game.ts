@@ -12,47 +12,31 @@ import {
   PlayerMoveStatus,
   type GameEventMap,
   type GameEventPayload,
+  type GameOptions,
   type GameStatus,
   type IGame,
 } from "./types/Game";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
-export type GameOptions = {
-  /**
-   * Predefined game variant. Currently only the classic 3x3 board is supported.
-   */
-  variant?: GameVariant;
-  /**
-   * @deprecated Use `variant` instead. The game supports predefined variants,
-   * not arbitrary board sizes. Only `9` is valid for the current classic 3x3 variant.
-   */
-  boardSize?: number;
-};
+const CLASSIC_3X3_BOARD_SIZE = 9;
 
-type GameVariantConfig = {
-  boardSize: number;
-};
-
-const GAME_VARIANT_CONFIGS = {
-  [GameVariant.CLASSIC_3X3]: {
-    boardSize: 9,
-  },
-} as const satisfies Record<GameVariant, GameVariantConfig>;
-
-const resolveGameVariantConfig = (options: GameOptions): GameVariantConfig => {
+const resolveBoardSize = (options: GameOptions): number => {
   const variant = options.variant ?? GameVariant.CLASSIC_3X3;
-  const config = GAME_VARIANT_CONFIGS[variant];
+
+  if (variant !== GameVariant.CLASSIC_3X3) {
+    throw new RangeError(`Unsupported game variant: ${variant}`);
+  }
 
   if (
     options.boardSize !== undefined &&
-    options.boardSize !== config.boardSize
+    options.boardSize !== CLASSIC_3X3_BOARD_SIZE
   ) {
     throw new RangeError(
       "`boardSize` is deprecated and arbitrary board sizes are not supported. Use a predefined `variant` instead.",
     );
   }
 
-  return config;
+  return CLASSIC_3X3_BOARD_SIZE;
 };
 
 export class Game implements IGame {
@@ -65,8 +49,7 @@ export class Game implements IGame {
   private _snapshot: GameEventPayload;
 
   constructor(options: GameOptions = {}) {
-    const config = resolveGameVariantConfig(options);
-    this._board = new Board(config.boardSize);
+    this._board = new Board(resolveBoardSize(options));
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,

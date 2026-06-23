@@ -172,7 +172,7 @@ export { DEFAULT_GAME_SYMBOLS } from 't3core';
 export { GameVariant } from 't3core';
 
 // Types
-export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
+export type { GameOptions, IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
 export type { GameEventMap, GameEventPayload } from 't3core';
 export type { BoardField, BoardSnapshot, IBoard } from 't3core';
 export type { BackToMoveStatusType, PlayerMoveStatus } from 't3core';

@@ -12,6 +12,18 @@ export const GameVariant = {
 } as const;
 export type GameVariant = (typeof GameVariant)[keyof typeof GameVariant];
 
+export type GameOptions = {
+  /**
+   * Predefined game variant. Currently only the classic 3x3 board is supported.
+   */
+  variant?: GameVariant;
+  /**
+   * @deprecated Use `variant` instead. The game supports predefined variants,
+   * not arbitrary board sizes. Only `9` is valid for the current classic 3x3 variant.
+   */
+  boardSize?: number;
+};
+
 export const PlayerMoveStatus = {
   SUCCESS: "success",
   ALREADY_SELECTED: "already_selected",
