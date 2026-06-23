@@ -1,4 +1,4 @@
-import type { PlayerSymbol } from "./Symbol";
+import type { PlayerSymbol } from "./Symbol.types";
 
 export type BoardField = number | PlayerSymbol;
 export type BoardSnapshot = readonly BoardField[];

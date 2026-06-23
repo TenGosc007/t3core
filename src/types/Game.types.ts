@@ -1,5 +1,5 @@
-import type { BoardSnapshot } from "./Board";
-import type { PlayerSymbol } from "./Symbol";
+import type { BoardSnapshot } from "./Board.types";
+import type { PlayerSymbol } from "./Symbol.types";
 
 type GameStatusWin = { status: "win"; winner: PlayerSymbol };
 type GameStatusDraw = { status: "draw" };

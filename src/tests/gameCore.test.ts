@@ -1,4 +1,4 @@
-import type { BoardField } from "../types/Board";
+import type { BoardField } from "../types/Board.types";
 
 import { expect, test, vi } from "vitest";
 
@@ -8,7 +8,7 @@ import {
   GameEvent,
   GameVariant,
   PlayerMoveStatus,
-} from "../types/Game";
+} from "../types/Game.types";
 
 /*
     O   X   O

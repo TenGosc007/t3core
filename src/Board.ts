@@ -1,5 +1,5 @@
-import type { BoardField, BoardSnapshot, IBoard } from "./types/Board";
-import type { PlayerSymbol } from "./types/Symbol";
+import type { BoardField, BoardSnapshot, IBoard } from "./types/Board.types";
+import type { PlayerSymbol } from "./types/Symbol.types";
 
 import { getLastArrayItem } from "./utils/getLastArrayItem";
 

@@ -1,5 +1,5 @@
-import type { BoardSnapshot } from "./types/Board";
-import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol";
+import type { BoardSnapshot } from "./types/Board.types";
+import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol.types";
 
 import EventEmitter from "eventemitter3";
 
@@ -15,7 +15,7 @@ import {
   type GameOptions,
   type GameStatus,
   type IGame,
-} from "./types/Game";
+} from "./types/Game.types";
 import { getWinnerFromFields } from "./utils/getWinnerFromFields";
 
 const CLASSIC_3X3_BOARD_SIZE = 9;
