@@ -2,13 +2,26 @@ import { defineConfig } from "tsup";
 
 import pkg from "./package.json" with { type: "json" };
 
-export default defineConfig({
+const external = Object.keys(pkg.dependencies ?? {});
+
+const shared = {
   entry: ["src/index.ts"],
-  format: ["cjs", "esm"],
-  dts: true,
-  clean: true,
   minify: false,
   splitting: false,
   sourcemap: false,
-  external: Object.keys(pkg.dependencies ?? {}),
-});
+  external,
+};
+
+export default defineConfig([
+  {
+    ...shared,
+    format: ["cjs"],
+    dts: true,
+    clean: true,
+  },
+  {
+    ...shared,
+    format: ["esm"],
+    dts: false,
+  },
+]);
