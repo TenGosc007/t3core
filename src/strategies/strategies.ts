@@ -15,14 +15,15 @@ export const resolveGameStrategy = (options: GameOptions): GameStrategy => {
     throw new RangeError(`Unsupported game variant: ${variant}`);
   }
 
-  if (
-    options.boardSize !== undefined &&
-    options.boardSize !== strategy.boardSize
-  ) {
+  validateBoardSize(options.boardSize ?? strategy.boardSize, strategy);
+
+  return strategy;
+};
+
+function validateBoardSize(boardSize: number, strategy: GameStrategy): void {
+  if (boardSize !== strategy.boardSize) {
     throw new RangeError(
       "`boardSize` is deprecated and arbitrary board sizes are not supported. Use a predefined `variant` instead.",
     );
   }
-
-  return strategy;
-};
+}

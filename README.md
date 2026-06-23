@@ -14,10 +14,10 @@ npm install t3core
 ## Usage as a Library
 
 ```typescript
-import { Game } from 't3core';
+import { Game, GameVariant } from 't3core';
 
 // Create a game with default symbols 'O' and 'X'
-const game = new Game();
+const game = new Game({ variant: GameVariant.CLASSIC_3X3 });
 
 // Make a move (index 0-8)
 game.savePlayerMove(4); // Places 'O' at center (index 4)
@@ -30,7 +30,7 @@ console.log(game.currentPlayer); // 'O' or 'X'
 console.log(game.isFieldSelectedByIndex(4)); // true
 
 // Access the board
-console.log(game.board); // ['O', 2, 3, 4, 'X', 6, 7, 8, 9]
+console.log(game.board); // [1, 2, 3, 4, 'O', 6, 7, 8, 9]
 
 // Reset the game
 game.reset();
@@ -111,15 +111,15 @@ function TicTacToeBoard() {
 
 | Property/Method | Description |
 | --------------- | ----------- |
-| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`) |
+| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`). `options.boardSize` is deprecated |
 | `currentPlayer` | Get the current player's symbol |
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `readonly BoardField[]` |
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
-| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` |
+| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` (`success`, `already_selected`, `game_not_running`, `invalid_index`) |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
 | `movesCount` | Number of moves made in the current game |
-| `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` |
+| `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` (`success`, `invalid_history_index`) |
 | `on(event, fn)` | Subscribe to events (`STATE_CHANGE`, `PLAYER_MOVE` ⚠️, `RESET` ⚠️). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state |
@@ -172,7 +172,7 @@ export { DEFAULT_GAME_SYMBOLS } from 't3core';
 export { GameVariant } from 't3core';
 
 // Types
-export type { GameOptions, IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
+export type { GameOptions, IGame, GameStatus, GameVariantType, PlayerSymbol, PlayerSymbols } from 't3core';
 export type { GameEventMap, GameEventPayload } from 't3core';
 export type { BoardField, BoardSnapshot, IBoard } from 't3core';
 export type { BackToMoveStatusType, PlayerMoveStatus } from 't3core';
