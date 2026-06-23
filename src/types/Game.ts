@@ -16,9 +16,17 @@ export const PlayerMoveStatus = {
   SUCCESS: "success",
   ALREADY_SELECTED: "already_selected",
   GAME_NOT_RUNNING: "game_not_running",
+  INVALID_INDEX: "invalid_index",
 } as const;
 export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
+
+export const BackToMoveStatus = {
+  SUCCESS: "success",
+  INVALID_HISTORY_INDEX: "invalid_history_index",
+} as const;
+export type BackToMoveStatus =
+  (typeof BackToMoveStatus)[keyof typeof BackToMoveStatus];
 
 export const GameEvent = {
   /** @deprecated Use `STATE_CHANGE` instead. Still emitted by `savePlayerMove` with `index` in payload. */
@@ -65,5 +73,5 @@ export interface IGame {
   savePlayerMove: (index: number) => PlayerMoveStatus;
   /** @deprecated Use `board` instead. */
   getBoard: () => BoardField[];
-  backToMove: (index: number) => void;
+  backToMove: (index: number) => BackToMoveStatus;
 }

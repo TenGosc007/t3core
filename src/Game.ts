@@ -6,6 +6,7 @@ import EventEmitter from "eventemitter3";
 import { Board } from "./Board";
 import { DEFAULT_GAME_SYMBOLS } from "./constants";
 import {
+  BackToMoveStatus,
   GameEvent,
   GameVariant,
   PlayerMoveStatus,
@@ -77,6 +78,18 @@ export class Game implements IGame {
       this._currentPlayer === this._symbols[0]
         ? this._symbols[1]
         : this._symbols[0];
+  }
+
+  private _isBoardIndexValid(index: number) {
+    return Number.isInteger(index) && index >= 0 && index < this._board.fields.length;
+  }
+
+  private _isHistoryIndexValid(index: number) {
+    return (
+      Number.isInteger(index) &&
+      index >= 0 &&
+      index <= this._board.snapshotCount
+    );
   }
 
   private _updateGameStatus() {
@@ -230,7 +243,11 @@ export class Game implements IGame {
    * Also emits {@link GameEvent.PLAYER_MOVE} event (deprecated).
    * @param index The index of the field to mark.
    */
-  savePlayerMove(index: number) {
+  savePlayerMove(index: number): PlayerMoveStatus {
+    if (!this._isBoardIndexValid(index)) {
+      return PlayerMoveStatus.INVALID_INDEX;
+    }
+
     if (this.isFieldSelectedByIndex(index)) {
       return PlayerMoveStatus.ALREADY_SELECTED;
     }
@@ -250,11 +267,17 @@ export class Game implements IGame {
    * Restores the game to a previous state by index.
    * @param index The index of the state to restore.
    */
-  backToMove(index: number) {
+  backToMove(index: number): BackToMoveStatus {
+    if (!this._isHistoryIndexValid(index)) {
+      return BackToMoveStatus.INVALID_HISTORY_INDEX;
+    }
+
     const board = this._board;
     board.restoreBoardHistoryAt(index);
     this._currentPlayer = this._symbols[index % 2];
     this._updateGameState();
+
+    return BackToMoveStatus.SUCCESS;
   }
 
   /**

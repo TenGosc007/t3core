@@ -23,17 +23,31 @@ export type { IGame } from "./types/Game";
 /**
  * Game event names: `STATE_CHANGE`, `PLAYER_MOVE` (deprecated), `RESET` (deprecated).
  */
-export { GameEvent, GameVariant } from "./types/Game";
+export { GameEvent } from "./types/Game";
 
 /**
- * Result status of a player move: `success`, `already_selected`, `game_not_running`.
+ * Predefined game variants.
+ */
+export { GameVariant } from "./types/Game";
+
+/**
+ * Result status of restoring a historical move.
+ */
+export { BackToMoveStatus } from "./types/Game";
+
+/**
+ * Result status of a player move: `success`, `already_selected`, `game_not_running`, `invalid_index`.
  */
 export { PlayerMoveStatus } from "./types/Game";
 
 /**
  * Typed event map for EventEmitter3 — use with `Game` listeners.
  */
-export type { GameEventMap, GameEventPayload } from "./types/Game";
+export type {
+  BackToMoveStatus as BackToMoveStatusType,
+  GameEventMap,
+  GameEventPayload,
+} from "./types/Game";
 
 /**
  * Union type representing possible game states:

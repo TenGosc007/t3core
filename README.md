@@ -119,7 +119,7 @@ function TicTacToeBoard() {
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
 | `movesCount` | Number of moves made in the current game |
-| `backToMove(index: number)` | Restore the board to a previous history state at the given index |
+| `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` |
 | `on(event, fn)` | Subscribe to events (`STATE_CHANGE`, `PLAYER_MOVE` ⚠️, `RESET` ⚠️). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state |
@@ -175,8 +175,11 @@ export { GameVariant } from 't3core';
 export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
 export type { GameEventMap, GameEventPayload } from 't3core';
 export type { BoardField, IBoard } from 't3core';
-export type { PlayerMoveStatus } from 't3core';
+export type { BackToMoveStatusType, PlayerMoveStatus } from 't3core';
 
 // Events
 export { GameEvent } from 't3core';
+
+// Statuses
+export { BackToMoveStatus, PlayerMoveStatus } from 't3core';
 ```

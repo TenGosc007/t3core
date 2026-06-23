@@ -1,7 +1,12 @@
 import { expect, test, vi } from "vitest";
 
 import { Game } from "../Game";
-import { GameEvent, GameVariant } from "../types/Game";
+import {
+  BackToMoveStatus,
+  GameEvent,
+  GameVariant,
+  PlayerMoveStatus,
+} from "../types/Game";
 
 /*
     O   X   O
@@ -119,6 +124,23 @@ test("PLAYER_MOVE event is not fired when move is invalid", () => {
   expect(listener).not.toHaveBeenCalled();
 });
 
+test("savePlayerMove returns INVALID_INDEX for out-of-range or non-integer indexes", () => {
+  const game = new Game();
+  const beforeBoard = game.board;
+  const stateListener = vi.fn();
+  const moveListener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, stateListener);
+  game.on(GameEvent.PLAYER_MOVE, moveListener);
+
+  expect(game.savePlayerMove(-1)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerMove(9)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerMove(1.5)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.board).toEqual(beforeBoard);
+  expect(game.currentPlayer).toBe("O");
+  expect(stateListener).not.toHaveBeenCalled();
+  expect(moveListener).not.toHaveBeenCalled();
+});
+
 test("savePlayerMove returns GAME_NOT_RUNNING after game is won", () => {
   const game = new Game();
   game.savePlayerMove(0);
@@ -207,6 +229,29 @@ test("backToMove reverts to previous state", () => {
   expect(game.board[4]).toBe("O");
   expect(game.board[0]).toBe(1);
   expect(game.board[2]).toBe(3);
+});
+
+test("backToMove returns SUCCESS when history index is valid", () => {
+  const game = new Game();
+  game.savePlayerMove(4);
+
+  expect(game.backToMove(1)).toBe(BackToMoveStatus.SUCCESS);
+});
+
+test("backToMove returns INVALID_HISTORY_INDEX for invalid history index", () => {
+  const game = new Game();
+  game.savePlayerMove(4);
+  const beforeBoard = game.board;
+  const beforeCurrentPlayer = game.currentPlayer;
+  const stateListener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, stateListener);
+
+  expect(game.backToMove(-1)).toBe(BackToMoveStatus.INVALID_HISTORY_INDEX);
+  expect(game.backToMove(2)).toBe(BackToMoveStatus.INVALID_HISTORY_INDEX);
+  expect(game.backToMove(0.5)).toBe(BackToMoveStatus.INVALID_HISTORY_INDEX);
+  expect(game.board).toEqual(beforeBoard);
+  expect(game.currentPlayer).toBe(beforeCurrentPlayer);
+  expect(stateListener).not.toHaveBeenCalled();
 });
 
 test("savePlayerMove truncates history after backToMove when making new move", () => {
