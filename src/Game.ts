@@ -6,11 +6,10 @@ import EventEmitter from "eventemitter3";
 
 import { Board } from "./Board";
 import { DEFAULT_GAME_SYMBOLS } from "./constants";
-import { GAME_STRATEGIES } from "./strategies";
+import { resolveGameStrategy } from "./strategies";
 import {
   BackToMoveStatus,
   GameEvent,
-  GameVariant,
   PlayerMoveStatus,
   type GameEventMap,
   type GameEventPayload,
@@ -18,28 +17,6 @@ import {
   type GameStatus,
   type IGame,
 } from "./types/Game.types";
-
-const CLASSIC_3X3_BOARD_SIZE = 9;
-
-const resolveGameStrategy = (options: GameOptions): GameStrategy => {
-  const variant = options.variant ?? GameVariant.CLASSIC_3X3;
-  const strategy = GAME_STRATEGIES[variant];
-
-  if (!strategy) {
-    throw new RangeError(`Unsupported game variant: ${variant}`);
-  }
-
-  if (
-    options.boardSize !== undefined &&
-    options.boardSize !== CLASSIC_3X3_BOARD_SIZE
-  ) {
-    throw new RangeError(
-      "`boardSize` is deprecated and arbitrary board sizes are not supported. Use a predefined `variant` instead.",
-    );
-  }
-
-  return strategy;
-};
 
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];
