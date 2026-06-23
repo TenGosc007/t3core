@@ -1,4 +1,4 @@
-import type { BoardField, IBoard } from "./types/Board";
+import type { BoardField, BoardSnapshot, IBoard } from "./types/Board";
 import type { PlayerSymbol } from "./types/Symbol";
 
 import { getLastArrayItem } from "./utils/getLastArrayItem";
@@ -9,7 +9,7 @@ export const BOARD_SIZE = 9;
 
 export class Board implements IBoard {
   private readonly _size: number;
-  private _snapshot: BoardField[] | null = null;
+  private _snapshot: BoardSnapshot | null = null;
   private _boardSnapshots: BoardField[][];
   private _currentFields: BoardField[];
   private _currentSnapshotIndex: number | null = null;
@@ -27,10 +27,8 @@ export class Board implements IBoard {
    * checks (e.g. `useSyncExternalStore`).
    * @returns A cached shallow copy of the board fields.
    */
-  get fields() {
-    if (!this._snapshot) {
-      this._snapshot = [...this._currentFields];
-    }
+  get fields(): BoardSnapshot {
+    this._snapshot ??= Object.freeze([...this._currentFields]);
     return this._snapshot;
   }
 

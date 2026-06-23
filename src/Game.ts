@@ -1,4 +1,4 @@
-import type { BoardField } from "./types/Board";
+import type { BoardSnapshot } from "./types/Board";
 import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol";
 
 import EventEmitter from "eventemitter3";
@@ -39,13 +39,14 @@ const GAME_VARIANT_CONFIGS = {
   },
 } as const satisfies Record<GameVariant, GameVariantConfig>;
 
-const resolveGameVariantConfig = (
-  options: GameOptions,
-): GameVariantConfig => {
+const resolveGameVariantConfig = (options: GameOptions): GameVariantConfig => {
   const variant = options.variant ?? GameVariant.CLASSIC_3X3;
   const config = GAME_VARIANT_CONFIGS[variant];
 
-  if (options.boardSize !== undefined && options.boardSize !== config.boardSize) {
+  if (
+    options.boardSize !== undefined &&
+    options.boardSize !== config.boardSize
+  ) {
     throw new RangeError(
       "`boardSize` is deprecated and arbitrary board sizes are not supported. Use a predefined `variant` instead.",
     );
@@ -81,7 +82,9 @@ export class Game implements IGame {
   }
 
   private _isBoardIndexValid(index: number) {
-    return Number.isInteger(index) && index >= 0 && index < this._board.fields.length;
+    return (
+      Number.isInteger(index) && index >= 0 && index < this._board.fields.length
+    );
   }
 
   private _isHistoryIndexValid(index: number) {
@@ -155,9 +158,9 @@ export class Game implements IGame {
   /**
    * Returns the current board state.
    * @returns The current board state.
-   * @type {BoardField[]}
+   * @type {BoardSnapshot}
    */
-  get board() {
+  get board(): BoardSnapshot {
     return this._board.fields;
   }
 
@@ -200,10 +203,10 @@ export class Game implements IGame {
   /**
    * Returns the current board state.
    * @returns The current board state.
-   * @type {BoardField[]}
+   * @type {BoardSnapshot}
    * @deprecated Use `board` instead.
    */
-  getBoard(): BoardField[] {
+  getBoard(): BoardSnapshot {
     return this._board.fields;
   }
 

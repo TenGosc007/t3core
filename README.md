@@ -114,7 +114,7 @@ function TicTacToeBoard() {
 | `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`) |
 | `currentPlayer` | Get the current player's symbol |
 | `gameStatus` | Get current game status |
-| `board` | Get current board state as `BoardField[]` |
+| `board` | Get current board state as `readonly BoardField[]` |
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
@@ -174,7 +174,7 @@ export { GameVariant } from 't3core';
 // Types
 export type { IGame, GameStatus, PlayerSymbol, PlayerSymbols } from 't3core';
 export type { GameEventMap, GameEventPayload } from 't3core';
-export type { BoardField, IBoard } from 't3core';
+export type { BoardField, BoardSnapshot, IBoard } from 't3core';
 export type { BackToMoveStatusType, PlayerMoveStatus } from 't3core';
 
 // Events

@@ -74,6 +74,6 @@ export type { GameVariant as GameVariantType } from "./types/Game";
 export type { PlayerSymbols, PlayerSymbol } from "./types/Symbol";
 
 /**
- * Union type for a board cell: either a `number` (empty slot label) or a `PlayerSymbol`.
+ * Union type for a board cell and readonly board snapshots exposed by the public API.
  */
-export type { BoardField, IBoard } from "./types/Board";
+export type { BoardField, BoardSnapshot, IBoard } from "./types/Board";

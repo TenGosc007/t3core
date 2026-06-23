@@ -1,9 +1,10 @@
 import type { PlayerSymbol } from "./Symbol";
 
 export type BoardField = number | PlayerSymbol;
+export type BoardSnapshot = readonly BoardField[];
 
 export interface IBoard {
-  fields: BoardField[];
+  fields: BoardSnapshot;
   snapshotCount: number;
   /** @deprecated Use `getFieldByIndex` instead. */
   getFieldByNumber: (fieldNumber: number) => BoardField;

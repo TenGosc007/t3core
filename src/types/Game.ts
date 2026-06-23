@@ -1,4 +1,4 @@
-import type { BoardField } from "./Board";
+import type { BoardSnapshot } from "./Board";
 import type { PlayerSymbol } from "./Symbol";
 
 type GameStatusWin = { status: "win"; winner: PlayerSymbol };
@@ -38,7 +38,7 @@ export const GameEvent = {
 export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
 export type GameEventPayload = {
-  board: BoardField[];
+  board: BoardSnapshot;
   currentPlayer: PlayerSymbol;
   gameStatus: GameStatus;
 };
@@ -62,7 +62,7 @@ export interface IGame {
   readonly snapshot: GameEventPayload;
   readonly gameStatus: GameStatus;
   readonly currentPlayer: PlayerSymbol;
-  readonly board: BoardField[];
+  readonly board: BoardSnapshot;
   readonly movesCount: number;
   /** @deprecated Use `savePlayerMove` instead. */
   savePlayerSelection: (field: number) => void;
@@ -72,6 +72,6 @@ export interface IGame {
   isFieldSelectedByIndex: (index: number) => boolean;
   savePlayerMove: (index: number) => PlayerMoveStatus;
   /** @deprecated Use `board` instead. */
-  getBoard: () => BoardField[];
+  getBoard: () => BoardSnapshot;
   backToMove: (index: number) => BackToMoveStatus;
 }

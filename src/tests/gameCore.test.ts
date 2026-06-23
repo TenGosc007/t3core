@@ -1,3 +1,5 @@
+import type { BoardField } from "../types/Board";
+
 import { expect, test, vi } from "vitest";
 
 import { Game } from "../Game";
@@ -201,6 +203,36 @@ test("deprecated getBoard returns same as board getter", () => {
   game.savePlayerMove(4);
 
   expect(game.getBoard()).toEqual(game.board);
+});
+
+test("board snapshots exposed by public API are frozen", () => {
+  const game = new Game();
+
+  expect(Object.isFrozen(game.board)).toBe(true);
+  expect(Object.isFrozen(game.snapshot.board)).toBe(true);
+  expect(Object.isFrozen(game.getBoard())).toBe(true);
+});
+
+test("mutating the public board snapshot does not change the game state", () => {
+  const game = new Game();
+  const board = game.board as BoardField[];
+
+  expect(() => {
+    board[0] = "O";
+  }).toThrow(TypeError);
+  expect(game.board[0]).toBe(1);
+  expect(game.isFieldSelectedByIndex(0)).toBe(false);
+});
+
+test("event payload board is frozen", () => {
+  const game = new Game();
+  const listener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, listener);
+
+  game.savePlayerMove(0);
+
+  const payload = listener.mock.calls[0][0];
+  expect(Object.isFrozen(payload.board)).toBe(true);
 });
 
 test("savePlayerMove creates board history snapshots", () => {
