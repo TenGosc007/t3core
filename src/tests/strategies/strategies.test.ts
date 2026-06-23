@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { resolveGameStrategy } from "../strategies";
-import { GameVariant, type GameOptions } from "../types/Game.types";
+import { GameVariant, type GameOptions } from "../../game/Game.types";
+import { resolveGameStrategy } from "../../strategies";
 
 test("resolveGameStrategy returns classic 3x3 strategy by default", () => {
   const strategy = resolveGameStrategy({});

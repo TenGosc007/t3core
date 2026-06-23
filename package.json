@@ -54,7 +54,6 @@
     "fallow": "^2.87.0",
     "globals": "^17.6.0",
     "jiti": "^2.6.1",
-    "tsc-alias": "^1.8.17",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",

@@ -1,6 +1,6 @@
 import type { GameStrategy } from "./strategies.types";
 
-import { GameVariant, type GameOptions } from "../types/Game.types";
+import { GameVariant, type GameOptions } from "../game/Game.types";
 import { classic3x3Strategy } from "./variants/classic3x3";
 
 const GAME_STRATEGIES = {

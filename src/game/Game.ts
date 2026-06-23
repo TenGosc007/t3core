@@ -1,12 +1,12 @@
-import type { GameStrategy } from "./strategies";
-import type { BoardSnapshot } from "./types/Board.types";
-import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol.types";
+import type { GameStrategy } from "../strategies";
+import type { BoardSnapshot } from "./Board.types";
+import type { PlayerSymbol, PlayerSymbols } from "./Symbol.types";
 
 import EventEmitter from "eventemitter3";
 
+import { DEFAULT_GAME_SYMBOLS } from "../constants";
+import { resolveGameStrategy } from "../strategies";
 import { Board } from "./Board";
-import { DEFAULT_GAME_SYMBOLS } from "./constants";
-import { resolveGameStrategy } from "./strategies";
 import {
   BackToMoveStatus,
   GameEvent,
@@ -16,7 +16,7 @@ import {
   type GameOptions,
   type GameStatus,
   type IGame,
-} from "./types/Game.types";
+} from "./Game.types";
 
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];

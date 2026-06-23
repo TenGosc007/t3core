@@ -1,7 +1,7 @@
-import type { BoardField, BoardSnapshot, IBoard } from "./types/Board.types";
-import type { PlayerSymbol } from "./types/Symbol.types";
+import type { BoardField, BoardSnapshot, IBoard } from "./Board.types";
+import type { PlayerSymbol } from "./Symbol.types";
 
-import { getLastArrayItem } from "./utils/getLastArrayItem";
+import { getLastArrayItem } from "../utils/getLastArrayItem";
 
 const fillFields = (_: BoardField, idx: number) => idx + 1;
 
@@ -29,7 +29,7 @@ export class Board implements IBoard {
    */
   get fields(): BoardSnapshot {
     this._snapshot ??= Object.freeze([...this._currentFields]);
-    return this._snapshot;
+    return this._snapshot!;
   }
 
   /**

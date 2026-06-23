@@ -1,5 +1,5 @@
-import type { BoardSnapshot } from "../types/Board.types";
-import type { PlayerSymbol } from "../types/Symbol.types";
+import type { BoardSnapshot } from "../game/Board.types";
+import type { PlayerSymbol } from "../game/Symbol.types";
 
 export type GameStrategy = {
   readonly boardSize: number;
