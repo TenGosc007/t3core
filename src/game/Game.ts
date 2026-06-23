@@ -1,10 +1,10 @@
 import type { GameStrategy } from "../strategies";
-import type { BoardSnapshot } from "./Board.types";
-import type { PlayerSymbol, PlayerSymbols } from "./Symbol.types";
+import type { BoardSnapshot } from "./types/Board.types";
+import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol.types";
 
 import EventEmitter from "eventemitter3";
 
-import { DEFAULT_GAME_SYMBOLS } from "../constants";
+import { DEFAULT_GAME_SYMBOLS } from "../constants/gameConstants";
 import { resolveGameStrategy } from "../strategies";
 import { Board } from "./Board";
 import {
@@ -16,8 +16,15 @@ import {
   type GameOptions,
   type GameStatus,
   type IGame,
-} from "./Game.types";
+} from "./types/Game.types";
 
+/**
+ * Main public facade for a Tic Tac Toe game.
+ *
+ * Manages the board, current player, win/draw detection, move history, and
+ * emits typed events that can be consumed by UI frameworks such as React via
+ * `useSyncExternalStore`.
+ */
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];
   private _gameStatus: GameStatus = { status: "running" };
@@ -28,6 +35,12 @@ export class Game implements IGame {
   private _emitter = new EventEmitter<GameEventMap>();
   private _snapshot: GameEventPayload;
 
+  /**
+   * Creates a new game instance.
+   *
+   * @param options - Optional configuration. Use `variant` to select a predefined
+   *   game variant. `boardSize` is deprecated and only accepted for backwards compatibility.
+   */
   constructor(options: GameOptions = {}) {
     this._strategy = resolveGameStrategy(options);
     this._board = new Board(this._strategy.boardSize);
@@ -168,7 +181,7 @@ export class Game implements IGame {
    * Returns the current board state.
    * @returns The current board state.
    * @type {BoardSnapshot}
-   * @deprecated Use `board` instead.
+   * @deprecated Use `board` instead. Will be removed in v2.0.
    */
   getBoard(): BoardSnapshot {
     return this._board.fields;
@@ -176,9 +189,9 @@ export class Game implements IGame {
 
   /**
    * Checks if a field is already selected by a player.
-   * @param field The field number to check.
+   * @param field The 1-based field number to check.
    * @returns `true` if the field is selected, `false` otherwise.
-   * @deprecated Use `isFieldSelectedByIndex` instead.
+   * @deprecated Use `isFieldSelectedByIndex` instead. Will be removed in v2.0.
    */
   isFieldSelected(field: number) {
     return typeof this._board.getFieldByNumber(field) === "string";
@@ -195,8 +208,9 @@ export class Game implements IGame {
 
   /**
    * Saves a player's selection on the board.
-   * @param field The field number to mark (1-9 numbering).
+   * @param field The 1-based field number to mark (1-9 numbering).
    * @deprecated Use `savePlayerMove(index)` instead (0-8 index-based). Does not emit events or update the snapshot.
+   *   Will be removed in v2.0.
    */
   savePlayerSelection(field: number) {
     this._board.setFieldByNumber(field, this._currentPlayer);
@@ -205,10 +219,13 @@ export class Game implements IGame {
   }
 
   /**
-   * Saves a player's selection on the board by index.
-   * Emits {@link GameEvent.STATE_CHANGE} event.
-   * Also emits {@link GameEvent.PLAYER_MOVE} event (deprecated).
-   * @param index The index of the field to mark.
+   * Saves a player's selection on the board by 0-based index.
+   *
+   * Emits {@link GameEvent.STATE_CHANGE}. For backwards compatibility it also
+   * emits the deprecated {@link GameEvent.PLAYER_MOVE}, which will be removed in v2.0.
+   *
+   * @param index The 0-based index of the field to mark.
+   * @returns The status of the move.
    */
   savePlayerMove(index: number): PlayerMoveStatus {
     if (!this._isBoardIndexValid(index)) {
@@ -249,8 +266,9 @@ export class Game implements IGame {
 
   /**
    * Resets the game to its initial state.
-   * Emits {@link GameEvent.STATE_CHANGE} event.
-   * Also emits {@link GameEvent.RESET} event (deprecated).
+   *
+   * Emits {@link GameEvent.STATE_CHANGE}. For backwards compatibility it also
+   * emits the deprecated {@link GameEvent.RESET}, which will be removed in v2.0.
    */
   reset() {
     this._currentPlayer = this._symbols[0];

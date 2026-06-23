@@ -111,7 +111,7 @@ function TicTacToeBoard() {
 
 | Property/Method | Description |
 | --------------- | ----------- |
-| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`). `options.boardSize` is deprecated |
+| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`). `options.boardSize` is deprecated and will be removed in v2.0 |
 | `currentPlayer` | Get the current player's symbol |
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `readonly BoardField[]` |
@@ -122,10 +122,10 @@ function TicTacToeBoard() {
 | `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` (`success`, `invalid_history_index`) |
 | `on(event, fn)` | Subscribe to events (`STATE_CHANGE`, `PLAYER_MOVE` ⚠️, `RESET` ⚠️). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
-| `reset()` | Reset the game to initial state |
-| `getBoard()` | **Deprecated.** Use `board` instead |
-| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead. Uses 1-9 field numbering; does not emit events |
-| `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead |
+| `reset()` | Reset the game to initial state. Emits `STATE_CHANGE`; also emits deprecated `RESET` (removed in v2.0) |
+| `getBoard()` | **Deprecated.** Use `board` instead. Will be removed in v2.0 |
+| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead. Uses 1-9 field numbering; does not emit events. Will be removed in v2.0 |
+| `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead. Will be removed in v2.0 |
 
 ### Events
 
@@ -149,7 +149,7 @@ game.on(GameEvent.STATE_CHANGE, onStateChange);
 game.off(GameEvent.STATE_CHANGE, onStateChange); // works
 ```
 
-> ⚠️ **Deprecated events** — still emitted for backwards compatibility, will be removed in a future major version:
+> ⚠️ **Deprecated events** — still emitted for backwards compatibility, will be removed in v2.0:
 >
 > ```typescript
 > // PLAYER_MOVE — emitted only by savePlayerMove, includes the played index

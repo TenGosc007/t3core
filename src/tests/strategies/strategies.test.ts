@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { GameVariant, type GameOptions } from "../../game/Game.types";
+import { GameVariant, type GameOptions } from "../../game/types/Game.types";
 import { resolveGameStrategy } from "../../strategies";
 
 test("resolveGameStrategy returns classic 3x3 strategy by default", () => {

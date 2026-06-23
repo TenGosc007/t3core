@@ -1,1 +1,0 @@
-export const DEFAULT_GAME_SYMBOLS = ["O", "X"] as const;
