@@ -1,15 +1,21 @@
-import type { BoardField, IBoard } from "./types/Board";
-import type { PlayerSymbol } from "./types/Symbol";
+import type { BoardField, BoardSnapshot, IBoard } from "./types/Board.types";
+import type { PlayerSymbol } from "./types/Symbol.types";
 
-import { getLastArrayItem } from "./utils/getLastArrayItem";
+import { getLastArrayItem } from "../utils/getLastArrayItem";
 
 const fillFields = (_: BoardField, idx: number) => idx + 1;
 
 export const BOARD_SIZE = 9;
 
+/**
+ * Mutable board implementation with built-in history/snapshot support.
+ *
+ * Exposes read-only snapshots via {@link fields} and records every mutation
+ * so that previous states can be restored with {@link restoreBoardHistoryAt}.
+ */
 export class Board implements IBoard {
   private readonly _size: number;
-  private _snapshot: BoardField[] | null = null;
+  private _snapshot: BoardSnapshot | null = null;
   private _boardSnapshots: BoardField[][];
   private _currentFields: BoardField[];
   private _currentSnapshotIndex: number | null = null;
@@ -27,11 +33,9 @@ export class Board implements IBoard {
    * checks (e.g. `useSyncExternalStore`).
    * @returns A cached shallow copy of the board fields.
    */
-  get fields() {
-    if (!this._snapshot) {
-      this._snapshot = [...this._currentFields];
-    }
-    return this._snapshot;
+  get fields(): BoardSnapshot {
+    this._snapshot ??= Object.freeze([...this._currentFields]);
+    return this._snapshot!;
   }
 
   /**
@@ -42,11 +46,11 @@ export class Board implements IBoard {
   }
 
   /**
-   * Returns the value of a field by its number.
+   * Returns the value of a field by its 1-based field number.
    * @param fieldNumber The field number (1-9) to get.
    * @returns The value of the field.
    * @type {number | TSymbol}
-   * @deprecated Use `getFieldByIndex` instead.
+   * @deprecated Use `getFieldByIndex` instead. Will be removed in v2.0.
    */
   getFieldByNumber(fieldNumber: number) {
     return this._currentFields[fieldNumber - 1];
@@ -71,11 +75,11 @@ export class Board implements IBoard {
   }
 
   /**
-   * Sets a field's value by its number.
+   * Sets a field's value by its 1-based field number.
    * Invalidates the cached snapshot so the next `fields` access returns a new reference.
    * @param fieldNumber The field number (1-9) to set.
    * @param symbol The symbol to set.
-   * @deprecated Use `setFieldByIndex` instead.
+   * @deprecated Use `setFieldByIndex` instead. Will be removed in v2.0.
    */
   setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
     this._currentFields[fieldNumber - 1] = symbol;

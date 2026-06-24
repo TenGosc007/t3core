@@ -1,47 +1,74 @@
 /**
  * Core game logic for Tic Tac Toe.
- * Manages player turns, board state, win/draw detection, and game lifecycle.
+ *
+ * Manages player turns, board state, win/draw detection, move history, and events.
+ * All deprecated APIs are scheduled for removal in v2.0.
  */
-export { Game } from "./Game";
+export { Game } from "./game/Game";
 
 /**
  * Options for configuring a `Game` instance.
- * @property boardSize - Number of fields on the board (default: 9).
+ * @property variant - Predefined game variant.
+ * @property boardSize - Deprecated. Use `variant` instead. Will be removed in v2.0.
  */
-export type { GameOptions } from "./Game";
+export type { GameOptions } from "./game/types/Game.types";
 
 /**
- * Default player symbols ['O', 'X'] for convenience.
+ * Default player symbols: `['O', 'X']`.
  */
-export { DEFAULT_GAME_SYMBOLS } from "./constants";
+export { DEFAULT_GAME_SYMBOLS } from "./constants/gameConstants";
 
 /**
- * Interface describing the Game class contract.
+ * Interface describing the `Game` class contract.
  */
-export type { IGame } from "./types/Game";
+export type { IGame } from "./game/types/Game.types";
 
 /**
- * Game event names: `STATE_CHANGE`, `PLAYER_MOVE` (deprecated), `RESET` (deprecated).
+ * Game event names.
+ *
+ * `PLAYER_MOVE` and `RESET` are deprecated and will be removed in v2.0.
+ * Use `STATE_CHANGE` for all state updates.
  */
-export { GameEvent } from "./types/Game";
+export { GameEvent } from "./game/types/Game.types";
 
 /**
- * Result status of a player move: `success`, `already_selected`, `game_not_running`.
+ * Predefined game variants.
  */
-export { PlayerMoveStatus } from "./types/Game";
+export { GameVariant } from "./game/types/Game.types";
 
 /**
- * Typed event map for EventEmitter3 — use with `Game` listeners.
+ * Result status of restoring a historical move.
  */
-export type { GameEventMap, GameEventPayload } from "./types/Game";
+export { BackToMoveStatus } from "./game/types/Game.types";
+
+/**
+ * Result status of a player move: `success`, `already_selected`, `game_not_running`, `invalid_index`.
+ */
+export { PlayerMoveStatus } from "./game/types/Game.types";
+
+/**
+ * Typed event map for `eventemitter3` — use with `Game` listeners.
+ *
+ * `PLAYER_MOVE` and `RESET` entries are deprecated and will be removed in v2.0.
+ */
+export type {
+  BackToMoveStatus as BackToMoveStatusType,
+  GameEventMap,
+  GameEventPayload,
+} from "./game/types/Game.types";
 
 /**
  * Union type representing possible game states:
  * - `{ status: 'running' }` - Game in progress
- * - `{ status: 'win', winner: TSymbol }` - A player won
+ * - `{ status: 'win', winner: PlayerSymbol }` - A player won
  * - `{ status: 'draw' }` - Board full, no winner
  */
-export type { GameStatus } from "./types/Game";
+export type { GameStatus } from "./game/types/Game.types";
+
+/**
+ * Union type representing supported predefined game variants.
+ */
+export type { GameVariant as GameVariantType } from "./game/types/Game.types";
 
 /**
  * Tuple type for player symbols: `[symbol1, symbol2]`.
@@ -52,9 +79,13 @@ export type { GameStatus } from "./types/Game";
  * type Symbol = 'O' | 'X';   // PlayerSymbol
  * ```
  */
-export type { PlayerSymbols, PlayerSymbol } from "./types/Symbol";
+export type { PlayerSymbols, PlayerSymbol } from "./game/types/Symbol.types";
 
 /**
- * Union type for a board cell: either a `number` (empty slot label) or a `PlayerSymbol`.
+ * Union type for a board cell and readonly board snapshots exposed by the public API.
  */
-export type { BoardField, IBoard } from "./types/Board";
+export type {
+  BoardField,
+  BoardSnapshot,
+  IBoard,
+} from "./game/types/Board.types";

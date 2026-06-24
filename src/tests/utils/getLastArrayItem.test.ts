@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { getLastArrayItem } from "../utils/getLastArrayItem";
+import { getLastArrayItem } from "../../utils/getLastArrayItem";
 
 test("getLastArrayItem: returns the last element of an array", () => {
   expect(getLastArrayItem([1, 2, 3])).toBe(3);

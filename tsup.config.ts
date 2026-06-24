@@ -1,11 +1,27 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from "tsup";
 
-export default defineConfig({
-  entry: ['src/index.ts'],
-  format: ['cjs', 'esm'],
-  dts: true,
-  clean: true,
-  minify: true,
+import pkg from "./package.json" with { type: "json" };
+
+const external = Object.keys(pkg.dependencies ?? {});
+
+const shared = {
+  entry: ["src/index.ts"],
+  minify: false,
   splitting: false,
   sourcemap: false,
-});
+  external,
+};
+
+export default defineConfig([
+  {
+    ...shared,
+    format: ["cjs"],
+    dts: true,
+    clean: true,
+  },
+  {
+    ...shared,
+    format: ["esm"],
+    dts: false,
+  },
+]);
