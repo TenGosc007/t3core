@@ -10,6 +10,8 @@ import {
   PlayerMoveStatus,
 } from "../../game/types/Game.types";
 
+const initialBoard = () => new Array(9).fill(0).map((_, idx) => idx + 1);
+
 /*
     O   X   O
     O   X   X
@@ -40,7 +42,7 @@ test("Reset the game", () => {
   game.savePlayerMove(7);
   game.reset();
 
-  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(game.board).toEqual(initialBoard());
   expect(game.gameStatus.status).toBe("running");
   expect(game.currentPlayer).toBe("O");
 });
@@ -48,22 +50,20 @@ test("Reset the game", () => {
 test("creates a classic 3x3 game by default", () => {
   const game = new Game();
 
-  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(game.board).toEqual(initialBoard());
 });
 
 test("creates a game from the classic 3x3 variant", () => {
   const game = new Game({ variant: GameVariant.CLASSIC_3X3 });
 
-  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(game.board).toEqual(initialBoard());
 });
 
 test("deprecated boardSize only accepts the current classic 3x3 size", () => {
   expect(() => new Game({ boardSize: 16 })).toThrow(
     "arbitrary board sizes are not supported",
   );
-  expect(new Game({ boardSize: 9 }).board).toEqual(
-    new Array(9).fill(0).map((_, idx) => idx + 1),
-  );
+  expect(new Game({ boardSize: 9 }).board).toEqual(initialBoard());
 });
 
 /*
@@ -111,7 +111,7 @@ test("RESET event fires with snapshot payload", () => {
   expect(listener).toHaveBeenCalledOnce();
   const payload = listener.mock.calls[0][0];
   expect(payload.gameStatus).toEqual({ status: "running" });
-  expect(payload.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(payload.board).toEqual(initialBoard());
   expect(payload.currentPlayer).toBe("O");
 });
 
@@ -175,7 +175,7 @@ test("multiple resets work correctly", () => {
 
   expect(game.gameStatus.status).toBe("running");
   expect(game.currentPlayer).toBe("O");
-  expect(game.board).toEqual(new Array(9).fill(0).map((_, idx) => idx + 1));
+  expect(game.board).toEqual(initialBoard());
 });
 
 test("deprecated savePlayerSelection still works (1-9 numbering)", () => {

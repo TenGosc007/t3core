@@ -3,26 +3,14 @@
   "entry": ["src/index.{ts,tsx,js,jsx}", "src/main.{ts,tsx,js,jsx}"],
   "ignoreDependencies": ["jiti", "eslint-import-resolver-typescript"],
   "ignorePatterns": [
-    "**/*.generated.ts",
     "**/*.d.ts",
-    "**/*.spec.{ts,tsx,js,jsx}",
-    "**/*.test.{ts,tsx,js,jsx}",
-    "**/*.e2e.{ts,tsx,js,jsx}",
-    "**/__tests__/**",
-    "**/tests/**",
-    "**/test/**",
     "**/vitest.config.*",
     "**/jest.config.*",
     "./package.json"
   ],
   "duplicates": {
     "minOccurrences": 3,
-    "ignore": [
-      "**/lib/**",
-      "**/legacy/**",
-      "**/__generated__/**",
-      "**/generated/**"
-    ]
+    "ignore": ["**/generated/**"]
   },
   "rules": {
     "unused-dependencies": "warn",
