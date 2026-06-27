@@ -40,30 +40,30 @@ info()  { echo -e "${CYAN}▶  $1${NC}"; }
 ok()    { echo -e "${GREEN}✅  $1${NC}"; }
 warn()  { echo -e "${YELLOW}⚠   $1${NC}"; }
 err()   { echo -e "${RED}❌  $1${NC}"; }
-step()  { echo -e "\n${CYAN}━━━ [KROK $1/8] $2 ━━━${NC}"; }
+step()  { echo -e "\n${CYAN}━━━ [STEP $1/8] $2 ━━━${NC}"; }
 
 # ─── Rollback ───────────────────────────────────────────
 rollback() {
   echo ""
-  err "Błąd w kroku — wycofywanie zmian..."
+  err "Step failed — rolling back changes..."
 
   if [[ -n "$CHANGELOG_CREATED" && -f "$CHANGELOG_CREATED" ]]; then
     rm -f "$CHANGELOG_CREATED"
-    info "Usunięto changelog: $CHANGELOG_CREATED"
+    info "Removed changelog: $CHANGELOG_CREATED"
   fi
 
   if [[ -n "$VERSION_BUMPED" ]]; then
     git checkout -- package.json 2>/dev/null || true
-    info "Przywrócono package.json do wersji $CURRENT_VERSION"
+    info "Restored package.json to version $CURRENT_VERSION"
   fi
 
   if [[ -n "$BRANCH_CREATED" ]]; then
     git checkout "$ORIGINAL_BRANCH" 2>/dev/null || true
     git branch -D "$BRANCH_CREATED" 2>/dev/null || true
-    info "Usunięto branch $BRANCH_CREATED, powrót na $ORIGINAL_BRANCH"
+    info "Deleted branch $BRANCH_CREATED, switched back to $ORIGINAL_BRANCH"
   fi
 
-  err "Release przerwany. Wszystkie zmiany zostały cofnięte."
+  err "Release aborted. All changes have been rolled back."
   exit 1
 }
 
@@ -74,42 +74,42 @@ step 1 "Pre-flight checks"
 
 CURRENT_BRANCH=$(git branch --show-current)
 if [[ "$CURRENT_BRANCH" != "main" ]]; then
-  warn "Nie jesteś na branch 'main' (jesteś na '$CURRENT_BRANCH')."
-  read -p "Kontynuować? (y/N): " -n 1 -r
+  warn "Not on branch 'main' (currently on '$CURRENT_BRANCH')."
+  read -p "Continue? (y/N): " -n 1 -r
   echo
-  [[ ! $REPLY =~ ^[Yy]$ ]] && { err "Anulowano."; exit 1; }
+  [[ ! $REPLY =~ ^[Yy]$ ]] && { err "Aborted."; exit 1; }
 fi
 
 if [[ -n $(git status --porcelain) ]]; then
-  warn "Masz niezatwierdzone zmiany:"
+  warn "You have uncommitted changes:"
   git status --short
-  read -p "Kontynuować mimo to? (y/N): " -n 1 -r
+  read -p "Continue anyway? (y/N): " -n 1 -r
   echo
-  [[ ! $REPLY =~ ^[Yy]$ ]] && { err "Anulowano."; exit 1; }
+  [[ ! $REPLY =~ ^[Yy]$ ]] && { err "Aborted."; exit 1; }
 fi
 
-info "Sprawdzanie logowania do npm..."
+info "Checking npm authentication..."
 if ! npm whoami &>/dev/null; then
-  warn "Nie jesteś zalogowany do npm."
-  read -p "Zalogować się teraz? (Y/n): " -n 1 -r
+  warn "Not logged in to npm."
+  read -p "Log in now? (Y/n): " -n 1 -r
   echo
   if [[ $REPLY =~ ^[Nn]$ ]]; then
-    err "Anulowano. Zaloguj się ręcznie: npm login"
+    err "Aborted. Log in manually: npm login"
     exit 1
   fi
   npm login
   if ! npm whoami &>/dev/null; then
-    err "Logowanie nie powiodło się."
+    err "Login failed."
     exit 1
   fi
 fi
 NPM_USER=$(npm whoami)
-ok "Zalogowany jako: $NPM_USER"
+ok "Logged in as: $NPM_USER"
 
 ok "Pre-flight checks passed"
 
 # ─── Step 2: Quality checks ─────────────────────────────
-step 2 "Quality checks (zanim cokolwiek zmienimy)"
+step 2 "Quality checks (before any changes)"
 
 info "Lint..."
 yarn lint
@@ -126,37 +126,37 @@ yarn fallow
 info "Build..."
 yarn build
 
-ok "Wszystkie quality checks passed"
+ok "All quality checks passed"
 
 # ─── Step 3: Version selection ──────────────────────────
-step 3 "Wybór wersji"
+step 3 "Version selection"
 
 BUMP_TYPE="${1:-}"
 
 if [[ -z "$BUMP_TYPE" ]]; then
-  echo "Aktualna wersja: $CURRENT_VERSION"
-  echo "Dostępne opcje: patch | minor | major | <specific version (np. 1.2.3)>"
-  read -p "Wybierz typ bumpa: " BUMP_TYPE
+  echo "Current version: $CURRENT_VERSION"
+  echo "Available options: patch | minor | major | <specific version (e.g. 1.2.3)>"
+  read -p "Select bump type: " BUMP_TYPE
 fi
 
 if [[ -z "$BUMP_TYPE" ]]; then
-  err "Nie podano typu bumpa."
+  err "No bump type provided."
   exit 1
 fi
 
 # Validate
 if [[ "$BUMP_TYPE" != "patch" && "$BUMP_TYPE" != "minor" && "$BUMP_TYPE" != "major" ]]; then
   if [[ ! "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    err "Nieprawidłowy typ bumpa lub wersja: '$BUMP_TYPE'"
-    echo "Oczekiwane: patch | minor | major | <semver (np. 1.2.3)>"
+    err "Invalid bump type or version: '$BUMP_TYPE'"
+    echo "Expected: patch | minor | major | <semver (e.g. 1.2.3)>"
     exit 1
   fi
 fi
 
-info "Wybrano: $BUMP_TYPE"
+info "Selected: $BUMP_TYPE"
 
 # ─── Step 4: npm version availability ───────────────────
-step 4 "Sprawdzenie dostępności wersji na npm"
+step 4 "npm version availability check"
 
 # Compute the new version
 if [[ "$BUMP_TYPE" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -175,28 +175,28 @@ fi
 
 TAG="v$NEW_VERSION"
 
-info "Sprawdzanie czy $PACKAGE_NAME@$NEW_VERSION już istnieje na npm..."
+info "Checking if $PACKAGE_NAME@$NEW_VERSION already exists on npm..."
 if npm view "$PACKAGE_NAME@$NEW_VERSION" version &>/dev/null; then
-  err "Wersja $NEW_VERSION już istnieje na npm. Wybierz inną."
+  err "Version $NEW_VERSION already exists on npm. Choose a different one."
   exit 1
 fi
 
 # Also check if git tag exists
 if git tag -l "$TAG" | grep -q "$TAG"; then
-  err "Git tag $TAG już istnieje. Wybierz inną wersję."
+  err "Git tag $TAG already exists. Choose a different version."
   exit 1
 fi
 
-ok "Wersja $NEW_VERSION jest dostępna"
+ok "Version $NEW_VERSION is available"
 
 # ─── Step 5: Release branch ─────────────────────────────
-step 5 "Utworzenie release branch"
+step 5 "Create release branch"
 
 BRANCH_NAME="release/v$NEW_VERSION"
 git checkout -b "$BRANCH_NAME"
 BRANCH_CREATED="$BRANCH_NAME"
 
-ok "Utworzono branch: $BRANCH_NAME"
+ok "Created branch: $BRANCH_NAME"
 
 # ─── Step 6: Version bump ───────────────────────────────
 step 6 "Version bump"
@@ -204,10 +204,10 @@ step 6 "Version bump"
 npm version "$BUMP_TYPE" --no-git-tag-version
 VERSION_BUMPED="1"
 
-ok "Wersja podniesiona: $CURRENT_VERSION → $NEW_VERSION"
+ok "Version bumped: $CURRENT_VERSION → $NEW_VERSION"
 
 # ─── Step 7: Changelog ──────────────────────────────────
-step 7 "Utworzenie changelog"
+step 7 "Create changelog"
 
 RELEASES_DIR=".github/releases"
 mkdir -p "$RELEASES_DIR"
@@ -240,42 +240,48 @@ Brief description of the release.
 EOF
 
 CHANGELOG_CREATED="$RELEASE_FILE"
-ok "Utworzono: $RELEASE_FILE"
+ok "Created: $RELEASE_FILE"
 
 echo ""
-info "Edytuj release notes. Otwieram edytor..."
+info "Edit release notes. Opening editor..."
 
 if [[ -n "${EDITOR:-}" ]]; then
   "$EDITOR" "$RELEASE_FILE"
+elif command -v windsurf &> /dev/null; then
+  windsurf "$RELEASE_FILE"
+elif command -v devin-desktop &> /dev/null; then
+  devin-desktop "$RELEASE_FILE"
+elif command -v cursor &> /dev/null; then
+  cursor "$RELEASE_FILE"
 elif command -v code &> /dev/null; then
   code "$RELEASE_FILE"
 elif command -v vim &> /dev/null; then
   vim "$RELEASE_FILE"
 fi
 
-read -p "Naciśnij Enter gdy skończysz edytować release notes..."
+read -p "Press Enter when done editing release notes..."
 
-ok "Changelog gotowy"
+ok "Changelog ready"
 
 # ─── Step 8: Summary + confirm ──────────────────────────
-step 8 "Podsumowanie i potwierdzenie"
+step 8 "Summary and confirmation"
 
 echo ""
-echo "  Pakiet:      $PACKAGE_NAME"
-echo "  Wersja:      $CURRENT_VERSION → $NEW_VERSION"
+echo "  Package:     $PACKAGE_NAME"
+echo "  Version:     $CURRENT_VERSION → $NEW_VERSION"
 echo "  Branch:      $BRANCH_NAME"
 echo "  Tag:         $TAG"
 echo "  Changelog:   $RELEASE_FILE"
 echo ""
 
-read -p "Czy chcesz commitować, utworzyć tag i pushować? (y/N): " -n 1 -r
+read -p "Commit, create tag, and push? (y/N): " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   echo ""
-  warn "Zmiany nie zostały commitowane. Zostały na branchu $BRANCH_NAME."
+  warn "Changes not committed. Left on branch $BRANCH_NAME."
   echo ""
-  echo "Ręczne kroki:"
-  echo "  1. Sprawdź zmiany:  git diff"
+  echo "Manual steps:"
+  echo "  1. Review changes:  git diff"
   echo "  2. Commit:          git add . && git commit -m 'release: v$NEW_VERSION'"
   echo "  3. Tag:             git tag $TAG"
   echo "  4. Push:            git push origin $BRANCH_NAME --tags"
@@ -286,14 +292,14 @@ git add .
 git commit -m "release: v$NEW_VERSION"
 git tag "$TAG"
 
-info "Pushowanie brancha i tagu..."
+info "Pushing branch and tags..."
 git push origin "$BRANCH_NAME" --tags
 
 echo ""
-ok "Release v$NEW_VERSION przygotowany!"
+ok "Release v$NEW_VERSION prepared!"
 echo ""
-echo "Następne kroki:"
-echo "  1. Utwórz PR na GitHub: base=main, compare=$BRANCH_NAME"
-echo "  2. Po merge utwórz GitHub Release z tagiem $TAG"
-echo "  3. GitHub Actions automatycznie opublikuje na npm"
+echo "Next steps:"
+echo "  1. Create a PR on GitHub: base=main, compare=$BRANCH_NAME"
+echo "  2. After merge, create a GitHub Release with tag $TAG"
+echo "  3. GitHub Actions will automatically publish to npm"
 echo ""
