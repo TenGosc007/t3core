@@ -10,9 +10,7 @@
     "lint": "eslint ./src/**/*.ts",
     "ts:check": "tsc --noEmit",
     "fallow": "fallow health --coverage coverage/coverage-final.json",
-    "publish:dry": "npm run build && npm publish --dry-run",
-    "release:tag": "env -i HOME=$HOME PATH=$PATH bash scripts/release.sh",
-    "new:release": "env -i HOME=$HOME PATH=$PATH bash scripts/publish-release.sh"
+    "release": "bash scripts/release.sh"
   },
   "keywords": [
     "tic-tac-toe",

@@ -2,27 +2,31 @@
 
 ## Quick Start (Automated)
 
-Use the automated release script to perform all steps at once:
+Use the automated release script to prepare a release:
 
 ```bash
-# Bump patch version (1.0.0 -> 1.0.1)
-./scripts/publish-release.sh patch
+# Interactive — prompts for version bump type
+yarn release
 
-# Or bump minor/major
-./scripts/publish-release.sh minor
-./scripts/publish-release.sh major
-
-# Or use a specific version
-./scripts/publish-release.sh 1.2.3
+# Or specify directly
+yarn release patch    # 1.5.0 -> 1.5.1
+yarn release minor    # 1.5.0 -> 1.6.0
+yarn release major    # 1.5.0 -> 2.0.0
+yarn release 1.6.0    # specific version
 ```
 
 The script will:
 
-1. Create a release branch
-2. Update version in package.json
-3. Create release document template
-4. Run all release checks and create the git tag
-5. Provide next steps for pushing and creating PR
+1. **Pre-flight checks** — git state, npm auth
+2. **Quality checks** — lint, ts:check, test, fallow, build (before any changes)
+3. **Version selection** — patch / minor / major / specific
+4. **npm availability** — verify the version doesn't already exist on npm
+5. **Release branch** — create `release/v<VERSION>`
+6. **Version bump** — update `package.json`
+7. **Changelog** — create `.github/releases/v<VERSION>.md` and open editor
+8. **Confirm** — commit, tag, and push (with rollback on any error)
+
+If any step fails, all changes are automatically rolled back (branch deleted, `package.json` restored, changelog removed).
 
 ---
 
@@ -76,8 +80,9 @@ Brief description of the release
 # Stage changes
 git add .
 
-# Run the release script to create the tag
-yarn release:tag
+# Commit and create tag
+git commit -m "release: v1.0.4"
+git tag v1.0.4
 
 # Push the branch and tag
 git push origin release/v1.0.4 --tags
