@@ -92,7 +92,7 @@ git push origin release/v1.0.4 --tags
 
 1. Go to GitHub → **Pull requests → New pull request**
 2. Base: `main`, Compare: `release/v1.0.4`
-3. The PR checks (lint, TypeScript check, tests) will run automatically
+3. The PR checks (lint, TypeScript check, tests, fallow) will run automatically
 4. After checks pass, merge the PR
 
 ### 5. Publish GitHub release

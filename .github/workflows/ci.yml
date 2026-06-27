@@ -23,7 +23,14 @@ jobs:
 
       - run: yarn install --frozen-lockfile
 
-      - run: yarn test:coverage
+      - name: Lint
+        run: yarn lint
+
+      - name: TypeScript check
+        run: yarn ts:check
+
+      - name: Tests with coverage
+        run: yarn test:coverage
 
       - uses: fallow-rs/fallow@v2
         with:
