@@ -7,6 +7,8 @@
  *
  * @param fields - Board slice matching {@link BoardSnapshot}.
  * @param winningCombinations - List of index combinations that define a win.
+ *   Invariant: every index MUST be in `[0, fields.length)`. Out-of-range
+ *   indices yield no winner instead of throwing.
  * @returns The winning symbol, or `null` if there is no winner.
  */
 export function getWinnerFromFields<TSymbol extends string>(
