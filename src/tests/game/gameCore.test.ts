@@ -185,6 +185,48 @@ test("deprecated savePlayerSelection still works (1-9 numbering)", () => {
   expect(game.board[4]).toBe("O");
 });
 
+test("deprecated savePlayerSelection returns SUCCESS for valid field", () => {
+  const game = new Game();
+  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.SUCCESS);
+});
+
+test("deprecated savePlayerSelection returns INVALID_INDEX for out-of-range or non-integer fields", () => {
+  const game = new Game();
+  expect(game.savePlayerSelection(0)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(10)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(-1)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(1.5)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(NaN)).toBe(PlayerMoveStatus.INVALID_INDEX);
+});
+
+test("deprecated savePlayerSelection does not corrupt the board on invalid field", () => {
+  const game = new Game();
+  const before = [...game.board];
+  game.savePlayerSelection(0); // would write to index -1
+  game.savePlayerSelection(10); // out of range
+  expect([...game.board]).toEqual(before);
+});
+
+test("deprecated savePlayerSelection returns ALREADY_SELECTED for occupied field", () => {
+  const game = new Game();
+  game.savePlayerSelection(5);
+  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.ALREADY_SELECTED);
+  // board unchanged after second attempt
+  expect(game.board.filter((f) => typeof f === "string")).toHaveLength(1);
+});
+
+test("deprecated savePlayerSelection returns GAME_NOT_RUNNING after game is won", () => {
+  const game = new Game();
+  // O wins: fields 1,2,3 (indexes 0,1,2)
+  game.savePlayerSelection(1); // O
+  game.savePlayerSelection(4); // X
+  game.savePlayerSelection(2); // O
+  game.savePlayerSelection(5); // X
+  game.savePlayerSelection(3); // O -> win
+  expect(game.gameStatus.status).toBe("win");
+  expect(game.savePlayerSelection(9)).toBe(PlayerMoveStatus.GAME_NOT_RUNNING);
+});
+
 test("isFieldSelected and isFieldSelectedByIndex are equivalent", () => {
   const game = new Game();
   game.savePlayerMove(4);

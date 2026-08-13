@@ -209,13 +209,29 @@ export class Game implements IGame {
   /**
    * Saves a player's selection on the board.
    * @param field The 1-based field number to mark (1-9 numbering).
-   * @deprecated Use `savePlayerMove(index)` instead (0-8 index-based). Does not emit events or update the snapshot.
-   *   Will be removed in v2.0.
+   * @returns The status of the move. Does not emit events or update the snapshot.
+   * @deprecated Use `savePlayerMove(index)` instead (0-8 index-based). Will be removed in v2.0.
    */
-  savePlayerSelection(field: number) {
+  savePlayerSelection(field: number): PlayerMoveStatus {
+    const index = field - 1;
+
+    if (!this._isBoardIndexValid(index)) {
+      return PlayerMoveStatus.INVALID_INDEX;
+    }
+
+    if (this.isFieldSelectedByIndex(index)) {
+      return PlayerMoveStatus.ALREADY_SELECTED;
+    }
+
+    if (this._gameStatus.status !== "running") {
+      return PlayerMoveStatus.GAME_NOT_RUNNING;
+    }
+
     this._board.setFieldByNumber(field, this._currentPlayer);
     this._togglePlayer();
     this._updateGameStatus();
+
+    return PlayerMoveStatus.SUCCESS;
   }
 
   /**

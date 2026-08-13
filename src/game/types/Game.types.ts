@@ -118,7 +118,7 @@ export interface IGame {
   /**
    * @deprecated Use `savePlayerMove` instead. Will be removed in v2.0.
    */
-  savePlayerSelection: (field: number) => void;
+  savePlayerSelection: (field: number) => PlayerMoveStatus;
 
   /** Resets the game to its initial state. */
   reset: () => void;

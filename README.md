@@ -124,7 +124,7 @@ function TicTacToeBoard() {
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
 | `reset()` | Reset the game to initial state. Emits `STATE_CHANGE`; also emits deprecated `RESET` (removed in v2.0) |
 | `getBoard()` | **Deprecated.** Use `board` instead. Will be removed in v2.0 |
-| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead. Uses 1-9 field numbering; does not emit events. Will be removed in v2.0 |
+| `savePlayerSelection(field: number)` | **Deprecated.** Use `savePlayerMove(index)` instead. Uses 1-9 field numbering; returns `PlayerMoveStatus`; does not emit events. Will be removed in v2.0 |
 | `isFieldSelected(field: number)` | **Deprecated.** Use `isFieldSelectedByIndex(index)` instead. Will be removed in v2.0 |
 
 ### Events
