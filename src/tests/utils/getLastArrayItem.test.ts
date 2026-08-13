@@ -9,3 +9,7 @@ test("getLastArrayItem: returns the last element of an array", () => {
 test("getLastArrayItem: works with a single-element array", () => {
   expect(getLastArrayItem(["only"])).toBe("only");
 });
+
+test("getLastArrayItem: throws RangeError on empty array", () => {
+  expect(() => getLastArrayItem([])).toThrow(RangeError);
+});
