@@ -93,7 +93,20 @@ export class Game implements IGame {
     }
   }
 
-  _updateGameState(index?: number) {
+  /**
+   * Recomputes the game status, refreshes the snapshot, and emits
+   * `PLAYER_MOVE` (when `index` is provided) followed by `STATE_CHANGE`.
+   *
+   * Listener errors are captured into `errors` instead of aborting subsequent
+   * events, so the event emission contract is preserved (e.g. `RESET` always
+   * follows `STATE_CHANGE` in {@link reset}). The caller is responsible for
+   * re-throwing collected errors via {@link _rethrowCollected}.
+   *
+   * @internal Remove in v2.0 together with the deprecated `PLAYER_MOVE` and
+   *   `RESET` events — a single `STATE_CHANGE` per state change has no
+   *   ordering to preserve, so this collapses to a direct `emit` call.
+   */
+  _updateGameState(index?: number, errors: unknown[] = []) {
     this._updateGameStatus();
     this._snapshot = {
       board: this._board.fields,
@@ -101,9 +114,53 @@ export class Game implements IGame {
       gameStatus: this._gameStatus,
     };
     if (index !== undefined) {
-      this._emitter.emit(GameEvent.PLAYER_MOVE, { ...this._snapshot, index });
+      this._safeEmit(errors, GameEvent.PLAYER_MOVE, {
+        ...this._snapshot,
+        index,
+      });
     }
-    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
+    this._safeEmit(errors, GameEvent.STATE_CHANGE, this._snapshot);
+  }
+
+  /**
+   * Emits an event, capturing any listener errors into `errors` so that
+   * subsequent events still fire. Collected errors are re-thrown by the caller
+   * via {@link _rethrowCollected}, ensuring no error is swallowed while
+   * preserving the event emission contract (e.g. `RESET` always follows
+   * `STATE_CHANGE`).
+   *
+   * @internal Remove in v2.0 together with the deprecated `PLAYER_MOVE` and
+   *   `RESET` events.
+   */
+  private _safeEmit<K extends keyof GameEventMap>(
+    errors: unknown[],
+    event: K,
+    ...args: GameEventMap[K]
+  ): void {
+    try {
+      (this._emitter.emit as (event: K, ...args: GameEventMap[K]) => void)(
+        event,
+        ...args,
+      );
+    } catch (err) {
+      errors.push(err);
+    }
+  }
+
+  /**
+   * Re-throws errors collected by {@link _safeEmit}. A single error is thrown
+   * as-is; multiple errors are wrapped in an `AggregateError`.
+   *
+   * @internal Remove in v2.0 together with {@link _safeEmit} and the
+   *   deprecated `PLAYER_MOVE` / `RESET` events.
+   */
+  private _rethrowCollected(errors: unknown[]): void {
+    if (errors.length === 0) return;
+    if (errors.length === 1) throw errors[0];
+    throw new AggregateError(
+      errors,
+      `Multiple listeners threw during event emission`,
+    );
   }
 
   /**
@@ -258,7 +315,9 @@ export class Game implements IGame {
 
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
-    this._updateGameState(index);
+    const errors: unknown[] = [];
+    this._updateGameState(index, errors);
+    this._rethrowCollected(errors);
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -275,7 +334,9 @@ export class Game implements IGame {
     const board = this._board;
     board.restoreBoardHistoryAt(index);
     this._currentPlayer = this._symbols[index % 2];
-    this._updateGameState();
+    const errors: unknown[] = [];
+    this._updateGameState(undefined, errors);
+    this._rethrowCollected(errors);
 
     return BackToMoveStatus.SUCCESS;
   }
@@ -285,11 +346,17 @@ export class Game implements IGame {
    *
    * Emits {@link GameEvent.STATE_CHANGE}. For backwards compatibility it also
    * emits the deprecated {@link GameEvent.RESET}, which will be removed in v2.0.
+   *
+   * Listener errors never abort subsequent events: `RESET` is always emitted
+   * after `STATE_CHANGE` even if a `STATE_CHANGE` listener throws. Collected
+   * listener errors are re-thrown once all events have been dispatched.
    */
   reset() {
     this._currentPlayer = this._symbols[0];
     this._board.reset();
-    this._updateGameState();
-    this._emitter.emit(GameEvent.RESET, this._snapshot);
+    const errors: unknown[] = [];
+    this._updateGameState(undefined, errors);
+    this._safeEmit(errors, GameEvent.RESET, this._snapshot);
+    this._rethrowCollected(errors);
   }
 }

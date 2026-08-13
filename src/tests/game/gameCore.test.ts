@@ -277,6 +277,72 @@ test("event payload board is frozen", () => {
   expect(Object.isFrozen(payload.board)).toBe(true);
 });
 
+test("throwing STATE_CHANGE listener does not prevent RESET from firing", () => {
+  const game = new Game();
+  const stateChangeListener = () => {
+    throw new Error("listener boom");
+  };
+  const resetListener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
+  game.on(GameEvent.RESET, resetListener);
+
+  expect(() => game.reset()).toThrow("listener boom");
+  // RESET still fired despite STATE_CHANGE listener throwing
+  expect(resetListener).toHaveBeenCalledOnce();
+});
+
+test("throwing PLAYER_MOVE listener does not prevent STATE_CHANGE from firing", () => {
+  const game = new Game();
+  const playerMoveListener = () => {
+    throw new Error("player_move boom");
+  };
+  const stateChangeListener = vi.fn();
+  game.on(GameEvent.PLAYER_MOVE, playerMoveListener);
+  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
+
+  expect(() => game.savePlayerMove(0)).toThrow("player_move boom");
+  // STATE_CHANGE still fired despite PLAYER_MOVE listener throwing
+  expect(stateChangeListener).toHaveBeenCalledOnce();
+});
+
+test("multiple throwing listeners produce AggregateError", () => {
+  const game = new Game();
+  const err1 = new Error("first");
+  const err2 = new Error("second");
+  game.on(GameEvent.PLAYER_MOVE, () => {
+    throw err1;
+  });
+  game.on(GameEvent.STATE_CHANGE, () => {
+    throw err2;
+  });
+
+  try {
+    game.savePlayerMove(0);
+    expect.fail("expected AggregateError");
+  } catch (e) {
+    expect(e).toBeInstanceOf(AggregateError);
+    expect((e as AggregateError).errors).toEqual([err1, err2]);
+  }
+});
+
+test("savePlayerMove still returns SUCCESS when no listener throws", () => {
+  const game = new Game();
+  game.on(GameEvent.STATE_CHANGE, () => {});
+  expect(game.savePlayerMove(0)).toBe(PlayerMoveStatus.SUCCESS);
+});
+
+test("throwing listener does not corrupt game state", () => {
+  const game = new Game();
+  game.on(GameEvent.STATE_CHANGE, () => {
+    throw new Error("boom");
+  });
+
+  expect(() => game.savePlayerMove(0)).toThrow("boom");
+  // Board was mutated and player toggled before emit — state is consistent
+  expect(game.board[0]).toBe("O");
+  expect(game.currentPlayer).toBe("X");
+});
+
 test("savePlayerMove creates board history snapshots", () => {
   const game = new Game();
   expect(game.movesCount).toBe(0);
