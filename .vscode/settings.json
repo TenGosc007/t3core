@@ -4,5 +4,7 @@
     "source.fixAll.eslint": "explicit"
   },
   "editor.formatOnSave": true,
-  "fallow.coverage.capturePath": "/Users/apple/Desktop/ex/coverage/coverage-final.json"
+  "fallow.coverage.capturePath": "/Users/apple/Desktop/ex/coverage/coverage-final.json",
+  "todo-tree.ripgrep": "/opt/homebrew/bin/rg",
+  "todo-tree.ripgrep.ripgrep": "/opt/homebrew/bin/rg"
 }

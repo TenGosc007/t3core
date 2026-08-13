@@ -40,6 +40,9 @@ export class Game implements IGame {
    *
    * @param options - Optional configuration. Use `variant` to select a predefined
    *   game variant. `boardSize` is deprecated and only accepted for backwards compatibility.
+   * @throws {RangeError} When `variant` is unsupported, or when the deprecated
+   *   `boardSize` does not match the selected variant's board size. Propagated
+   *   from {@link resolveGameStrategy}.
    */
   constructor(options: GameOptions = {}) {
     this._strategy = resolveGameStrategy(options);
