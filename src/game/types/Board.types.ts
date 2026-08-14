@@ -16,21 +16,32 @@ export interface IBoard {
 
   /**
    * @deprecated Use `getFieldByIndex` instead. Will be removed in v2.0.
+   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
    */
   getFieldByNumber: (fieldNumber: number) => BoardField;
 
   /**
    * @deprecated Use `setFieldByIndex` instead. Will be removed in v2.0.
+   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
    */
   setFieldByNumber: (fieldNumber: number, symbol: PlayerSymbol) => void;
 
-  /** Returns the value of the field at the given 0-based index. */
+  /**
+   * Returns the value of the field at the given 0-based index.
+   * @throws {RangeError} When `index` is out of range or not an integer.
+   */
   getFieldByIndex: (index: number) => BoardField;
 
-  /** Sets the value of the field at the given 0-based index and records the move in history. */
+  /**
+   * Sets the value of the field at the given 0-based index and records the move in history.
+   * @throws {RangeError} When `index` is out of range or not an integer.
+   */
   setFieldByIndex: (index: number, symbol: PlayerSymbol) => void;
 
-  /** Restores the board to a historical snapshot at the given index. */
+  /**
+   * Restores the board to a historical snapshot at the given index.
+   * @throws {RangeError} When `index` is out of range or not an integer.
+   */
   restoreBoardHistoryAt: (index: number) => void;
 
   /** Returns `true` when all fields are occupied by player symbols. */

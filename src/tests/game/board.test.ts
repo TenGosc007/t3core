@@ -127,3 +127,54 @@ test("reset invalidates snapshot cache", () => {
   board.reset();
   expect(board.fields).not.toBe(before);
 });
+
+test("getFieldByIndex throws RangeError for out-of-range or non-integer index", () => {
+  const board = new Board();
+  expect(() => board.getFieldByIndex(-1)).toThrow(RangeError);
+  expect(() => board.getFieldByIndex(9)).toThrow(RangeError);
+  expect(() => board.getFieldByIndex(1.5)).toThrow(RangeError);
+  expect(() => board.getFieldByIndex(NaN)).toThrow(RangeError);
+});
+
+test("setFieldByIndex throws RangeError for out-of-range or non-integer index", () => {
+  const board = new Board();
+  expect(() => board.setFieldByIndex(-1, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByIndex(9, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByIndex(1.5, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByIndex(NaN, "O")).toThrow(RangeError);
+});
+
+test("getFieldByNumber throws RangeError for out-of-range or non-integer field", () => {
+  const board = new Board();
+  expect(() => board.getFieldByNumber(0)).toThrow(RangeError);
+  expect(() => board.getFieldByNumber(10)).toThrow(RangeError);
+  expect(() => board.getFieldByNumber(1.5)).toThrow(RangeError);
+  expect(() => board.getFieldByNumber(NaN)).toThrow(RangeError);
+});
+
+test("setFieldByNumber throws RangeError for out-of-range or non-integer field", () => {
+  const board = new Board();
+  expect(() => board.setFieldByNumber(0, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByNumber(10, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByNumber(1.5, "O")).toThrow(RangeError);
+  expect(() => board.setFieldByNumber(NaN, "O")).toThrow(RangeError);
+});
+
+test("restoreBoardHistoryAt throws RangeError for out-of-range or non-integer index", () => {
+  const board = new Board();
+  board.setFieldByIndex(0, "O"); // snapshotCount = 1
+  expect(() => board.restoreBoardHistoryAt(-1)).toThrow(RangeError);
+  expect(() => board.restoreBoardHistoryAt(2)).toThrow(RangeError);
+  expect(() => board.restoreBoardHistoryAt(1.5)).toThrow(RangeError);
+  expect(() => board.restoreBoardHistoryAt(NaN)).toThrow(RangeError);
+});
+
+test("Board bounds validation respects custom size", () => {
+  const board = new Board(4);
+  // valid: indexes 0-3, field numbers 1-4
+  expect(() => board.getFieldByIndex(3)).not.toThrow();
+  expect(() => board.getFieldByNumber(4)).not.toThrow();
+  // invalid: index 4 / field 5 are out of range for size 4
+  expect(() => board.getFieldByIndex(4)).toThrow(RangeError);
+  expect(() => board.getFieldByNumber(5)).toThrow(RangeError);
+});

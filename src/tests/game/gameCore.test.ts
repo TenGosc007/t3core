@@ -185,6 +185,48 @@ test("deprecated savePlayerSelection still works (1-9 numbering)", () => {
   expect(game.board[4]).toBe("O");
 });
 
+test("deprecated savePlayerSelection returns SUCCESS for valid field", () => {
+  const game = new Game();
+  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.SUCCESS);
+});
+
+test("deprecated savePlayerSelection returns INVALID_INDEX for out-of-range or non-integer fields", () => {
+  const game = new Game();
+  expect(game.savePlayerSelection(0)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(10)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(-1)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(1.5)).toBe(PlayerMoveStatus.INVALID_INDEX);
+  expect(game.savePlayerSelection(NaN)).toBe(PlayerMoveStatus.INVALID_INDEX);
+});
+
+test("deprecated savePlayerSelection does not corrupt the board on invalid field", () => {
+  const game = new Game();
+  const before = [...game.board];
+  game.savePlayerSelection(0); // would write to index -1
+  game.savePlayerSelection(10); // out of range
+  expect([...game.board]).toEqual(before);
+});
+
+test("deprecated savePlayerSelection returns ALREADY_SELECTED for occupied field", () => {
+  const game = new Game();
+  game.savePlayerSelection(5);
+  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.ALREADY_SELECTED);
+  // board unchanged after second attempt
+  expect(game.board.filter((f) => typeof f === "string")).toHaveLength(1);
+});
+
+test("deprecated savePlayerSelection returns GAME_NOT_RUNNING after game is won", () => {
+  const game = new Game();
+  // O wins: fields 1,2,3 (indexes 0,1,2)
+  game.savePlayerSelection(1); // O
+  game.savePlayerSelection(4); // X
+  game.savePlayerSelection(2); // O
+  game.savePlayerSelection(5); // X
+  game.savePlayerSelection(3); // O -> win
+  expect(game.gameStatus.status).toBe("win");
+  expect(game.savePlayerSelection(9)).toBe(PlayerMoveStatus.GAME_NOT_RUNNING);
+});
+
 test("isFieldSelected and isFieldSelectedByIndex are equivalent", () => {
   const game = new Game();
   game.savePlayerMove(4);
@@ -233,6 +275,72 @@ test("event payload board is frozen", () => {
 
   const payload = listener.mock.calls[0][0];
   expect(Object.isFrozen(payload.board)).toBe(true);
+});
+
+test("throwing STATE_CHANGE listener does not prevent RESET from firing", () => {
+  const game = new Game();
+  const stateChangeListener = () => {
+    throw new Error("listener boom");
+  };
+  const resetListener = vi.fn();
+  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
+  game.on(GameEvent.RESET, resetListener);
+
+  expect(() => game.reset()).toThrow("listener boom");
+  // RESET still fired despite STATE_CHANGE listener throwing
+  expect(resetListener).toHaveBeenCalledOnce();
+});
+
+test("throwing PLAYER_MOVE listener does not prevent STATE_CHANGE from firing", () => {
+  const game = new Game();
+  const playerMoveListener = () => {
+    throw new Error("player_move boom");
+  };
+  const stateChangeListener = vi.fn();
+  game.on(GameEvent.PLAYER_MOVE, playerMoveListener);
+  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
+
+  expect(() => game.savePlayerMove(0)).toThrow("player_move boom");
+  // STATE_CHANGE still fired despite PLAYER_MOVE listener throwing
+  expect(stateChangeListener).toHaveBeenCalledOnce();
+});
+
+test("multiple throwing listeners produce AggregateError", () => {
+  const game = new Game();
+  const err1 = new Error("first");
+  const err2 = new Error("second");
+  game.on(GameEvent.PLAYER_MOVE, () => {
+    throw err1;
+  });
+  game.on(GameEvent.STATE_CHANGE, () => {
+    throw err2;
+  });
+
+  try {
+    game.savePlayerMove(0);
+    expect.fail("expected AggregateError");
+  } catch (e) {
+    expect(e).toBeInstanceOf(AggregateError);
+    expect((e as AggregateError).errors).toEqual([err1, err2]);
+  }
+});
+
+test("savePlayerMove still returns SUCCESS when no listener throws", () => {
+  const game = new Game();
+  game.on(GameEvent.STATE_CHANGE, () => {});
+  expect(game.savePlayerMove(0)).toBe(PlayerMoveStatus.SUCCESS);
+});
+
+test("throwing listener does not corrupt game state", () => {
+  const game = new Game();
+  game.on(GameEvent.STATE_CHANGE, () => {
+    throw new Error("boom");
+  });
+
+  expect(() => game.savePlayerMove(0)).toThrow("boom");
+  // Board was mutated and player toggled before emit — state is consistent
+  expect(game.board[0]).toBe("O");
+  expect(game.currentPlayer).toBe("X");
 });
 
 test("savePlayerMove creates board history snapshots", () => {

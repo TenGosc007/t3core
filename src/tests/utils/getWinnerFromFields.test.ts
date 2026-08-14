@@ -62,3 +62,14 @@ test("getWinnerFromFields: anti-diagonal 2-4-6 wins", () => {
   const fields = [1, 2, "X", 4, "X", 6, "X", 8, 9];
   expect(getWinnerFromFields(fields, COMBINATIONS)).toBe("X");
 });
+
+test("getWinnerFromFields: out-of-range combination index yields no winner instead of throwing", () => {
+  // Documented invariant: WINNING_COMBINATIONS indices must be in [0, fields.length).
+  // A malformed combination reads `undefined` and compares unequal — no throw.
+  const fields = ["X", "X", "X", 4, 5, 6, 7, 8, 9];
+  const malformedCombinations = [[0, 1, 99]] as const;
+  expect(() =>
+    getWinnerFromFields(fields, malformedCombinations),
+  ).not.toThrow();
+  expect(getWinnerFromFields(fields, malformedCombinations)).toBe(null);
+});
