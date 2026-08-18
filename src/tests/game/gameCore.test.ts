@@ -59,13 +59,6 @@ test("creates a game from the classic 3x3 variant", () => {
   expect(game.board).toEqual(initialBoard());
 });
 
-test("deprecated boardSize only accepts the current classic 3x3 size", () => {
-  expect(() => new Game({ boardSize: 16 })).toThrow(
-    "arbitrary board sizes are not supported",
-  );
-  expect(new Game({ boardSize: 9 }).board).toEqual(initialBoard());
-});
-
 /*
     X   O   X
     4   O   6
@@ -84,55 +77,11 @@ test("Check if the game is won", () => {
   expect(game.isFieldSelectedByIndex(8)).toBe(false);
 });
 
-test("PLAYER_MOVE event fires with correct payload on savePlayerMove", () => {
-  const game = new Game();
-  const listener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, listener);
-
-  game.savePlayerMove(4);
-
-  expect(listener).toHaveBeenCalledOnce();
-  const payload = listener.mock.calls[0][0];
-  expect(payload.index).toBe(4);
-  expect(payload.board).toBeDefined();
-  expect(payload.currentPlayer).toBeDefined();
-  expect(payload.gameStatus).toBeDefined();
-});
-
-test("RESET event fires with snapshot payload", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  game.savePlayerMove(1);
-
-  const listener = vi.fn();
-  game.on(GameEvent.RESET, listener);
-  game.reset();
-
-  expect(listener).toHaveBeenCalledOnce();
-  const payload = listener.mock.calls[0][0];
-  expect(payload.gameStatus).toEqual({ status: "running" });
-  expect(payload.board).toEqual(initialBoard());
-  expect(payload.currentPlayer).toBe("O");
-});
-
-test("PLAYER_MOVE event is not fired when move is invalid", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  const listener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, listener);
-
-  game.savePlayerMove(0);
-
-  expect(listener).not.toHaveBeenCalled();
-});
-
 test("savePlayerMove returns INVALID_INDEX for out-of-range or non-integer indexes", () => {
   const game = new Game();
   const beforeBoard = game.board;
   const stateListener = vi.fn();
-  const moveListener = vi.fn();
   game.on(GameEvent.STATE_CHANGE, stateListener);
-  game.on(GameEvent.PLAYER_MOVE, moveListener);
 
   expect(game.savePlayerMove(-1)).toBe(PlayerMoveStatus.INVALID_INDEX);
   expect(game.savePlayerMove(9)).toBe(PlayerMoveStatus.INVALID_INDEX);
@@ -140,7 +89,6 @@ test("savePlayerMove returns INVALID_INDEX for out-of-range or non-integer index
   expect(game.board).toEqual(beforeBoard);
   expect(game.currentPlayer).toBe("O");
   expect(stateListener).not.toHaveBeenCalled();
-  expect(moveListener).not.toHaveBeenCalled();
 });
 
 test("savePlayerMove returns GAME_NOT_RUNNING after game is won", () => {
@@ -159,8 +107,8 @@ test("savePlayerMove returns GAME_NOT_RUNNING after game is won", () => {
 test("off() removes listener", () => {
   const game = new Game();
   const listener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, listener);
-  game.off(GameEvent.PLAYER_MOVE, listener);
+  game.on(GameEvent.STATE_CHANGE, listener);
+  game.off(GameEvent.STATE_CHANGE, listener);
   game.savePlayerMove(0);
 
   expect(listener).not.toHaveBeenCalled();
@@ -178,81 +126,11 @@ test("multiple resets work correctly", () => {
   expect(game.board).toEqual(initialBoard());
 });
 
-test("deprecated savePlayerSelection still works (1-9 numbering)", () => {
-  const game = new Game();
-  game.savePlayerSelection(5); // field 5 = index 4
-  expect(game.isFieldSelectedByIndex(4)).toBe(true);
-  expect(game.board[4]).toBe("O");
-});
-
-test("deprecated savePlayerSelection returns SUCCESS for valid field", () => {
-  const game = new Game();
-  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.SUCCESS);
-});
-
-test("deprecated savePlayerSelection returns INVALID_INDEX for out-of-range or non-integer fields", () => {
-  const game = new Game();
-  expect(game.savePlayerSelection(0)).toBe(PlayerMoveStatus.INVALID_INDEX);
-  expect(game.savePlayerSelection(10)).toBe(PlayerMoveStatus.INVALID_INDEX);
-  expect(game.savePlayerSelection(-1)).toBe(PlayerMoveStatus.INVALID_INDEX);
-  expect(game.savePlayerSelection(1.5)).toBe(PlayerMoveStatus.INVALID_INDEX);
-  expect(game.savePlayerSelection(NaN)).toBe(PlayerMoveStatus.INVALID_INDEX);
-});
-
-test("deprecated savePlayerSelection does not corrupt the board on invalid field", () => {
-  const game = new Game();
-  const before = [...game.board];
-  game.savePlayerSelection(0); // would write to index -1
-  game.savePlayerSelection(10); // out of range
-  expect([...game.board]).toEqual(before);
-});
-
-test("deprecated savePlayerSelection returns ALREADY_SELECTED for occupied field", () => {
-  const game = new Game();
-  game.savePlayerSelection(5);
-  expect(game.savePlayerSelection(5)).toBe(PlayerMoveStatus.ALREADY_SELECTED);
-  // board unchanged after second attempt
-  expect(game.board.filter((f) => typeof f === "string")).toHaveLength(1);
-});
-
-test("deprecated savePlayerSelection returns GAME_NOT_RUNNING after game is won", () => {
-  const game = new Game();
-  // O wins: fields 1,2,3 (indexes 0,1,2)
-  game.savePlayerSelection(1); // O
-  game.savePlayerSelection(4); // X
-  game.savePlayerSelection(2); // O
-  game.savePlayerSelection(5); // X
-  game.savePlayerSelection(3); // O -> win
-  expect(game.gameStatus.status).toBe("win");
-  expect(game.savePlayerSelection(9)).toBe(PlayerMoveStatus.GAME_NOT_RUNNING);
-});
-
-test("isFieldSelected and isFieldSelectedByIndex are equivalent", () => {
-  const game = new Game();
-  game.savePlayerMove(4);
-
-  // isFieldSelected uses 1-9 numbering, isFieldSelectedByIndex uses 0-8
-  expect(game.isFieldSelected(5)).toBe(true); // field 5
-  expect(game.isFieldSelectedByIndex(4)).toBe(true); // index 4
-
-  expect(game.isFieldSelected(1)).toBe(false);
-  expect(game.isFieldSelectedByIndex(0)).toBe(false);
-});
-
-test("deprecated getBoard returns same as board getter", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  game.savePlayerMove(4);
-
-  expect(game.getBoard()).toEqual(game.board);
-});
-
 test("board snapshots exposed by public API are frozen", () => {
   const game = new Game();
 
   expect(Object.isFrozen(game.board)).toBe(true);
   expect(Object.isFrozen(game.snapshot.board)).toBe(true);
-  expect(Object.isFrozen(game.getBoard())).toBe(true);
 });
 
 test("mutating the public board snapshot does not change the game state", () => {
@@ -275,54 +153,6 @@ test("event payload board is frozen", () => {
 
   const payload = listener.mock.calls[0][0];
   expect(Object.isFrozen(payload.board)).toBe(true);
-});
-
-test("throwing STATE_CHANGE listener does not prevent RESET from firing", () => {
-  const game = new Game();
-  const stateChangeListener = () => {
-    throw new Error("listener boom");
-  };
-  const resetListener = vi.fn();
-  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
-  game.on(GameEvent.RESET, resetListener);
-
-  expect(() => game.reset()).toThrow("listener boom");
-  // RESET still fired despite STATE_CHANGE listener throwing
-  expect(resetListener).toHaveBeenCalledOnce();
-});
-
-test("throwing PLAYER_MOVE listener does not prevent STATE_CHANGE from firing", () => {
-  const game = new Game();
-  const playerMoveListener = () => {
-    throw new Error("player_move boom");
-  };
-  const stateChangeListener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, playerMoveListener);
-  game.on(GameEvent.STATE_CHANGE, stateChangeListener);
-
-  expect(() => game.savePlayerMove(0)).toThrow("player_move boom");
-  // STATE_CHANGE still fired despite PLAYER_MOVE listener throwing
-  expect(stateChangeListener).toHaveBeenCalledOnce();
-});
-
-test("multiple throwing listeners produce AggregateError", () => {
-  const game = new Game();
-  const err1 = new Error("first");
-  const err2 = new Error("second");
-  game.on(GameEvent.PLAYER_MOVE, () => {
-    throw err1;
-  });
-  game.on(GameEvent.STATE_CHANGE, () => {
-    throw err2;
-  });
-
-  try {
-    game.savePlayerMove(0);
-    expect.fail("expected AggregateError");
-  } catch (e) {
-    expect(e).toBeInstanceOf(AggregateError);
-    expect((e as AggregateError).errors).toEqual([err1, err2]);
-  }
 });
 
 test("savePlayerMove still returns SUCCESS when no listener throws", () => {
@@ -448,25 +278,7 @@ test("STATE_CHANGE event fires on backToMove", () => {
   expect(listener).toHaveBeenCalledOnce();
 });
 
-test("RESET event does not fire on savePlayerMove", () => {
-  const game = new Game();
-  const listener = vi.fn();
-  game.on(GameEvent.RESET, listener);
-  game.savePlayerMove(0);
-  expect(listener).not.toHaveBeenCalled();
-});
-
-test("RESET event does not fire on backToMove", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  game.savePlayerMove(1);
-  const listener = vi.fn();
-  game.on(GameEvent.RESET, listener);
-  game.backToMove(1);
-  expect(listener).not.toHaveBeenCalled();
-});
-
-test("PLAYER_MOVE event does not fire after game is won", () => {
+test("STATE_CHANGE event does not fire after game is won", () => {
   const game = new Game();
   game.savePlayerMove(0);
   game.savePlayerMove(3);
@@ -475,7 +287,7 @@ test("PLAYER_MOVE event does not fire after game is won", () => {
   game.savePlayerMove(2);
   expect(game.gameStatus.status).toBe("win");
   const listener = vi.fn();
-  game.on(GameEvent.PLAYER_MOVE, listener);
+  game.on(GameEvent.STATE_CHANGE, listener);
   game.savePlayerMove(8);
   expect(listener).not.toHaveBeenCalled();
 });
@@ -500,10 +312,4 @@ test("_gameStatus reference is preserved when game stays running", () => {
   const statusAfterFirst = game.gameStatus;
   game.savePlayerMove(1);
   expect(game.gameStatus).toBe(statusAfterFirst);
-});
-
-test("deprecated boardSize rejects arbitrary board sizes", () => {
-  expect(() => new Game({ boardSize: 4 })).toThrow(
-    "arbitrary board sizes are not supported",
-  );
 });

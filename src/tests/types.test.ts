@@ -24,7 +24,5 @@ test("BackToMoveStatus values are correct", () => {
 });
 
 test("GameEvent values are correct", () => {
-  expect(GameEvent.PLAYER_MOVE).toBe("PLAYER_MOVE");
-  expect(GameEvent.RESET).toBe("RESET");
   expect(GameEvent.STATE_CHANGE).toBe("STATE_CHANGE");
 });

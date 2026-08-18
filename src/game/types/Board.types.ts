@@ -15,18 +15,6 @@ export interface IBoard {
   snapshotCount: number;
 
   /**
-   * @deprecated Use `getFieldByIndex` instead. Will be removed in v2.0.
-   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
-   */
-  getFieldByNumber: (fieldNumber: number) => BoardField;
-
-  /**
-   * @deprecated Use `setFieldByIndex` instead. Will be removed in v2.0.
-   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
-   */
-  setFieldByNumber: (fieldNumber: number, symbol: PlayerSymbol) => void;
-
-  /**
    * Returns the value of the field at the given 0-based index.
    * @throws {RangeError} When `index` is out of range or not an integer.
    */

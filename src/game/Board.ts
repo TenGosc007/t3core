@@ -31,14 +31,6 @@ export class Board implements IBoard {
     this._currentFields = getLastArrayItem(this._boardSnapshots);
   }
 
-  private _isFieldNumberValid(fieldNumber: number) {
-    return (
-      Number.isInteger(fieldNumber) &&
-      fieldNumber >= 1 &&
-      fieldNumber <= this._size
-    );
-  }
-
   private _isIndexValid(index: number) {
     return Number.isInteger(index) && index >= 0 && index < this._size;
   }
@@ -67,23 +59,6 @@ export class Board implements IBoard {
   }
 
   /**
-   * Returns the value of a field by its 1-based field number.
-   * @param fieldNumber The field number (1-9) to get.
-   * @returns The value of the field.
-   * @type {number | TSymbol}
-   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
-   * @deprecated Use `getFieldByIndex` instead. Will be removed in v2.0.
-   */
-  getFieldByNumber(fieldNumber: number) {
-    if (!this._isFieldNumberValid(fieldNumber)) {
-      throw new RangeError(
-        `fieldNumber must be an integer in [1, ${this._size}], got: ${fieldNumber}`,
-      );
-    }
-    return this._currentFields[fieldNumber - 1];
-  }
-
-  /**
    * Returns the value of a field by its index.
    * @param index The index of the field to get.
    * @returns The value of the field.
@@ -105,24 +80,6 @@ export class Board implements IBoard {
    */
   isFull() {
     return this._currentFields.every((field) => typeof field === "string");
-  }
-
-  /**
-   * Sets a field's value by its 1-based field number.
-   * Invalidates the cached snapshot so the next `fields` access returns a new reference.
-   * @param fieldNumber The field number (1-9) to set.
-   * @param symbol The symbol to set.
-   * @throws {RangeError} When `fieldNumber` is out of range or not an integer.
-   * @deprecated Use `setFieldByIndex` instead. Will be removed in v2.0.
-   */
-  setFieldByNumber(fieldNumber: number, symbol: PlayerSymbol) {
-    if (!this._isFieldNumberValid(fieldNumber)) {
-      throw new RangeError(
-        `fieldNumber must be an integer in [1, ${this._size}], got: ${fieldNumber}`,
-      );
-    }
-    this._currentFields[fieldNumber - 1] = symbol;
-    this._snapshot = null;
   }
 
   /**
