@@ -32,6 +32,14 @@ export type AIOptions = {
   symbol?: PlayerSymbol;
 
   /**
+   * Symbol the opponent plays. Inferred from the board when omitted (the first
+   * symbol on the board that differs from `symbol`). Required only when the AI
+   * moves first on an empty board — in that case the opponent has not appeared
+   * on the board yet and the symbol cannot be inferred.
+   */
+  opponentSymbol?: PlayerSymbol;
+
+  /**
    * Optional seed for the internal RNG. When omitted, `Math.random` is used.
    * Provide a seed for reproducible behavior in tests.
    */

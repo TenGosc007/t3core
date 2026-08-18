@@ -12,7 +12,27 @@ export const LOSS_SCORE = -10;
 export const DRAW_SCORE = 0;
 
 /** Move ordering for the 3x3 board: center → corners → edges. Maximizes alpha-beta cutoffs. */
-const MOVE_ORDER_3X3: readonly number[] = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+export const MOVE_ORDER_3X3: readonly number[] = [4, 0, 2, 6, 8, 1, 3, 5, 7];
+
+/** Options for {@link alphaBeta}. */
+export type AlphaBetaOptions = {
+  /** Current board state (mutated in place during search, restored before returning). */
+  fields: BoardField[];
+  /** Current search depth (starts at 0, increments per ply). */
+  depth: number;
+  /** Best score the maximizing player can guarantee so far. */
+  alpha: number;
+  /** Best score the minimizing player can guarantee so far. */
+  beta: number;
+  /** `true` when it is the AI's turn (maximizing `aiSymbol`). */
+  isMaximizing: boolean;
+  /** Symbol the AI plays. */
+  aiSymbol: PlayerSymbol;
+  /** Symbol the opponent plays. */
+  opponentSymbol: PlayerSymbol;
+  /** Maximum search depth. `Infinity` for a full search. */
+  maxDepth: number;
+};
 
 /**
  * Alfa-Beta search for the classic 3x3 variant. **3x3-only** — win-detection
@@ -22,16 +42,16 @@ const MOVE_ORDER_3X3: readonly number[] = [4, 0, 2, 6, 8, 1, 3, 5, 7];
  * Scoring: AI win = `WIN_SCORE - depth` (prefers faster wins),
  * AI loss = `LOSS_SCORE + depth` (prefers slower losses), draw = `DRAW_SCORE`.
  */
-export function alphaBeta(
-  fields: BoardField[],
-  depth: number,
-  alpha: number,
-  beta: number,
-  isMaximizing: boolean,
-  aiSymbol: PlayerSymbol,
-  opponentSymbol: PlayerSymbol,
-  maxDepth: number,
-): Score {
+export function alphaBeta({
+  fields,
+  depth,
+  alpha,
+  beta,
+  isMaximizing,
+  aiSymbol,
+  opponentSymbol,
+  maxDepth,
+}: AlphaBetaOptions): Score {
   const winner = getWinnerFromFields(fields, WINNING_COMBINATIONS_3X3);
 
   if (winner === aiSymbol) return WIN_SCORE - depth;
@@ -46,16 +66,16 @@ export function alphaBeta(
 
       const original = fields[index];
       fields[index] = aiSymbol;
-      const score = alphaBeta(
+      const score = alphaBeta({
         fields,
-        depth + 1,
+        depth: depth + 1,
         alpha,
         beta,
-        false,
+        isMaximizing: false,
         aiSymbol,
         opponentSymbol,
         maxDepth,
-      );
+      });
       fields[index] = original;
 
       if (score > best) best = score;
@@ -71,16 +91,16 @@ export function alphaBeta(
 
     const original = fields[index];
     fields[index] = opponentSymbol;
-    const score = alphaBeta(
+    const score = alphaBeta({
       fields,
-      depth + 1,
+      depth: depth + 1,
       alpha,
       beta,
-      true,
+      isMaximizing: true,
       aiSymbol,
       opponentSymbol,
       maxDepth,
-    );
+    });
     fields[index] = original;
 
     if (score < best) best = score;
