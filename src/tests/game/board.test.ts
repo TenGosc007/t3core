@@ -58,20 +58,6 @@ test("getFieldByIndex returns correct field", () => {
   expect(board.getFieldByIndex(0)).toBe("O");
 });
 
-test("getFieldByNumber returns correct field (1-based)", () => {
-  const board = new Board();
-  expect(board.getFieldByNumber(1)).toBe(1);
-  board.setFieldByNumber(1, "X");
-  expect(board.getFieldByNumber(1)).toBe("X");
-});
-
-test("setFieldByNumber mutates field in place without history", () => {
-  const board = new Board();
-  board.setFieldByNumber(5, "O");
-  expect(board.getFieldByNumber(5)).toBe("O");
-  expect(board.snapshotCount).toBe(0);
-});
-
 test("isFull returns false on fresh board", () => {
   const board = new Board();
   expect(board.isFull()).toBe(false);
@@ -144,22 +130,6 @@ test("setFieldByIndex throws RangeError for out-of-range or non-integer index", 
   expect(() => board.setFieldByIndex(NaN, "O")).toThrow(RangeError);
 });
 
-test("getFieldByNumber throws RangeError for out-of-range or non-integer field", () => {
-  const board = new Board();
-  expect(() => board.getFieldByNumber(0)).toThrow(RangeError);
-  expect(() => board.getFieldByNumber(10)).toThrow(RangeError);
-  expect(() => board.getFieldByNumber(1.5)).toThrow(RangeError);
-  expect(() => board.getFieldByNumber(NaN)).toThrow(RangeError);
-});
-
-test("setFieldByNumber throws RangeError for out-of-range or non-integer field", () => {
-  const board = new Board();
-  expect(() => board.setFieldByNumber(0, "O")).toThrow(RangeError);
-  expect(() => board.setFieldByNumber(10, "O")).toThrow(RangeError);
-  expect(() => board.setFieldByNumber(1.5, "O")).toThrow(RangeError);
-  expect(() => board.setFieldByNumber(NaN, "O")).toThrow(RangeError);
-});
-
 test("restoreBoardHistoryAt throws RangeError for out-of-range or non-integer index", () => {
   const board = new Board();
   board.setFieldByIndex(0, "O"); // snapshotCount = 1
@@ -171,10 +141,8 @@ test("restoreBoardHistoryAt throws RangeError for out-of-range or non-integer in
 
 test("Board bounds validation respects custom size", () => {
   const board = new Board(4);
-  // valid: indexes 0-3, field numbers 1-4
+  // valid: indexes 0-3
   expect(() => board.getFieldByIndex(3)).not.toThrow();
-  expect(() => board.getFieldByNumber(4)).not.toThrow();
-  // invalid: index 4 / field 5 are out of range for size 4
+  // invalid: index 4 is out of range for size 4
   expect(() => board.getFieldByIndex(4)).toThrow(RangeError);
-  expect(() => board.getFieldByNumber(5)).toThrow(RangeError);
 });

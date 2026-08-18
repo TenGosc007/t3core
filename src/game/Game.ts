@@ -39,10 +39,9 @@ export class Game implements IGame {
    * Creates a new game instance.
    *
    * @param options - Optional configuration. Use `variant` to select a predefined
-   *   game variant. `boardSize` is deprecated and only accepted for backwards compatibility.
-   * @throws {RangeError} When `variant` is unsupported, or when the deprecated
-   *   `boardSize` does not match the selected variant's board size. Propagated
-   *   from {@link resolveGameStrategy}.
+   *   game variant.
+   * @throws {RangeError} When `variant` is unsupported. Propagated from
+   *   {@link resolveGameStrategy}.
    */
   constructor(options: GameOptions = {}) {
     this._strategy = resolveGameStrategy(options);
@@ -98,72 +97,16 @@ export class Game implements IGame {
 
   /**
    * Recomputes the game status, refreshes the snapshot, and emits
-   * `PLAYER_MOVE` (when `index` is provided) followed by `STATE_CHANGE`.
-   *
-   * Listener errors are captured into `errors` instead of aborting subsequent
-   * events, so the event emission contract is preserved (e.g. `RESET` always
-   * follows `STATE_CHANGE` in {@link reset}). The caller is responsible for
-   * re-throwing collected errors via {@link _rethrowCollected}.
-   *
-   * @internal Remove in v2.0 together with the deprecated `PLAYER_MOVE` and
-   *   `RESET` events — a single `STATE_CHANGE` per state change has no
-   *   ordering to preserve, so this collapses to a direct `emit` call.
+   * `STATE_CHANGE`.
    */
-  _updateGameState(index?: number, errors: unknown[] = []) {
+  private _updateGameState() {
     this._updateGameStatus();
     this._snapshot = {
       board: this._board.fields,
       currentPlayer: this._currentPlayer,
       gameStatus: this._gameStatus,
     };
-    if (index !== undefined) {
-      this._safeEmit(errors, GameEvent.PLAYER_MOVE, {
-        ...this._snapshot,
-        index,
-      });
-    }
-    this._safeEmit(errors, GameEvent.STATE_CHANGE, this._snapshot);
-  }
-
-  /**
-   * Emits an event, capturing any listener errors into `errors` so that
-   * subsequent events still fire. Collected errors are re-thrown by the caller
-   * via {@link _rethrowCollected}, ensuring no error is swallowed while
-   * preserving the event emission contract (e.g. `RESET` always follows
-   * `STATE_CHANGE`).
-   *
-   * @internal Remove in v2.0 together with the deprecated `PLAYER_MOVE` and
-   *   `RESET` events.
-   */
-  private _safeEmit<K extends keyof GameEventMap>(
-    errors: unknown[],
-    event: K,
-    ...args: GameEventMap[K]
-  ): void {
-    try {
-      (this._emitter.emit as (event: K, ...args: GameEventMap[K]) => void)(
-        event,
-        ...args,
-      );
-    } catch (err) {
-      errors.push(err);
-    }
-  }
-
-  /**
-   * Re-throws errors collected by {@link _safeEmit}. A single error is thrown
-   * as-is; multiple errors are wrapped in an `AggregateError`.
-   *
-   * @internal Remove in v2.0 together with {@link _safeEmit} and the
-   *   deprecated `PLAYER_MOVE` / `RESET` events.
-   */
-  private _rethrowCollected(errors: unknown[]): void {
-    if (errors.length === 0) return;
-    if (errors.length === 1) throw errors[0];
-    throw new AggregateError(
-      errors,
-      `Multiple listeners threw during event emission`,
-    );
+    this._emitter.emit(GameEvent.STATE_CHANGE, this._snapshot);
   }
 
   /**
@@ -238,26 +181,6 @@ export class Game implements IGame {
   }
 
   /**
-   * Returns the current board state.
-   * @returns The current board state.
-   * @type {BoardSnapshot}
-   * @deprecated Use `board` instead. Will be removed in v2.0.
-   */
-  getBoard(): BoardSnapshot {
-    return this._board.fields;
-  }
-
-  /**
-   * Checks if a field is already selected by a player.
-   * @param field The 1-based field number to check.
-   * @returns `true` if the field is selected, `false` otherwise.
-   * @deprecated Use `isFieldSelectedByIndex` instead. Will be removed in v2.0.
-   */
-  isFieldSelected(field: number) {
-    return typeof this._board.getFieldByNumber(field) === "string";
-  }
-
-  /**
    * Checks if a field is already selected by a player.
    * @param index The index of the field to check.
    * @returns `true` if the field is selected, `false` otherwise.
@@ -267,38 +190,9 @@ export class Game implements IGame {
   }
 
   /**
-   * Saves a player's selection on the board.
-   * @param field The 1-based field number to mark (1-9 numbering).
-   * @returns The status of the move. Does not emit events or update the snapshot.
-   * @deprecated Use `savePlayerMove(index)` instead (0-8 index-based). Will be removed in v2.0.
-   */
-  savePlayerSelection(field: number): PlayerMoveStatus {
-    const index = field - 1;
-
-    if (!this._isBoardIndexValid(index)) {
-      return PlayerMoveStatus.INVALID_INDEX;
-    }
-
-    if (this.isFieldSelectedByIndex(index)) {
-      return PlayerMoveStatus.ALREADY_SELECTED;
-    }
-
-    if (this._gameStatus.status !== "running") {
-      return PlayerMoveStatus.GAME_NOT_RUNNING;
-    }
-
-    this._board.setFieldByNumber(field, this._currentPlayer);
-    this._togglePlayer();
-    this._updateGameStatus();
-
-    return PlayerMoveStatus.SUCCESS;
-  }
-
-  /**
    * Saves a player's selection on the board by 0-based index.
    *
-   * Emits {@link GameEvent.STATE_CHANGE}. For backwards compatibility it also
-   * emits the deprecated {@link GameEvent.PLAYER_MOVE}, which will be removed in v2.0.
+   * Emits {@link GameEvent.STATE_CHANGE}.
    *
    * @param index The 0-based index of the field to mark.
    * @returns The status of the move.
@@ -318,9 +212,7 @@ export class Game implements IGame {
 
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
-    const errors: unknown[] = [];
-    this._updateGameState(index, errors);
-    this._rethrowCollected(errors);
+    this._updateGameState();
 
     return PlayerMoveStatus.SUCCESS;
   }
@@ -337,9 +229,7 @@ export class Game implements IGame {
     const board = this._board;
     board.restoreBoardHistoryAt(index);
     this._currentPlayer = this._symbols[index % 2];
-    const errors: unknown[] = [];
-    this._updateGameState(undefined, errors);
-    this._rethrowCollected(errors);
+    this._updateGameState();
 
     return BackToMoveStatus.SUCCESS;
   }
@@ -347,19 +237,11 @@ export class Game implements IGame {
   /**
    * Resets the game to its initial state.
    *
-   * Emits {@link GameEvent.STATE_CHANGE}. For backwards compatibility it also
-   * emits the deprecated {@link GameEvent.RESET}, which will be removed in v2.0.
-   *
-   * Listener errors never abort subsequent events: `RESET` is always emitted
-   * after `STATE_CHANGE` even if a `STATE_CHANGE` listener throws. Collected
-   * listener errors are re-thrown once all events have been dispatched.
+   * Emits {@link GameEvent.STATE_CHANGE}.
    */
   reset() {
     this._currentPlayer = this._symbols[0];
     this._board.reset();
-    const errors: unknown[] = [];
-    this._updateGameState(undefined, errors);
-    this._safeEmit(errors, GameEvent.RESET, this._snapshot);
-    this._rethrowCollected(errors);
+    this._updateGameState();
   }
 }

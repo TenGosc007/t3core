@@ -24,10 +24,3 @@ test("resolveGameStrategy rejects unsupported variants", () => {
     "Unsupported game variant: unknown",
   );
 });
-
-test("resolveGameStrategy keeps deprecated boardSize compatibility for classic 3x3", () => {
-  expect(resolveGameStrategy({ boardSize: 9 }).boardSize).toBe(9);
-  expect(() => resolveGameStrategy({ boardSize: 16 })).toThrow(
-    "arbitrary board sizes are not supported",
-  );
-});

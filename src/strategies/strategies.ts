@@ -13,7 +13,7 @@ const GAME_STRATEGIES = {
  *
  * @param options - Game creation options.
  * @returns The matching strategy for the selected variant.
- * @throws {RangeError} When the variant is unsupported or the deprecated `boardSize` does not match the variant.
+ * @throws {RangeError} When the variant is unsupported.
  */
 export const resolveGameStrategy = (options: GameOptions): GameStrategy => {
   const variant = options.variant ?? GameVariant.CLASSIC_3X3;
@@ -23,20 +23,5 @@ export const resolveGameStrategy = (options: GameOptions): GameStrategy => {
     throw new RangeError(`Unsupported game variant: ${variant}`);
   }
 
-  validateBoardSize(options.boardSize ?? strategy.boardSize, strategy);
-
   return strategy;
 };
-
-/**
- * Validates the deprecated `boardSize` option.
- *
- * @deprecated This validation exists only for backwards compatibility. Will be removed in v2.0.
- */
-function validateBoardSize(boardSize: number, strategy: GameStrategy): void {
-  if (boardSize !== strategy.boardSize) {
-    throw new RangeError(
-      "`boardSize` is deprecated and arbitrary board sizes are not supported. Use a predefined `variant` instead.",
-    );
-  }
-}
