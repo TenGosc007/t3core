@@ -82,3 +82,29 @@ export type {
   BoardSnapshot,
   IBoard,
 } from "./game/types/Board.types";
+
+// ─── AI (Single Player) ────────────────────────────────────────────────
+
+/**
+ * Stateful AI player for Single Player mode. Supports auto-play (subscribes
+ * to `STATE_CHANGE` and moves on its turn) and manual use (`nextMove(game)`).
+ */
+export { AIPlayer } from "./ai/AIPlayer";
+
+/**
+ * Stateless helper that computes the best move for `game.currentPlayer`
+ * without mutating the game. The caller applies the move via `game.savePlayerMove`.
+ */
+export { getBestMove } from "./ai/getBestMove";
+
+/**
+ * AI difficulty levels: `NORMAL` (casual, depth 1, 30% mistakes) and
+ * `HARD` (strong, depth 4, 10% mistakes). No `EASY` for 3x3 in v2.0.
+ */
+export { AIDifficulty } from "./ai/types";
+
+/**
+ * Options for `AIPlayer` and `getBestMove`: `difficulty`, `symbol`,
+ * `opponentSymbol`, `seed`.
+ */
+export type { AIOptions, AIMoveResult } from "./ai/types";

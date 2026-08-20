@@ -169,4 +169,73 @@ export { GameEvent } from 't3core';
 
 // Statuses
 export { BackToMoveStatus, PlayerMoveStatus } from 't3core';
+
+// AI (Single Player)
+export { AIPlayer, getBestMove, AIDifficulty } from 't3core';
+export type { AIOptions, AIMoveResult } from 't3core';
 ```
+
+## Single Player (AI)
+
+`t3core` ships an AI opponent for the classic 3x3 variant, based on Alfa-Beta pruning with difficulty knobs (depth limit + mistake rate). Two difficulty levels are available — no unbeatable level, so the player always has a chance to win.
+
+| Level | Depth | Mistake rate | Behavior |
+|-------|-------|--------------|----------|
+| `AIDifficulty.NORMAL` | 1 | 30% | Sees only immediate moves; often plays randomly. Very beatable. |
+| `AIDifficulty.HARD` | 4 | 10% | Looks 4 plies ahead; occasional blunders. Strong, but beatable. |
+
+### `AIPlayer` — auto-play
+
+```typescript
+import { Game, AIPlayer, AIDifficulty } from 't3core';
+
+const game = new Game();
+const ai = new AIPlayer({
+  difficulty: AIDifficulty.HARD,
+  symbol: 'X',            // AI plays second by default
+  opponentSymbol: 'O',
+});
+
+ai.attach(game);          // subscribes to STATE_CHANGE; moves on its turn
+// ...human plays via game.savePlayerMove(index)...
+ai.detach();              // unsubscribe
+ai.setDifficulty(AIDifficulty.NORMAL);  // change level mid-game
+```
+
+### `AIPlayer` — manual mode
+
+```typescript
+const ai = new AIPlayer({ difficulty: AIDifficulty.HARD, symbol: 'X', opponentSymbol: 'O' });
+const result = ai.nextMove(game);  // computes and applies the move
+if (result.status === 'success') {
+  console.log('AI played index', result.index);
+}
+```
+
+### `getBestMove` — stateless helper
+
+```typescript
+import { getBestMove, AIDifficulty } from 't3core';
+
+const result = getBestMove(game, {
+  difficulty: AIDifficulty.HARD,
+  symbol: 'X',
+  opponentSymbol: 'O',
+  seed: 12345,            // optional — for reproducible behavior
+});
+if (result.status === 'success') {
+  game.savePlayerMove(result.index);  // caller applies the move
+}
+```
+
+### AI API
+
+| Export | Description |
+| ------ | ----------- |
+| `AIPlayer` | Stateful wrapper. `attach(game)` for auto-play, `nextMove(game)` for manual, `setDifficulty(level)` to change level, `detach()` to unsubscribe |
+| `getBestMove(game, options?)` | Stateless helper. Returns `AIMoveResult` (`{ status: 'success', index }` \| `{ status: 'no_moves' }`). Does not mutate the game |
+| `AIDifficulty` | Enum: `NORMAL`, `HARD` |
+| `AIOptions` | Type: `{ difficulty?, symbol?, opponentSymbol?, seed? }` |
+| `AIMoveResult` | Type: discriminated union on `status` |
+
+> **Note:** `getBestMove` and `AIPlayer` support only the 3x3 variant (9-cell board). Passing a game with a different board size throws `RangeError`. When the AI moves first on an empty board, `opponentSymbol` must be provided explicitly (it cannot be inferred from the board).
