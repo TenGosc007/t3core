@@ -25,6 +25,7 @@ test("HARD completes a winning line when one is available", () => {
     difficulty: AIDifficulty.HARD,
     symbol: "X",
     opponentSymbol: "O",
+    seed: 1,
   });
   expect(result.status).toBe("success");
   if (result.status === "success") {
@@ -43,6 +44,7 @@ test("HARD blocks an opponent's winning threat", () => {
     difficulty: AIDifficulty.HARD,
     symbol: "X",
     opponentSymbol: "O",
+    seed: 1,
   });
   expect(result.status).toBe("success");
   if (result.status === "success") {
@@ -57,6 +59,7 @@ test("HARD takes the center on an empty board when it moves first", () => {
     difficulty: AIDifficulty.HARD,
     symbol: "O",
     opponentSymbol: "X",
+    seed: 1,
   });
   expect(result.status).toBe("success");
   if (result.status === "success") {
