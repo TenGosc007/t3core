@@ -1,9 +1,18 @@
 import type { BoardSnapshot } from "@/game/types/Board.types";
-import type {
-  GameEventPayload,
-  GameStatus,
-} from "@/game/types/Game.types";
+import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
+import type EventEmitter from "eventemitter3";
+
+/**
+ * Untyped event handler used internally by sessions to back the typed
+ * `on`/`off` API. `eventemitter3` requires a homogeneous handler map, so we
+ * erase the per-event payload type at the emitter boundary and restore it via
+ * casts in each session's `on`/`off`/`_emit`.
+ */
+export type SessionHandler = (payload: Record<string, unknown>) => void;
+
+/** Internal emitter type shared by `PvPGame`, `SinglePlayerGame`, `AIGame`. */
+export type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
 
 /** Lifecycle of a session — independent of `GameStatus`. */
 export type SessionLifecycle = "idle" | "started" | "finished";

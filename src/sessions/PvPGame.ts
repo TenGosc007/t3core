@@ -1,49 +1,17 @@
-import type {
-  GameSession,
-  GameSessionEventPayload,
-  GameSessionEventType,
-  PlayMoveResult,
-  StartResult,
-} from "./types";
+import type { GameSession, PlayMoveResult, StartResult } from "./types";
 import type { Game } from "@/game/Game";
-
-import EventEmitter from "eventemitter3";
 
 import { PlayerMoveStatus } from "@/game/types/Game.types";
 
-type SessionHandler = (payload: Record<string, unknown>) => void;
-type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
+import { BaseSession } from "./BaseSession";
 
 /**
  * Local two-player session. No AI — each `playMove` applies one human move and
  * emits `move` + (`turn` | `finished`).
  */
-export class PvPGame implements GameSession {
-  private readonly _game: Game;
-  private readonly _emitter: SessionEmitter = new EventEmitter();
-
-  private _generation = 0;
-  private _busyGeneration: number | null = null;
-  private _lifecycle: "idle" | "started" | "finished" = "idle";
-
+export class PvPGame extends BaseSession implements GameSession {
   constructor(options: { game: Game }) {
-    this._game = options.game;
-  }
-
-  get board() {
-    return this._game.board;
-  }
-  get currentPlayer() {
-    return this._game.currentPlayer;
-  }
-  get gameStatus() {
-    return this._game.gameStatus;
-  }
-  get snapshot() {
-    return this._game.snapshot;
-  }
-  get movesCount() {
-    return this._game.movesCount;
+    super(options.game);
   }
 
   async start(): Promise<StartResult> {
@@ -96,35 +64,5 @@ export class PvPGame implements GameSession {
     } finally {
       if (this._busyGeneration === gen) this._busyGeneration = null;
     }
-  }
-
-  reset(): void {
-    this._generation++;
-    this._busyGeneration = null;
-    this._lifecycle = "idle";
-    this._game.reset();
-  }
-
-  on<K extends GameSessionEventType>(
-    event: K,
-    handler: (payload: GameSessionEventPayload<K>) => void,
-  ): this {
-    this._emitter.on(event, handler as SessionHandler);
-    return this;
-  }
-
-  off<K extends GameSessionEventType>(
-    event: K,
-    handler: (payload: GameSessionEventPayload<K>) => void,
-  ): this {
-    this._emitter.off(event, handler as SessionHandler);
-    return this;
-  }
-
-  private _emit<K extends GameSessionEventType>(
-    event: K,
-    payload: GameSessionEventPayload<K>,
-  ): void {
-    this._emitter.emit(event, payload as Record<string, unknown>);
   }
 }

@@ -1,31 +1,14 @@
-import type {
-  GameSessionEventPayload,
-  GameSessionEventType,
-  PlayMoveResult,
-  RunResult,
-} from "./types";
+import type { PlayMoveResult, RunResult } from "./types";
 import type { MoveStrategy } from "@/ai/strategy.types";
 import type { Game } from "@/game/Game";
-import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameEventPayload } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
-
-import EventEmitter from "eventemitter3";
 
 import { MoveStrategyError } from "@/ai/strategy.types";
 import { PlayerMoveStatus } from "@/game/types/Game.types";
 
-type SessionHandler = (payload: Record<string, unknown>) => void;
-type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
-
-function isLegalMove(index: number, board: BoardSnapshot): boolean {
-  return (
-    Number.isInteger(index) &&
-    index >= 0 &&
-    index < board.length &&
-    typeof board[index] !== "string"
-  );
-}
+import { BaseSession } from "./BaseSession";
+import { isLegalMove } from "./utils";
 
 /**
  * AI-vs-AI session. Does NOT implement {@link GameSession} — there is no human
@@ -33,39 +16,17 @@ function isLegalMove(index: number, board: BoardSnapshot): boolean {
  * move) and `run()` (auto-play to the end). Useful for difficulty benchmarks
  * and regression demos.
  */
-export class AIGame {
-  private readonly _game: Game;
+export class AIGame extends BaseSession {
   private readonly _strategies: readonly [MoveStrategy, MoveStrategy];
   private readonly _symbols: readonly [PlayerSymbol, PlayerSymbol];
-  private readonly _emitter: SessionEmitter = new EventEmitter();
-
-  private _generation = 0;
-  private _busyGeneration: number | null = null;
-  private _lifecycle: "idle" | "started" | "finished" = "idle";
 
   constructor(options: {
     game: Game;
     strategies: [MoveStrategy, MoveStrategy]; // [player1='O', player2='X']
   }) {
-    this._game = options.game;
+    super(options.game);
     this._strategies = options.strategies;
     this._symbols = ["O", "X"] as const;
-  }
-
-  get board() {
-    return this._game.board;
-  }
-  get currentPlayer() {
-    return this._game.currentPlayer;
-  }
-  get gameStatus() {
-    return this._game.gameStatus;
-  }
-  get snapshot() {
-    return this._game.snapshot;
-  }
-  get movesCount() {
-    return this._game.movesCount;
   }
 
   /** Performs one AI move for the current player. */
@@ -107,36 +68,6 @@ export class AIGame {
     } finally {
       if (this._busyGeneration === gen) this._busyGeneration = null;
     }
-  }
-
-  reset(): void {
-    this._generation++;
-    this._busyGeneration = null;
-    this._lifecycle = "idle";
-    this._game.reset();
-  }
-
-  on<K extends GameSessionEventType>(
-    event: K,
-    handler: (payload: GameSessionEventPayload<K>) => void,
-  ): this {
-    this._emitter.on(event, handler as SessionHandler);
-    return this;
-  }
-
-  off<K extends GameSessionEventType>(
-    event: K,
-    handler: (payload: GameSessionEventPayload<K>) => void,
-  ): this {
-    this._emitter.off(event, handler as SessionHandler);
-    return this;
-  }
-
-  private _emit<K extends GameSessionEventType>(
-    event: K,
-    payload: GameSessionEventPayload<K>,
-  ): void {
-    this._emitter.emit(event, payload as Record<string, unknown>);
   }
 
   /** Performs one AI move without taking the lock — `step`/`run` hold it. */

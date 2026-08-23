@@ -1,13 +1,4 @@
-import type {
-  AivsAiInstance,
-  AivsAiOptions,
-  PvPInstance,
-  PvpOptions,
-  SinglePlayerInstance,
-  SinglePlayerOptions,
-  TicTacToeConstructor,
-  TicTacToeOptions,
-} from "./types";
+import type { TicTacToeConstructor, TicTacToeOptions } from "./types";
 import type { MoveStrategy } from "@/ai/strategy.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
@@ -27,8 +18,9 @@ function buildStrategy(config: {
 }): MoveStrategy {
   const engine = config.engine ?? "alphabeta";
   if (engine === "random") return new RandomStrategy({ seed: config.seed });
+
   return new AlphaBetaStrategy({
-    difficulty: config.difficulty ?? AIDifficulty.HARD,
+    difficulty: config.difficulty ?? AIDifficulty.NORMAL,
     seed: config.seed,
   });
 }
@@ -157,15 +149,3 @@ class TicTacToeImpl {
  */
 export const TicTacToe: TicTacToeConstructor =
   TicTacToeImpl as unknown as TicTacToeConstructor;
-
-// Re-export for type-only consumers.
-export type {
-  AivsAiInstance,
-  AivsAiOptions,
-  PvPInstance,
-  PvpOptions,
-  SinglePlayerInstance,
-  SinglePlayerOptions,
-  TicTacToeConstructor,
-  TicTacToeOptions,
-};
