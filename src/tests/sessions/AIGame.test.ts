@@ -1,9 +1,9 @@
-import type { MoveStrategy } from "@/ai/strategy.types";
+import type { MoveStrategy } from "@/ai";
 
 import { expect, test } from "vitest";
 
-import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
-import { AIDifficulty } from "@/ai/types";
+import { AlphaBetaStrategy } from "@/ai";
+import { AIDifficulty } from "@/ai/difficulty";
 import { Game } from "@/game/Game";
 import { AIGame } from "@/sessions/AIGame";
 

@@ -89,19 +89,19 @@ export type {
  * Stateless helper that computes the best move for `game.currentPlayer`
  * without mutating the game. The caller applies the move via `game.savePlayerMove`.
  */
-export { getBestMove } from "@/ai/getBestMove";
+export { getBestMove } from "@/ai";
 
 /**
  * AI difficulty levels: `NORMAL` (casual, depth 1, 30% mistakes) and
  * `HARD` (strong, depth 4, 10% mistakes). No `EASY` for 3x3 in v2.0.
  */
-export { AIDifficulty } from "@/ai/types";
+export { AIDifficulty } from "@/ai";
 
 /**
  * Options for `getBestMove`: `difficulty`, `symbol`,
  * `opponentSymbol`, `seed`.
  */
-export type { AIOptions, AIMoveResult } from "@/ai/types";
+export type { AIOptions, AIMoveResult } from "@/ai";
 
 // ─── Strategies (v2.1) ─────────────────────────────────────────────────
 
@@ -109,23 +109,23 @@ export type { AIOptions, AIMoveResult } from "@/ai/types";
  * Alfa-Beta pruning strategy implementing {@link MoveStrategy}. Persistent
  * RNG — one seed gives a reproducible move sequence across a whole game.
  */
-export { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
+export { AlphaBetaStrategy } from "@/ai";
 
 /**
  * Random legal-move strategy implementing {@link MoveStrategy}. Useful as a
  * baseline opponent for tests, demos, and difficulty benchmarks.
  */
-export { RandomStrategy } from "@/ai/RandomStrategy";
+export { RandomStrategy } from "@/ai";
 
 /**
  * Strategy interface and context for custom AI implementations.
  */
-export type { MoveStrategy, MoveContext } from "@/ai/strategy.types";
+export type { MoveStrategy, MoveContext } from "@/ai";
 
 /**
  * Error thrown by a strategy (or by a session validating a strategy's result).
  */
-export { MoveStrategyError } from "@/ai/strategy.types";
+export { MoveStrategyError } from "@/ai";
 
 // ─── Sessions (v2.1) ───────────────────────────────────────────────────
 

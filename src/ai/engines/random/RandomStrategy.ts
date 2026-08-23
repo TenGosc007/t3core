@@ -1,8 +1,8 @@
-import type { MoveContext, MoveStrategy } from "./strategy.types";
+import type { MoveContext, MoveStrategy } from "@/ai/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 
-import { mulberry32 } from "./difficultyConfig";
-import { MoveStrategyError } from "./strategy.types";
+import { mulberry32 } from "@/ai/rng";
+import { MoveStrategyError } from "@/ai/types";
 
 /**
  * Simplest possible {@link MoveStrategy}: picks a random empty field.
@@ -20,7 +20,8 @@ export class RandomStrategy implements MoveStrategy {
   private readonly _rng: () => number;
 
   constructor(options: { seed?: number } = {}) {
-    this._rng = options.seed !== undefined ? mulberry32(options.seed) : Math.random;
+    this._rng =
+      options.seed !== undefined ? mulberry32(options.seed) : Math.random;
   }
 
   async calculateMove(

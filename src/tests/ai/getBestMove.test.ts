@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { getBestMove } from "@/ai/getBestMove";
-import { AIDifficulty } from "@/ai/types";
+import { getBestMove } from "@/ai";
+import { AIDifficulty } from "@/ai/difficulty";
 import { Game } from "@/game/Game";
 import { GameVariant } from "@/game/types/Game.types";
 

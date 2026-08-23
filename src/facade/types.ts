@@ -1,4 +1,4 @@
-import type { AIDifficulty } from "@/ai/types";
+import type { AIDifficulty } from "@/ai/difficulty";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameVariant } from "@/game/types/Game.types";
 import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";

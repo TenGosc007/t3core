@@ -1,11 +1,13 @@
-import type { AIOptions, AIMoveResult } from "./types";
+import type { AIOptions, AIMoveResult } from "@/ai/difficulty";
 import type { BoardField, BoardSnapshot } from "@/game/types/Board.types";
 import type { IGame } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
+import { AIDifficulty as AIDifficultyValue } from "@/ai/difficulty";
+import { mulberry32 } from "@/ai/rng";
+
+import { ALPHA_BETA_CONFIG } from "./config";
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
-import { DIFFICULTY_CONFIG, mulberry32 } from "./difficultyConfig";
-import { AIDifficulty as AIDifficultyValue } from "./types";
 
 /** Scans the board for the first symbol that is not the AI's. Throws if none found. */
 function inferOpponentSymbol(
@@ -64,7 +66,7 @@ export function getBestMove(
   }
 
   const difficulty = options.difficulty ?? AIDifficultyValue.HARD;
-  const config = DIFFICULTY_CONFIG[difficulty];
+  const config = ALPHA_BETA_CONFIG[difficulty];
   const rng =
     options.seed !== undefined ? mulberry32(options.seed) : Math.random;
 
@@ -105,9 +107,9 @@ export function getBestMove(
     }
   }
 
-  // Tie-break: HARD = first by move order (deterministic); NORMAL = random among ties.
+  // Tie-break: deterministic = first by move order; otherwise random among ties.
   const index =
-    bestIndices.length === 1 || difficulty === AIDifficultyValue.HARD
+    bestIndices.length === 1 || config.deterministicTieBreak
       ? (bestIndices[0] as number)
       : (bestIndices[Math.floor(rng() * bestIndices.length)] as number);
 

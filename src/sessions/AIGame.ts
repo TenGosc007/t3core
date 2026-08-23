@@ -1,10 +1,10 @@
 import type { PlayMoveResult, RunResult } from "./types";
-import type { MoveStrategy } from "@/ai/strategy.types";
+import type { MoveStrategy } from "@/ai";
 import type { Game } from "@/game/Game";
 import type { GameEventPayload } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import { MoveStrategyError } from "@/ai/strategy.types";
+import { MoveStrategyError } from "@/ai";
 import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 import { BaseSession } from "./BaseSession";

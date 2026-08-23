@@ -7,7 +7,7 @@ import {
   DRAW_SCORE,
   LOSS_SCORE,
   WIN_SCORE,
-} from "@/ai/alphaBeta";
+} from "@/ai/engines/alphabeta";
 
 const AI = "X";
 const OPP = "O";

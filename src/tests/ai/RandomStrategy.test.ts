@@ -1,8 +1,8 @@
-import type { MoveContext } from "@/ai/strategy.types";
+import type { MoveContext } from "@/ai";
 
 import { expect, test } from "vitest";
 
-import { RandomStrategy } from "@/ai/RandomStrategy";
+import { RandomStrategy } from "@/ai";
 import { Game } from "@/game/Game";
 
 function ctx(aiSymbol: "O" | "X" = "X"): MoveContext {

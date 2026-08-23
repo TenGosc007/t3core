@@ -1,10 +1,10 @@
 import type { TicTacToeConstructor, TicTacToeOptions } from "./types";
-import type { MoveStrategy } from "@/ai/strategy.types";
+import type { MoveStrategy } from "@/ai";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
-import { RandomStrategy } from "@/ai/RandomStrategy";
-import { AIDifficulty } from "@/ai/types";
+import { AlphaBetaStrategy } from "@/ai";
+import { RandomStrategy } from "@/ai";
+import { AIDifficulty } from "@/ai";
 import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
 import { Game } from "@/game/Game";
 import { AIGame } from "@/sessions/AIGame";

@@ -1,10 +1,12 @@
-import type { MoveContext, MoveStrategy } from "./strategy.types";
+import type { MoveContext, MoveStrategy } from "@/ai/types";
 import type { BoardField, BoardSnapshot } from "@/game/types/Board.types";
 
+import { AIDifficulty } from "@/ai/difficulty";
+import { mulberry32 } from "@/ai/rng";
+import { MoveStrategyError } from "@/ai/types";
+
+import { ALPHA_BETA_CONFIG } from "./config";
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
-import { DIFFICULTY_CONFIG, mulberry32 } from "./difficultyConfig";
-import { MoveStrategyError } from "./strategy.types";
-import { AIDifficulty } from "./types";
 
 /**
  * {@link MoveStrategy} backed by Alfa-Beta pruning with per-difficulty knobs.
@@ -12,7 +14,7 @@ import { AIDifficulty } from "./types";
  * Does **not** delegate to {@link getBestMove} — `getBestMove` takes an `IGame`
  * (the whole game object), while this strategy receives only a `BoardSnapshot`
  * + {@link MoveContext}. Instead it calls {@link alphaBeta} directly and
- * shares {@link DIFFICULTY_CONFIG} with `getBestMove` as the single source of
+ * shares {@link ALPHA_BETA_CONFIG} with `getBestMove` as the single source of
  * truth for difficulty knobs.
  *
  * The RNG is created once per instance (persistent), so a given `seed`
@@ -51,7 +53,7 @@ export class AlphaBetaStrategy implements MoveStrategy {
       );
     }
 
-    const config = DIFFICULTY_CONFIG[this._difficulty];
+    const config = ALPHA_BETA_CONFIG[this._difficulty];
 
     // Mistake: with probability `mistakeRate`, ignore Alfa-Beta and play a
     // random legal move.
@@ -90,10 +92,9 @@ export class AlphaBetaStrategy implements MoveStrategy {
       }
     }
 
-    // Tie-break: HARD = first by move order (deterministic); NORMAL = random
-    // among ties.
+    // Tie-break: deterministic = first by move order; otherwise random among ties.
     const index =
-      bestIndices.length === 1 || this._difficulty === AIDifficulty.HARD
+      bestIndices.length === 1 || config.deterministicTieBreak
         ? (bestIndices[0] as number)
         : (bestIndices[Math.floor(this._rng() * bestIndices.length)] as number);
     return index;
