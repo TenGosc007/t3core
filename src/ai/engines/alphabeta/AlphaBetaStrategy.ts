@@ -5,15 +5,15 @@ import { AIDifficulty } from "@/ai/difficulty";
 import { mulberry32 } from "@/ai/rng";
 import { MoveStrategyError } from "@/ai/types";
 
-import { ALPHA_BETA_CONFIG } from "./config";
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
+import { ALPHA_BETA_CONFIG } from "./config";
 
 /**
  * {@link MoveStrategy} backed by Alfa-Beta pruning with per-difficulty knobs.
  *
- * Does **not** delegate to {@link getBestMove} — `getBestMove` takes an `IGame`
- * (the whole game object), while this strategy receives only a `BoardSnapshot`
- * + {@link MoveContext}. Instead it calls {@link alphaBeta} directly and
+ * Does **not** delegate to {@link getBestMove} — `getBestMove` takes a
+ * {@link GameView} (read-only view of game state), while this strategy
+ * receives only a `BoardSnapshot` + {@link MoveContext}. Instead it calls {@link alphaBeta} directly and
  * shares {@link ALPHA_BETA_CONFIG} with `getBestMove` as the single source of
  * truth for difficulty knobs.
  *

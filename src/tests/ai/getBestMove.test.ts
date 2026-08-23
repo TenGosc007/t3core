@@ -98,14 +98,15 @@ test("returns no_moves when the board is full (draw)", () => {
 });
 
 test("throws RangeError for a non-3x3 board", () => {
-  // Build a fake game-like object with a 4-cell board.
+  // Build a fake game-like object with a 4-cell board. `GameView` is structural,
+  // so this minimal stub is accepted without casts.
   const fakeGame = {
     board: [1, 2, 3, 4],
     gameStatus: { status: "running" as const },
     currentPlayer: "X",
   };
   expect(() =>
-    getBestMove(fakeGame as never, {
+    getBestMove(fakeGame, {
       difficulty: AIDifficulty.HARD,
       symbol: "X",
       opponentSymbol: "O",

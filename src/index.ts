@@ -120,7 +120,7 @@ export { RandomStrategy } from "@/ai";
 /**
  * Strategy interface and context for custom AI implementations.
  */
-export type { MoveStrategy, MoveContext } from "@/ai";
+export type { MoveStrategy, MoveContext, GameView } from "@/ai";
 
 /**
  * Error thrown by a strategy (or by a session validating a strategy's result).

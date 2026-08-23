@@ -1,13 +1,13 @@
 import type { AIOptions, AIMoveResult } from "@/ai/difficulty";
+import type { GameView } from "@/ai/types";
 import type { BoardField, BoardSnapshot } from "@/game/types/Board.types";
-import type { IGame } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 import { AIDifficulty as AIDifficultyValue } from "@/ai/difficulty";
 import { mulberry32 } from "@/ai/rng";
 
-import { ALPHA_BETA_CONFIG } from "./config";
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
+import { ALPHA_BETA_CONFIG } from "./config";
 
 /** Scans the board for the first symbol that is not the AI's. Throws if none found. */
 function inferOpponentSymbol(
@@ -30,7 +30,9 @@ function inferOpponentSymbol(
  * **not** mutate the game. The caller is responsible for applying the move via
  * `game.savePlayerMove(index)`.
  *
- * @param game - The current game state. Must be the classic 3x3 variant (9-cell board).
+ * @param game - Read-only view of the game state ({@link GameView}). Must be the
+ *   classic 3x3 variant (9-cell board). `Game` implements this structurally; a
+ *   minimal stub `{ board, gameStatus, currentPlayer }` also works.
  * @param options - Difficulty, symbols, and optional RNG seed.
  * @returns {@link AIMoveResult}:
  *   - `{ status: "success", index }` — a legal move was chosen.
@@ -39,7 +41,7 @@ function inferOpponentSymbol(
  *   the opponent symbol cannot be inferred from an empty board.
  */
 export function getBestMove(
-  game: IGame,
+  game: GameView,
   options: AIOptions = {},
 ): AIMoveResult {
   const board = game.board;

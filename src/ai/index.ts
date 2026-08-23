@@ -7,7 +7,7 @@
 // - `engines/<name>/` — one folder per algorithm, each with its own barrel.
 
 // Contract + errors.
-export type { MoveStrategy, MoveContext } from "./types";
+export type { MoveStrategy, MoveContext, GameView } from "./types";
 export { MoveStrategyError } from "./types";
 
 // Difficulty + functional-API options.

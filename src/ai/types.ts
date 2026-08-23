@@ -2,6 +2,21 @@ import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
+/**
+ * Read-only view of game state required by AI helpers (e.g. `getBestMove`).
+ * Deliberately narrow — exposes only what AI needs (`board`, `gameStatus`,
+ * `currentPlayer`), NOT the full {@link IGame} contract (which includes
+ * `savePlayerMove`, `reset`, `on`/`off`, etc.). This keeps `ai` decoupled
+ * from `game`'s mutation API: AI reads state, it never mutates the game.
+ *
+ * `Game` implements this structurally; tests can pass a minimal stub.
+ */
+export type GameView = {
+  readonly board: BoardSnapshot;
+  readonly gameStatus: GameStatus;
+  readonly currentPlayer: PlayerSymbol;
+};
+
 /** Context passed to a {@link MoveStrategy} alongside the board snapshot. */
 export type MoveContext = {
   /** Symbol of the player whose move the strategy must choose. */
