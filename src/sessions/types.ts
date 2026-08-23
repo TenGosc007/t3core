@@ -1,9 +1,9 @@
-import type { BoardSnapshot } from "../game/types/Board.types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
 import type {
   GameEventPayload,
   GameStatus,
-} from "../game/types/Game.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+} from "@/game/types/Game.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 /** Lifecycle of a session — independent of `GameStatus`. */
 export type SessionLifecycle = "idle" | "started" | "finished";

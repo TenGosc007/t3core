@@ -1,10 +1,10 @@
-import type { MoveContext } from "../../ai/strategy.types";
+import type { MoveContext } from "@/ai/strategy.types";
 
 import { expect, test } from "vitest";
 
-import { AlphaBetaStrategy } from "../../ai/AlphaBetaStrategy";
-import { AIDifficulty } from "../../ai/types";
-import { Game } from "../../game/Game";
+import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
+import { AIDifficulty } from "@/ai/types";
+import { Game } from "@/game/Game";
 
 function ctx(aiSymbol: "O" | "X" = "X"): MoveContext {
   return {

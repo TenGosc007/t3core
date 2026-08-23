@@ -1,7 +1,7 @@
-import type { BoardField, BoardSnapshot } from "../game/types/Board.types";
-import type { IGame } from "../game/types/Game.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
 import type { AIOptions, AIMoveResult } from "./types";
+import type { BoardField, BoardSnapshot } from "@/game/types/Board.types";
+import type { IGame } from "@/game/types/Game.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
 import { DIFFICULTY_CONFIG, mulberry32 } from "./difficultyConfig";

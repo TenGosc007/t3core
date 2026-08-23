@@ -1,5 +1,5 @@
-import type { BoardSnapshot } from "../game/types/Board.types";
 import type { MoveContext, MoveStrategy } from "./strategy.types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
 
 import { mulberry32 } from "./difficultyConfig";
 import { MoveStrategyError } from "./strategy.types";

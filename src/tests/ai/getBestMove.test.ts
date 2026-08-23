@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
 
-import { getBestMove } from "../../ai/getBestMove";
-import { AIDifficulty } from "../../ai/types";
-import { Game } from "../../game/Game";
-import { GameVariant } from "../../game/types/Game.types";
+import { getBestMove } from "@/ai/getBestMove";
+import { AIDifficulty } from "@/ai/types";
+import { Game } from "@/game/Game";
+import { GameVariant } from "@/game/types/Game.types";
 
 // All tests assume AI plays "X" (second player by default symbols ["O","X"]),
 // unless noted otherwise. We drive the game to a specific position by making

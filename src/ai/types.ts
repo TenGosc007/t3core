@@ -1,4 +1,4 @@
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 /** Selectable AI difficulty levels for Single Player mode. */
 export const AIDifficulty = {

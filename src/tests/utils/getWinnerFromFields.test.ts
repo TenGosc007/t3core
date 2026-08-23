@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { getWinnerFromFields } from "../../utils/getWinnerFromFields";
+import { getWinnerFromFields } from "@/utils/getWinnerFromFields";
 
 const COMBINATIONS = [
   [0, 1, 2],

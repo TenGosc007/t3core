@@ -1,15 +1,15 @@
-import type { AIDifficulty } from "../ai/types";
-import type { BoardSnapshot } from "../game/types/Board.types";
-import type { GameVariant } from "../game/types/Game.types";
-import type { GameEventPayload, GameStatus } from "../game/types/Game.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+import type { AIDifficulty } from "@/ai/types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
+import type { GameVariant } from "@/game/types/Game.types";
+import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 import type {
   GameSessionEventPayload,
   GameSessionEventType,
   PlayMoveResult,
   RunResult,
   StartResult,
-} from "../sessions/types";
+} from "@/sessions/types";
 
 /** AI engine configuration shared by all modes that involve AI. */
 export type AIConfig = {

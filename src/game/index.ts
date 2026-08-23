@@ -5,6 +5,6 @@
  */
 export { Game } from "./Game";
 export { Board } from "./Board";
-export * from "./types/Game.types";
-export * from "./types/Board.types";
-export * from "./types/Symbol.types";
+export * from "@/game/types/Game.types";
+export * from "@/game/types/Board.types";
+export * from "@/game/types/Symbol.types";

@@ -1,11 +1,11 @@
-import type { MoveStrategy } from "../../ai/strategy.types";
+import type { MoveStrategy } from "@/ai/strategy.types";
 
 import { expect, test } from "vitest";
 
-import { AlphaBetaStrategy } from "../../ai/AlphaBetaStrategy";
-import { AIDifficulty } from "../../ai/types";
-import { Game } from "../../game/Game";
-import { AIGame } from "../../sessions/AIGame";
+import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
+import { AIDifficulty } from "@/ai/types";
+import { Game } from "@/game/Game";
+import { AIGame } from "@/sessions/AIGame";
 
 // Helpers build the mutable tuple type expected by AIGame, and deduplicate
 // the repeated strategy-pair construction (fallow duplication warning).

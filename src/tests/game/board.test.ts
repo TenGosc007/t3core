@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { Board, BOARD_SIZE } from "../../game/Board";
+import { Board, BOARD_SIZE } from "@/game/Board";
 
 const emptyBoard = () => new Array(9).fill(0).map((_, i) => i + 1);
 

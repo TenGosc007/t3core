@@ -1,19 +1,19 @@
-import type { MoveStrategy } from "../ai/strategy.types";
-import type { Game } from "../game/Game";
-import type { BoardSnapshot } from "../game/types/Board.types";
-import type { GameEventPayload } from "../game/types/Game.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
 import type {
   GameSessionEventPayload,
   GameSessionEventType,
   PlayMoveResult,
   RunResult,
 } from "./types";
+import type { MoveStrategy } from "@/ai/strategy.types";
+import type { Game } from "@/game/Game";
+import type { BoardSnapshot } from "@/game/types/Board.types";
+import type { GameEventPayload } from "@/game/types/Game.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 import EventEmitter from "eventemitter3";
 
-import { MoveStrategyError } from "../ai/strategy.types";
-import { PlayerMoveStatus } from "../game/types/Game.types";
+import { MoveStrategyError } from "@/ai/strategy.types";
+import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 type SessionHandler = (payload: Record<string, unknown>) => void;
 type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;

@@ -1,4 +1,4 @@
-import type { BoardField } from "../../game/types/Board.types";
+import type { BoardField } from "@/game/types/Board.types";
 
 import { expect, test } from "vitest";
 
@@ -7,7 +7,7 @@ import {
   DRAW_SCORE,
   LOSS_SCORE,
   WIN_SCORE,
-} from "../../ai/alphaBeta";
+} from "@/ai/alphaBeta";
 
 const AI = "X";
 const OPP = "O";

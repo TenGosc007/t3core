@@ -7,7 +7,7 @@ import {
   GameEvent,
   GameVariant,
   PlayerMoveStatus,
-} from "../index";
+} from "@/index";
 
 test("public API exports Game class", () => {
   const game = new Game();

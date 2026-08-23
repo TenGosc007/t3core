@@ -1,5 +1,5 @@
-import type { BoardField, BoardSnapshot } from "../game/types/Board.types";
 import type { MoveContext, MoveStrategy } from "./strategy.types";
+import type { BoardField, BoardSnapshot } from "@/game/types/Board.types";
 
 import { alphaBeta, MOVE_ORDER_3X3 } from "./alphaBeta";
 import { DIFFICULTY_CONFIG, mulberry32 } from "./difficultyConfig";

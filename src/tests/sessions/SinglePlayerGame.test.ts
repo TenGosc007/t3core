@@ -1,12 +1,12 @@
-import type { MoveStrategy } from "../../ai/strategy.types";
+import type { MoveStrategy } from "@/ai/strategy.types";
 
 import { expect, test } from "vitest";
 
-import { AlphaBetaStrategy } from "../../ai/AlphaBetaStrategy";
-import { MoveStrategyError } from "../../ai/strategy.types";
-import { AIDifficulty } from "../../ai/types";
-import { Game } from "../../game/Game";
-import { SinglePlayerGame } from "../../sessions/SinglePlayerGame";
+import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
+import { MoveStrategyError } from "@/ai/strategy.types";
+import { AIDifficulty } from "@/ai/types";
+import { Game } from "@/game/Game";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 // --- Helpers (deduplicate session construction across tests) ---
 

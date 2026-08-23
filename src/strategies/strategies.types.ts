@@ -1,5 +1,5 @@
-import type { BoardSnapshot } from "../game/types/Board.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 /** Strategy implementing the rules of a specific {@link GameVariant}. */
 export type GameStrategy = {

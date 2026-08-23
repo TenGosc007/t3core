@@ -1,6 +1,6 @@
-import type { GameStrategy } from "../strategies.types";
+import type { GameStrategy } from "@/strategies/strategies.types";
 
-import { getWinnerFromFields } from "../../utils/getWinnerFromFields";
+import { getWinnerFromFields } from "@/utils/getWinnerFromFields";
 
 /**
  * Winning index combinations for the classic 3x3 Tic Tac Toe variant.

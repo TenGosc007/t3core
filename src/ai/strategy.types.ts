@@ -1,6 +1,6 @@
-import type { BoardSnapshot } from "../game/types/Board.types";
-import type { GameStatus } from "../game/types/Game.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
+import type { GameStatus } from "@/game/types/Game.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 /** Context passed to a {@link MoveStrategy} alongside the board snapshot. */
 export type MoveContext = {

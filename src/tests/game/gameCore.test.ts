@@ -1,14 +1,14 @@
-import type { BoardField } from "../../game/types/Board.types";
+import type { BoardField } from "@/game/types/Board.types";
 
 import { expect, test, vi } from "vitest";
 
-import { Game } from "../../game/Game";
+import { Game } from "@/game/Game";
 import {
   BackToMoveStatus,
   GameEvent,
   GameVariant,
   PlayerMoveStatus,
-} from "../../game/types/Game.types";
+} from "@/game/types/Game.types";
 
 const initialBoard = () => new Array(9).fill(0).map((_, idx) => idx + 1);
 

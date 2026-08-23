@@ -1,8 +1,8 @@
-import type { AivsAiInstance, PvPInstance } from "../../facade/types";
+import type { AivsAiInstance, PvPInstance } from "@/facade/types";
 
 import { expect, test } from "vitest";
 
-import { TicTacToe } from "../../facade/TicTacToe";
+import { TicTacToe } from "@/facade/TicTacToe";
 
 test("pvp mode returns a PvPInstance with playMove + start, no step/run", () => {
   const game = new TicTacToe({ mode: "pvp" });

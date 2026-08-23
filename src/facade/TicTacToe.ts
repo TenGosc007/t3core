@@ -1,5 +1,3 @@
-import type { MoveStrategy } from "../ai/strategy.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
 import type {
   AivsAiInstance,
   AivsAiOptions,
@@ -10,15 +8,17 @@ import type {
   TicTacToeConstructor,
   TicTacToeOptions,
 } from "./types";
+import type { MoveStrategy } from "@/ai/strategy.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import { AlphaBetaStrategy } from "../ai/AlphaBetaStrategy";
-import { RandomStrategy } from "../ai/RandomStrategy";
-import { AIDifficulty } from "../ai/types";
-import { DEFAULT_GAME_SYMBOLS } from "../constants/gameConstants";
-import { Game } from "../game/Game";
-import { AIGame } from "../sessions/AIGame";
-import { PvPGame } from "../sessions/PvPGame";
-import { SinglePlayerGame } from "../sessions/SinglePlayerGame";
+import { AlphaBetaStrategy } from "@/ai/AlphaBetaStrategy";
+import { RandomStrategy } from "@/ai/RandomStrategy";
+import { AIDifficulty } from "@/ai/types";
+import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
+import { Game } from "@/game/Game";
+import { AIGame } from "@/sessions/AIGame";
+import { PvPGame } from "@/sessions/PvPGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 function buildStrategy(config: {
   engine?: "alphabeta" | "random";

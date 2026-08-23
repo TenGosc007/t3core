@@ -1,4 +1,3 @@
-import type { Game } from "../game/Game";
 import type {
   GameSession,
   GameSessionEventPayload,
@@ -6,10 +5,11 @@ import type {
   PlayMoveResult,
   StartResult,
 } from "./types";
+import type { Game } from "@/game/Game";
 
 import EventEmitter from "eventemitter3";
 
-import { PlayerMoveStatus } from "../game/types/Game.types";
+import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 type SessionHandler = (payload: Record<string, unknown>) => void;
 type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;

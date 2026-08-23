@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 
-import { Game } from "../../game/Game";
-import { PvPGame } from "../../sessions/PvPGame";
+import { Game } from "@/game/Game";
+import { PvPGame } from "@/sessions/PvPGame";
 
 test("emits turn for player 1 ('O') after start()", async () => {
   const game = new Game();

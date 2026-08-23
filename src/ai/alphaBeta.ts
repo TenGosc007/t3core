@@ -1,8 +1,8 @@
-import type { BoardField } from "../game/types/Board.types";
-import type { PlayerSymbol } from "../game/types/Symbol.types";
+import type { BoardField } from "@/game/types/Board.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import { WINNING_COMBINATIONS_3X3 } from "../strategies/variants/classic3x3";
-import { getWinnerFromFields } from "../utils/getWinnerFromFields";
+import { WINNING_COMBINATIONS_3X3 } from "@/strategies/variants/classic3x3";
+import { getWinnerFromFields } from "@/utils/getWinnerFromFields";
 
 /** Alfa-Beta score. Higher is better for the AI. */
 export type Score = number;

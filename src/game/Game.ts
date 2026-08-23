@@ -1,12 +1,10 @@
-import type { GameStrategy } from "../strategies";
-import type { BoardSnapshot } from "./types/Board.types";
-import type { PlayerSymbol, PlayerSymbols } from "./types/Symbol.types";
+import type { BoardSnapshot } from "@/game/types/Board.types";
+import type { PlayerSymbol, PlayerSymbols } from "@/game/types/Symbol.types";
+import type { GameStrategy } from "@/strategies";
 
 import EventEmitter from "eventemitter3";
 
-import { DEFAULT_GAME_SYMBOLS } from "../constants/gameConstants";
-import { resolveGameStrategy } from "../strategies";
-import { Board } from "./Board";
+import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
 import {
   BackToMoveStatus,
   GameEvent,
@@ -16,7 +14,10 @@ import {
   type GameOptions,
   type GameStatus,
   type IGame,
-} from "./types/Game.types";
+} from "@/game/types/Game.types";
+import { resolveGameStrategy } from "@/strategies";
+
+import { Board } from "./Board";
 
 /**
  * Main public facade for a Tic Tac Toe game.
