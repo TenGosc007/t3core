@@ -86,12 +86,6 @@ export type {
 // ─── AI (Single Player) ────────────────────────────────────────────────
 
 /**
- * Stateful AI player for Single Player mode. Supports auto-play (subscribes
- * to `STATE_CHANGE` and moves on its turn) and manual use (`nextMove(game)`).
- */
-export { AIPlayer } from "./ai/AIPlayer";
-
-/**
  * Stateless helper that computes the best move for `game.currentPlayer`
  * without mutating the game. The caller applies the move via `game.savePlayerMove`.
  */
@@ -104,7 +98,86 @@ export { getBestMove } from "./ai/getBestMove";
 export { AIDifficulty } from "./ai/types";
 
 /**
- * Options for `AIPlayer` and `getBestMove`: `difficulty`, `symbol`,
+ * Options for `getBestMove`: `difficulty`, `symbol`,
  * `opponentSymbol`, `seed`.
  */
 export type { AIOptions, AIMoveResult } from "./ai/types";
+
+// ─── Strategies (v2.1) ─────────────────────────────────────────────────
+
+/**
+ * Alfa-Beta pruning strategy implementing {@link MoveStrategy}. Persistent
+ * RNG — one seed gives a reproducible move sequence across a whole game.
+ */
+export { AlphaBetaStrategy } from "./ai/AlphaBetaStrategy";
+
+/**
+ * Random legal-move strategy implementing {@link MoveStrategy}. Useful as a
+ * baseline opponent for tests, demos, and difficulty benchmarks.
+ */
+export { RandomStrategy } from "./ai/RandomStrategy";
+
+/**
+ * Strategy interface and context for custom AI implementations.
+ */
+export type { MoveStrategy, MoveContext } from "./ai/strategy.types";
+
+/**
+ * Error thrown by a strategy (or by a session validating a strategy's result).
+ */
+export { MoveStrategyError } from "./ai/strategy.types";
+
+// ─── Sessions (v2.1) ───────────────────────────────────────────────────
+
+/**
+ * Local two-player session. No AI — each `playMove` applies one human move.
+ */
+export { PvPGame } from "./sessions/PvPGame";
+
+/**
+ * Human-vs-AI session. `playMove(index)` applies the human's move and
+ * automatically triggers the AI's reply.
+ */
+export { SinglePlayerGame } from "./sessions/SinglePlayerGame";
+
+/**
+ * AI-vs-AI session. Exposes `step()` (one AI move) and `run()` (auto-play
+ * to the end). Useful for benchmarks and demos.
+ */
+export { AIGame } from "./sessions/AIGame";
+
+/**
+ * Common contract for human-driven sessions (`PvPGame`, `SinglePlayerGame`).
+ */
+export type {
+  GameSession,
+  GameSessionEvent,
+  GameSessionEventType,
+  GameSessionEventPayload,
+  PlayMoveResult,
+  StartResult,
+  RunResult,
+} from "./sessions/types";
+
+// ─── Facade (v2.1) ─────────────────────────────────────────────────────
+
+/**
+ * Facade entry point. Use as `new TicTacToe({ mode: ... })`. The returned
+ * instance type depends on `mode` (PvP / SinglePlayer / AivsAi).
+ */
+export { TicTacToe } from "./facade/TicTacToe";
+
+/**
+ * Facade option types and per-mode instance interfaces.
+ */
+export type {
+  TicTacToeOptions,
+  PvpOptions,
+  SinglePlayerOptions,
+  AivsAiOptions,
+  AIConfig,
+  PvPInstance,
+  SinglePlayerInstance,
+  AivsAiInstance,
+  TicTacToeConstructor,
+} from "./facade/types";
