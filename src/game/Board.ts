@@ -1,7 +1,11 @@
-import type { BoardField, BoardSnapshot, IBoard } from "./types/Board.types";
-import type { PlayerSymbol } from "./types/Symbol.types";
+import type {
+  BoardField,
+  BoardSnapshot,
+  IBoard,
+} from "@/game/types/Board.types";
+import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import { getLastArrayItem } from "../utils/getLastArrayItem";
+import { getLastArrayItem } from "@/game/utils/getLastArrayItem";
 
 const fillFields = (_: BoardField, idx: number) => idx + 1;
 
