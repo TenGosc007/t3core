@@ -42,50 +42,74 @@ export type AlphaBetaOptions = {
  * Scoring: AI win = `WIN_SCORE - depth` (prefers faster wins),
  * AI loss = `LOSS_SCORE + depth` (prefers slower losses), draw = `DRAW_SCORE`.
  */
-export function alphaBeta({
-  fields,
-  depth,
-  alpha,
-  beta,
-  isMaximizing,
-  aiSymbol,
-  opponentSymbol,
-  maxDepth,
-}: AlphaBetaOptions): Score {
-  const winner = getWinnerFromFields(fields, WINNING_COMBINATIONS_3X3);
+export function alphaBeta(opts: AlphaBetaOptions): Score {
+  const { fields, depth, aiSymbol, opponentSymbol, maxDepth } = opts;
 
+  const winner = getWinnerFromFields(fields, WINNING_COMBINATIONS_3X3);
   if (winner === aiSymbol) return WIN_SCORE - depth;
   if (winner === opponentSymbol) return LOSS_SCORE + depth;
   if (fields.every((field) => typeof field === "string")) return DRAW_SCORE;
   if (depth >= maxDepth) return DRAW_SCORE;
 
-  if (isMaximizing) {
-    let best = LOSS_SCORE + depth;
-    for (const index of MOVE_ORDER_3X3) {
-      if (typeof fields[index] === "string") continue;
+  return opts.isMaximizing ? searchMaximizing(opts) : searchMinimizing(opts);
+}
 
-      const original = fields[index];
-      fields[index] = aiSymbol;
-      const score = alphaBeta({
-        fields,
-        depth: depth + 1,
-        alpha,
-        beta,
-        isMaximizing: false,
-        aiSymbol,
-        opponentSymbol,
-        maxDepth,
-      });
-      fields[index] = original;
+/**
+ * Maximizing ply: places `aiSymbol` on each legal cell, recurses, and tightens
+ * `alpha`. Prunes when `beta <= alpha` (the minimizer already has a better
+ * option elsewhere).
+ */
+function searchMaximizing({
+  fields,
+  depth,
+  alpha,
+  beta,
+  aiSymbol,
+  opponentSymbol,
+  maxDepth,
+}: AlphaBetaOptions): Score {
+  let best = LOSS_SCORE + depth;
 
-      if (score > best) best = score;
-      if (best > alpha) alpha = best;
-      if (beta <= alpha) break;
-    }
-    return best;
+  for (const index of MOVE_ORDER_3X3) {
+    if (typeof fields[index] === "string") continue;
+
+    const original = fields[index];
+    fields[index] = aiSymbol;
+    const score = alphaBeta({
+      fields,
+      depth: depth + 1,
+      alpha,
+      beta,
+      isMaximizing: false,
+      aiSymbol,
+      opponentSymbol,
+      maxDepth,
+    });
+    fields[index] = original;
+
+    if (score > best) best = score;
+    if (best > alpha) alpha = best;
+    if (beta <= alpha) break;
   }
+  return best;
+}
 
+/**
+ * Minimizing ply: places `opponentSymbol` on each legal cell, recurses, and
+ * tightens `beta`. Prunes when `beta <= alpha` (the maximizer already has a
+ * better option elsewhere).
+ */
+function searchMinimizing({
+  fields,
+  depth,
+  alpha,
+  beta,
+  aiSymbol,
+  opponentSymbol,
+  maxDepth,
+}: AlphaBetaOptions): Score {
   let best = WIN_SCORE - depth;
+
   for (const index of MOVE_ORDER_3X3) {
     if (typeof fields[index] === "string") continue;
 
