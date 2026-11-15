@@ -27,6 +27,7 @@
     "url": "git+https://github.com/TenGosc007/t3core.git"
   },
   "type": "commonjs",
+  "packageManager": "yarn@1.22.22",
   "engines": {
     "node": ">=16.0.0"
   },

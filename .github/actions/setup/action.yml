@@ -1,0 +1,33 @@
+name: Setup development environment
+description: Set up pinned Node.js and Yarn versions and cache Yarn downloads.
+
+inputs:
+  registry-url:
+    description: Optional npm registry URL for publication.
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version-file: .nvmrc
+        registry-url: ${{ inputs.registry-url }}
+
+    - name: Enable pinned Yarn
+      shell: bash
+      run: corepack enable
+
+    - name: Locate Yarn cache
+      id: yarn-cache
+      shell: bash
+      run: echo "dir=$(yarn cache dir)" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Yarn downloads
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.yarn-cache.outputs.dir }}
+        key: ${{ runner.os }}-${{ runner.arch }}-yarn-${{ hashFiles('yarn.lock', 'package.json', '.nvmrc') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ runner.arch }}-yarn-

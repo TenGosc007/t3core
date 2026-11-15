@@ -14,6 +14,7 @@ import { afterEach, expect, test } from "vitest";
 
 const projectRoot = fileURLToPath(new URL("../", import.meta.url));
 const releaseBin = path.join(projectRoot, "node_modules/release-it/bin/release-it.js");
+const { packageManager } = JSON.parse(readFileSync(path.join(projectRoot, "package.json"), "utf8"));
 const fixtures = [];
 
 afterEach(() => {
@@ -53,6 +54,7 @@ function createFixture(message = "fix: reject invalid moves") {
     JSON.stringify({
       name: "t3core-release-test",
       version: "1.0.0",
+      packageManager,
       scripts: {
         "release:check": 'node -e "process.exit(process.env.RELEASE_TEST_FAIL === \'1\' ? 1 : 0)"',
       },

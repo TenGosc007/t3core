@@ -25,9 +25,10 @@ enabled by committing a workflow file alone.
 4. If the settings offer **Allowed actions**, allow direct publishing with `npm publish`.
 5. Save the trusted publisher configuration.
 
-The workflow grants `id-token: write` and `contents: read`. It uses Node.js 22
-and installs npm 11. Trusted Publishing requires Node.js 22.14.0 or newer and
-npm 11.5.1 or newer. Provenance is enabled during publication.
+The workflow grants `id-token: write` and `contents: read`. It reads the
+Node.js version from [`.nvmrc`](../.nvmrc), enables the Yarn version selected
+by Corepack, and installs npm 11. Trusted Publishing requires Node.js 22.14.0
+or newer and npm 11.5.1 or newer. Provenance is enabled during publication.
 
 `NPM_TOKEN` is no longer referenced by the workflow. Once the migration has
 been verified, its obsolete GitHub Actions secret can be removed.
@@ -37,8 +38,9 @@ been verified, its obsolete GitHub Actions secret can be removed.
 Releases use [release-it](https://github.com/release-it/release-it) with the
 [Conventional Changelog plugin](https://github.com/release-it/conventional-changelog).
 The configuration lives in [`.release-it.json`](../.release-it.json).
-Use Node.js 22.22.2 or newer on the Node 22 LTS line and Yarn 1 to install
-the development tools. CI and npm publication also use Node 22.
+Use Node.js from [`.nvmrc`](../.nvmrc) and the Yarn version pinned in
+[`package.json`](../package.json). The development setup is described in
+[CONTRIBUTING.md](../CONTRIBUTING.md).
 
 Merge the changes to be released into `main` before starting. Then update
 your local `main` and install the locked dependencies:
@@ -46,6 +48,9 @@ your local `main` and install the locked dependencies:
 ```bash
 git switch main
 git pull --ff-only origin main
+nvm install
+nvm use
+corepack enable
 yarn install --frozen-lockfile
 ```
 
