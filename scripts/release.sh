@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: yarn release [patch|minor|major|VERSION]
 #
 # Steps:
-#   1. Pre-flight checks (git state, npm auth)
+#   1. Pre-flight checks (git state)
 #   2. Quality checks (lint, ts:check, test, fallow, build)
 #   3. Version selection
 #   4. npm version availability check
@@ -87,24 +87,6 @@ if [[ -n $(git status --porcelain) ]]; then
   echo
   [[ ! $REPLY =~ ^[Yy]$ ]] && { err "Aborted."; exit 1; }
 fi
-
-info "Checking npm authentication..."
-if ! npm whoami &>/dev/null; then
-  warn "Not logged in to npm."
-  read -p "Log in now? (Y/n): " -n 1 -r
-  echo
-  if [[ $REPLY =~ ^[Nn]$ ]]; then
-    err "Aborted. Log in manually: npm login"
-    exit 1
-  fi
-  npm login
-  if ! npm whoami &>/dev/null; then
-    err "Login failed."
-    exit 1
-  fi
-fi
-NPM_USER=$(npm whoami)
-ok "Logged in as: $NPM_USER"
 
 ok "Pre-flight checks passed"
 

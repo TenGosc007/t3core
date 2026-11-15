@@ -1,104 +1,114 @@
 # Publishing to npm
 
-## Quick Start (Automated)
+Publishing runs when a GitHub Release is published. The
+[publish workflow](workflows/publish.yml) checks out the release tag and uses
+[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/) through
+GitHub Actions OIDC. It does not require an npm token or a local npm login.
 
-Use the automated release script to prepare a release:
+## One-time npm setup
+
+An npm maintainer of `t3core` must configure the package's trusted publisher
+before the first OIDC publication. This setting lives on npm and cannot be
+enabled by committing a workflow file alone.
+
+1. Sign in to [npmjs.com](https://www.npmjs.com) with an account that can manage `t3core`.
+2. Open the package settings and find **Trusted Publisher**.
+3. Choose **GitHub Actions** and enter the following values:
+
+   | Field | Value |
+   | --- | --- |
+   | Organization or user | `TenGosc007` |
+   | Repository | `t3core` |
+   | Workflow filename | `publish.yml` |
+   | Environment name | Leave empty; this workflow does not use a GitHub environment |
+
+4. If the settings offer **Allowed actions**, allow direct publishing with `npm publish`.
+5. Save the trusted publisher configuration.
+
+The workflow grants `id-token: write` and `contents: read`. It uses Node.js 22
+and installs npm 11. Trusted Publishing requires Node.js 22.14.0 or newer and
+npm 11.5.1 or newer. Provenance is enabled during publication.
+
+`NPM_TOKEN` is no longer referenced by the workflow. Once the migration has
+been verified, its obsolete GitHub Actions secret can be removed.
+
+## Prepare a stable release
+
+Use the existing release script:
 
 ```bash
-# Interactive — prompts for version bump type
+# Interactive version selection
 yarn release
 
-# Or specify directly
-yarn release patch    # 1.5.0 -> 1.5.1
-yarn release minor    # 1.5.0 -> 1.6.0
-yarn release major    # 1.5.0 -> 2.0.0
-yarn release 1.6.0    # specific version
+# Or select a stable version directly
+yarn release patch
+yarn release minor
+yarn release major
+yarn release 2.0.0
 ```
 
-The script will:
+The script checks the Git state, runs quality checks, checks version
+availability, creates a release branch, updates `package.json`, and creates
+release notes. After confirmation it commits, tags, and pushes the release
+branch. Preparing a release no longer prompts for npm authentication.
 
-1. **Pre-flight checks** — git state, npm auth
-2. **Quality checks** — lint, ts:check, test, fallow, build (before any changes)
-3. **Version selection** — patch / minor / major / specific
-4. **npm availability** — verify the version doesn't already exist on npm
-5. **Release branch** — create `release/v<VERSION>`
-6. **Version bump** — update `package.json`
-7. **Changelog** — create `.github/releases/v<VERSION>.md` and open editor
-8. **Confirm** — commit, tag, and push (with rollback on any error)
+Open a PR from the release branch to `main`, wait for CI, and merge it. Then
+publish a GitHub Release for its tag with the prepared release notes.
+Pushing a tag alone does not publish the package.
 
-If any step fails, all changes are automatically rolled back (branch deleted, `package.json` restored, changelog removed).
+## Prepare a prerelease
 
----
-
-## Manual Publishing Steps
-
-## One-time setup
-
-1. Go to [npmjs.com](https://www.npmjs.com) → **Access Tokens** → generate a **Granular Access Token** (or Classic **Automation** token) with publish rights for `t3core`
-2. Go to your GitHub repo → **Settings → Secrets and variables → Actions → New repository secret**
-3. Name: `NPM_TOKEN`, Value: the token from step 1
-
-## Publishing a new version
-
-### 1. Create a release branch
+The current release script accepts stable versions. Prepare prereleases
+manually until the release tooling gains prerelease support. For example,
+on a release branch:
 
 ```bash
-# Create and checkout a new branch (e.g., release/v1.0.4)
-git checkout -b release/v1.0.4
-
-# Update version in package.json manually or use:
-npm version patch --no-git-tag-version
-# or: npm version minor --no-git-tag-version
-# or: npm version major --no-git-tag-version
+npm version 2.0.0-beta.1 --no-git-tag-version
 ```
 
-### 2. Create release document
+Prepare release notes, run the quality checks, commit the changes, and create
+the matching `v2.0.0-beta.1` tag. Push the branch and tag, merge the release
+PR after CI passes, and publish a GitHub Release for that tag. Marking the
+GitHub Release as a prerelease makes its status clear to GitHub users.
 
-Create a new file at `.github/releases/v1.0.4.md` following the format of previous releases:
+The npm dist-tag is selected from the version in `package.json`:
 
-```markdown
-# Release title
+| Package version | Required GitHub tag | npm dist-tag |
+| --- | --- | --- |
+| `2.0.0` | `v2.0.0` | `latest` |
+| `2.0.0-beta.1` | `v2.0.0-beta.1` | `next` |
+| `2.0.0-rc.1` | `v2.0.0-rc.1` | `next` |
 
-Brief description of the release
+The GitHub Release prerelease checkbox does not select the npm dist-tag.
+Users install prereleases with `npm install t3core@next`.
 
----
+## Workflow behavior
 
-## Changelog
+1. Check out the exact release tag.
+2. Require the tag to equal `v` followed by the committed package version.
+   A mismatch fails the workflow; it never rewrites `package.json`.
+3. Check npm for that exact version. An existing version ends publication
+   successfully. Only `E404` allows publication to proceed; registry,
+   network, and authentication errors fail the workflow.
+4. Install dependencies from the lockfile and run lint, TypeScript checks,
+   tests, and the package build.
+5. Publish through OIDC with provenance and the selected dist-tag.
+   Lifecycle scripts are disabled for the publish command because the
+   package has already been built and checked.
 
-## [1.0.4] - YYYY-MM-DD
+Publication runs share one concurrency group and do not cancel an active
+publication. Retrying a successful publication skips an existing version;
+it does not move npm dist-tags.
 
-### Added / Fixed / Changed
+## Troubleshooting
 
-- Description of changes
-
-[1.0.4]: https://github.com/TenGosc007/t3core/compare/v1.0.3...v1.0.4
-```
-
-### 3. Create tag and push
-
-```bash
-# Stage changes
-git add .
-
-# Commit and create tag
-git commit -m "release: v1.0.4"
-git tag v1.0.4
-
-# Push the branch and tag
-git push origin release/v1.0.4 --tags
-```
-
-### 4. Create pull request
-
-1. Go to GitHub → **Pull requests → New pull request**
-2. Base: `main`, Compare: `release/v1.0.4`
-3. The PR checks (lint, TypeScript check, tests, fallow) will run automatically
-4. After checks pass, merge the PR
-
-### 5. Publish GitHub release
-
-1. Go to GitHub → **Releases → Draft a new release**
-2. Select the tag (e.g., `v1.0.4`)
-3. Copy release notes from `.github/releases/v1.0.4.md`
-4. **Publish release**
-5. The GitHub Actions workflow (`.github/workflows/publish.yml`) fires automatically and publishes to npm
+- **Tag mismatch:** prepare a new release whose tag matches its committed
+  `package.json`. The workflow does not infer or overwrite the version.
+- **OIDC authentication fails:** check the npm trusted publisher values,
+  especially the owner, repository, workflow filename, and empty environment.
+  `npm whoami` on a developer machine does not test GitHub Actions OIDC.
+- **Registry check fails:** resolve the reported network or registry error
+  and rerun the failed workflow. An unsuccessful lookup is not treated as
+  proof that a version is available.
+- **Version already published:** the retry succeeds without publishing
+  again. To release different code, prepare a new package version.
