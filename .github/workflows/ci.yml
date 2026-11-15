@@ -31,8 +31,8 @@ jobs:
       - name: TypeScript check
         run: yarn ts:check
 
-      - name: Build package
-        run: yarn build
+      - name: Build and check packed package
+        run: yarn package:check
 
       - name: Tests with coverage
         run: yarn test:coverage

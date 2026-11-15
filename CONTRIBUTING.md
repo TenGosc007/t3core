@@ -39,15 +39,50 @@ yarn lint
 yarn ts:check
 yarn test --run
 yarn build
+yarn package:check
 ```
 
 Use `yarn test` for watch mode and `yarn test:coverage` to refresh the
 coverage report. `yarn release:check` runs lint, TypeScript checks, tests
-with coverage, Fallow, and the build in order, stopping on the first failure.
+with coverage, Fallow, and the package check in order, stopping on the first failure.
+
+`yarn package:check` creates an npm tarball (building through `prepack`),
+installs it in a temporary consumer project, and checks both types and runtime
+behavior for ESM and CommonJS. It checks Node16 and NodeNext resolution for
+both formats, Bundler resolution for ESM, and TypeScript's CommonJS
+`import = require` syntax. Declaration checking uses `skipLibCheck: false`.
+The check needs npm and registry access to install runtime dependencies;
+it removes its temporary project and tarball afterwards. CI, publication,
+and `release:check` run this check automatically.
+Consumer fixtures in `scripts/fixtures` run in the temporary project rather
+than Vitest, so they are excluded from Fallow's source health analysis.
+
+TypeScript enables `noUncheckedIndexedAccess`, `noImplicitReturns`,
+`noFallthroughCasesInSwitch`, `noUnusedLocals`, and `noUnusedParameters`
+in addition to `strict`. Check that an indexed value exists before using it;
+fix the underlying issue instead of adding a type assertion or `!`.
+The unused-code checks also run during compilation. ESLint retains its
+existing unused-variable rules for editor feedback and naming conventions;
+prefix intentionally unused callback parameters with `_`.
 
 Release integration tests use temporary Git repositories and require Git
 to be available. Their fixture commits and tags stay in those temporary
 repositories.
+
+## Package output
+
+The build produces `dist/index.mjs` with `dist/index.d.mts` for ESM and
+`dist/index.js` with `dist/index.d.ts` for CommonJS. The `import` and `require`
+conditions in `exports` select the corresponding declarations first, then
+the runtime entry. The top-level `types` field remains a fallback for older
+TypeScript resolution.
+
+`npm pack` and `npm publish` build through `prepack` so a missing or stale
+`dist` is refreshed before packaging. There is no `prepare` hook: installing
+the published package uses the included build and does not require developer
+tools. Git checkouts need dependencies installed and `yarn build` before use.
+The publication workflow uses `--ignore-scripts` only after the package check
+has built and verified the artifacts.
 
 ## Library consumers and maintainers
 

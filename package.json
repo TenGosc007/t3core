@@ -5,13 +5,15 @@
   "scripts": {
     "build": "rm -rf dist && tsup",
     "build:watch": "tsup --watch",
+    "prepack": "yarn build",
+    "package:check": "node scripts/check-package.mjs",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
     "lint": "eslint ./src/**/*.ts \"scripts/**/*.mjs\"",
     "ts:check": "tsc --noEmit",
     "fallow": "fallow health --coverage coverage/coverage-final.json",
     "release": "release-it",
-    "release:check": "yarn lint && yarn ts:check && yarn test:coverage && yarn fallow && yarn build",
+    "release:check": "yarn lint && yarn ts:check && yarn test:coverage && yarn fallow && yarn package:check",
     "release:preview": "release-it --dry-run"
   },
   "keywords": [
@@ -26,6 +28,10 @@
     "type": "git",
     "url": "git+https://github.com/TenGosc007/t3core.git"
   },
+  "bugs": {
+    "url": "https://github.com/TenGosc007/t3core/issues"
+  },
+  "homepage": "https://github.com/TenGosc007/t3core#readme",
   "type": "commonjs",
   "packageManager": "yarn@1.22.22",
   "engines": {
@@ -33,9 +39,14 @@
   },
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
       "default": "./dist/index.mjs"
     },
     "./package.json": "./package.json"

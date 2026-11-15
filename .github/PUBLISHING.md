@@ -84,7 +84,9 @@ yarn release:check
 
 The dry run displays hook commands without executing them. Use
 `release:check` to actually run lint, TypeScript checks, tests with fresh
-coverage, Fallow, and the package build. A normal release runs the same
+coverage, Fallow, and `package:check`. The package check builds via `prepack`,
+packs and installs a temporary consumer, then verifies ESM/CommonJS types and
+runtime behavior. A normal release runs the same
 checks through its `before:init` hook before changing the version or changelog.
 A failed check stops the release.
 
@@ -160,10 +162,15 @@ Users install prereleases with `npm install t3core@next`.
    successfully. Only `E404` allows publication to proceed; registry,
    network, and authentication errors fail the workflow.
 4. Install dependencies from the lockfile and run lint, TypeScript checks,
-   tests, and the package build.
+   tests, and `package:check` (build, pack, consumer type checks and runtime checks).
 5. Publish through OIDC with provenance and the selected dist-tag.
    Lifecycle scripts are disabled for the publish command because the
    package has already been built and checked.
+
+Local `npm pack` and `npm publish` run `prepack` to build the package first.
+The archive contains separate declarations for ESM (`index.d.mts`) and
+CommonJS (`index.d.ts`), selected by the corresponding `exports` condition.
+The published package has no install-time build hook.
 
 Publication runs share one concurrency group and do not cancel an active
 publication. Retrying a successful publication skips an existing version;

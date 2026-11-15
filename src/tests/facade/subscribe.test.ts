@@ -59,7 +59,7 @@ for (const createGame of factories) {
     expect(snapshots.length).toBe(game.movesCount);
     expect(snapshots[snapshots.length - 1]).toBe(game.snapshot);
     expect(
-      snapshots[0].board.filter((field) => typeof field === "string"),
+      snapshots[0]?.board.filter((field) => typeof field === "string"),
     ).toHaveLength(1);
     const movesCount = game.movesCount;
 
@@ -149,15 +149,15 @@ test("singleplayer subscribers observe the human move before the AI reply", asyn
 
   const pending = game.playMove(4);
   expect(snapshots).toHaveLength(1);
-  expect(snapshots[0].board[4]).toBe("O");
-  expect(snapshots[0].currentPlayer).toBe("X");
+  expect(snapshots[0]?.board[4]).toBe("O");
+  expect(snapshots[0]?.currentPlayer).toBe("X");
 
   await pending;
   expect(snapshots).toHaveLength(2);
   expect(snapshots[1]).toBe(game.snapshot);
-  expect(snapshots[1].currentPlayer).toBe("O");
+  expect(snapshots[1]?.currentPlayer).toBe("O");
   expect(
-    snapshots[0].board.filter((field) => typeof field === "string"),
+    snapshots[0]?.board.filter((field) => typeof field === "string"),
   ).toHaveLength(1);
 });
 
