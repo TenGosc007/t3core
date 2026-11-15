@@ -7,10 +7,12 @@
     "build:watch": "tsup --watch",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
-    "lint": "eslint ./src/**/*.ts",
+    "lint": "eslint ./src/**/*.ts \"scripts/**/*.mjs\"",
     "ts:check": "tsc --noEmit",
     "fallow": "fallow health --coverage coverage/coverage-final.json",
-    "release": "bash scripts/release.sh"
+    "release": "release-it",
+    "release:check": "yarn lint && yarn ts:check && yarn test:coverage && yarn fallow && yarn build",
+    "release:preview": "release-it --dry-run"
   },
   "keywords": [
     "tic-tac-toe",
@@ -43,6 +45,7 @@
   ],
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@release-it/conventional-changelog": "^12.0.2",
     "@types/node": "^25.6.0",
     "@vitest/coverage-istanbul": "^4.1.8",
     "eslint": "^10.3.0",
@@ -52,6 +55,7 @@
     "fallow": "^2.87.0",
     "globals": "^17.6.0",
     "jiti": "^2.6.1",
+    "release-it": "^21.1.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.1",

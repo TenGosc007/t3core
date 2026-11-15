@@ -32,44 +32,108 @@ npm 11.5.1 or newer. Provenance is enabled during publication.
 `NPM_TOKEN` is no longer referenced by the workflow. Once the migration has
 been verified, its obsolete GitHub Actions secret can be removed.
 
-## Prepare a stable release
+## Local release tooling
 
-Use the existing release script:
+Releases use [release-it](https://github.com/release-it/release-it) with the
+[Conventional Changelog plugin](https://github.com/release-it/conventional-changelog).
+The configuration lives in [`.release-it.json`](../.release-it.json).
+Use Node.js 22.22.2 or newer on the Node 22 LTS line and Yarn 1 to install
+the development tools. CI and npm publication also use Node 22.
+
+Merge the changes to be released into `main` before starting. Then update
+your local `main` and install the locked dependencies:
 
 ```bash
-# Interactive version selection
+git switch main
+git pull --ff-only origin main
+yarn install --frozen-lockfile
+```
+
+Releases require `main`, a clean working tree, an upstream branch, and
+commits since the latest release tag. The release commit is pushed to
+`origin/main`, so the maintainer must have permission to push it.
+
+### GitHub release authentication
+
+For automatic GitHub Release creation, make a GitHub personal access token
+available locally as `GITHUB_TOKEN`. A fine-grained token needs access to
+`TenGosc007/t3core` with **Contents: Read and write**. Git push continues to
+use your configured Git credentials.
+
+Without `GITHUB_TOKEN`, release-it opens a prefilled GitHub Release form.
+Review it and select **Publish release** to start the npm workflow. This
+fallback lets you use your existing GitHub browser session.
+
+The GitHub token is separate from npm authentication: local release-it has
+`npm.publish: false`, and npm publication uses OIDC in GitHub Actions.
+
+## Preview and quality checks
+
+```bash
+# Display the proposed release steps without changing files or publishing
+yarn release:preview major
+
+# Execute all quality checks without creating a release
+yarn release:check
+```
+
+The dry run displays hook commands without executing them. Use
+`release:check` to actually run lint, TypeScript checks, tests with fresh
+coverage, Fallow, and the package build. A normal release runs the same
+checks through its `before:init` hook before changing the version or changelog.
+A failed check stops the release.
+
+## Create a stable release
+
+```bash
+# Use the recommendation from Conventional Commits and interactive prompts
 yarn release
 
-# Or select a stable version directly
+# Or choose an increment or exact version
 yarn release patch
 yarn release minor
 yarn release major
 yarn release 2.0.0
 ```
 
-The script checks the Git state, runs quality checks, checks version
-availability, creates a release branch, updates `package.json`, and creates
-release notes. After confirmation it commits, tags, and pushes the release
-branch. Preparing a release no longer prompts for npm authentication.
+After the checks pass, release-it updates `package.json`, prepends generated
+notes to [`CHANGELOG.md`](../CHANGELOG.md), creates a
+`chore: release v<VERSION>` commit, creates the `v<VERSION>` tag, and pushes
+the commit and tag. It then creates the GitHub Release using the generated
+notes, or opens its prefilled form when no GitHub token is available.
 
-Open a PR from the release branch to `main`, wait for CI, and merge it. Then
-publish a GitHub Release for its tag with the prepared release notes.
-Pushing a tag alone does not publish the package.
+Publishing that GitHub Release triggers the existing npm workflow.
+Pushing the tag alone does not publish the package. The previous Bash
+release script and manual release-branch preparation are replaced by this
+flow; existing notes in [`releases/`](releases/) remain available as history.
 
-## Prepare a prerelease
+### Conventional Commits
 
-The current release script accepts stable versions. Prepare prereleases
-manually until the release tooling gains prerelease support. For example,
-on a release branch:
+The plugin uses the `conventionalcommits` preset. Typical messages are:
+
+| Commit message | Recommended version change |
+| --- | --- |
+| `fix: reject invalid move indices` | Patch |
+| `feat: add a game variant` | Minor |
+| `feat!: replace the session API` | Major |
+| A commit with a `BREAKING CHANGE:` footer | Major |
+
+Use these messages for the commits that reach `main`, including squash-merge
+titles. Review the recommendation: older repository history contains
+non-Conventional Commit messages, so an explicit increment may be needed.
+Local commit-message enforcement remains a separate improvement.
+
+## Create a prerelease
+
+The same release command supports prereleases, including exact versions:
 
 ```bash
-npm version 2.0.0-beta.1 --no-git-tag-version
+yarn release 2.0.0-beta.1
+yarn release 2.0.0-rc.1
 ```
 
-Prepare release notes, run the quality checks, commit the changes, and create
-the matching `v2.0.0-beta.1` tag. Push the branch and tag, merge the release
-PR after CI passes, and publish a GitHub Release for that tag. Marking the
-GitHub Release as a prerelease makes its status clear to GitHub users.
+The version, changelog, and Git tag are prepared together. release-it marks
+the GitHub Release as a prerelease based on the version.
 
 The npm dist-tag is selected from the version in `package.json`:
 
@@ -112,3 +176,9 @@ it does not move npm dist-tags.
   proof that a version is available.
 - **Version already published:** the retry succeeds without publishing
   again. To release different code, prepare a new package version.
+- **Local release stops on Git checks:** merge the implementation first,
+  switch to an up-to-date `main`, and commit any intended local changes
+  before starting the release.
+- **Push rejected:** the release flow pushes its version/changelog commit
+  and tag before creating the GitHub Release. Resolve the push failure
+  using the repository's release permissions before publishing that release.
