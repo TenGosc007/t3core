@@ -74,6 +74,7 @@ type InstanceAccessors = {
 
 /** Common event subscription + reset methods. */
 type InstanceEvents = {
+  subscribe(callback: () => void): () => void;
   on<K extends GameSessionEventType>(
     event: K,
     handler: (payload: GameSessionEventPayload<K>) => void,

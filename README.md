@@ -66,7 +66,7 @@ game.reset();
 
 ### Next.js / Server Components
 
-> **Note:** `Game` instances are not serializable — do not pass them as props across the server → client boundary. Keep the instance on the client side (e.g. in `useRef` or module scope) and pass only the plain snapshot object through props:
+> **Note:** `TicTacToe` and `Game` instances are not serializable — do not pass them as props across the server → client boundary. Create one instance per board inside a Client Component (for example, with a lazy `useState` initializer), rather than a shared module-level singleton. Pass only plain snapshot data across the boundary:
 >
 > ```tsx
 > // ✅ pass plain state
@@ -78,48 +78,83 @@ game.reset();
 
 ### React Integration with `useSyncExternalStore`
 
-```tsx
-import { useSyncExternalStore } from 'react';
-import { Game, GameEvent } from 't3core';
+`TicTacToe.subscribe(callback)` is a stable, bound function that returns an unsubscribe function. It notifies synchronously after every human move, AI move, and reset, once the new `snapshot` is available. It does not notify immediately when subscribing, or for session-only events such as `ai-thinking`. Read `snapshot` for board state; use `on` / `off` separately for gameplay events.
 
-// Create a stable game instance (outside React or in a ref)
-const game = new Game();
+```tsx
+'use client';
+
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { TicTacToe, AIDifficulty } from 't3core';
 
 function useTicTacToe() {
+  // Create one stable game instance per mounted board
+  const [{ game, getSnapshot, getServerSnapshot }] = useState(() => {
+    const game = new TicTacToe({
+      mode: 'singleplayer',
+      humanSymbol: 'O',
+      ai: { difficulty: AIDifficulty.HARD },
+    });
+    const initialSnapshot = game.snapshot;
+
+    return {
+      game,
+      getSnapshot: () => game.snapshot,
+      getServerSnapshot: () => initialSnapshot,
+    };
+  });
+  const [error, setError] = useState<string | null>(null);
+  const reportError = useCallback((error: unknown) => {
+    setError(String(error));
+  }, []);
+
   const state = useSyncExternalStore(
     // Subscribe function
-    (callback) => {
-      game.on(GameEvent.STATE_CHANGE, callback);
-      return () => {
-        game.off(GameEvent.STATE_CHANGE, callback);
-      };
-    },
+    game.subscribe,
     // Get snapshot function
-    () => game.snapshot
+    getSnapshot,
+    getServerSnapshot
   );
+
+  useEffect(() => {
+    void game.start().catch(reportError);
+    return () => game.reset();
+  }, [game, reportError]);
 
   return {
     board: state.board,
     currentPlayer: state.currentPlayer,
     gameStatus: state.gameStatus,
-    makeMove: (index: number) => game.savePlayerMove(index),
-    reset: () => game.reset(),
+    error,
+    makeMove: (index: number) => {
+      void game.playMove(index).catch(reportError);
+    },
+    reset: () => {
+      setError(null);
+      game.reset();
+      void game.start().catch(reportError);
+    },
   };
 }
 
 // Component usage
-function TicTacToeBoard() {
-  const { board, currentPlayer, gameStatus, makeMove, reset } = useTicTacToe();
+export default function TicTacToeBoard() {
+  const { board, currentPlayer, gameStatus, error, makeMove, reset } = useTicTacToe();
 
   return (
     <div>
       <p>Current Player: {currentPlayer}</p>
+      {error && <p role="alert">{error}</p>}
       <div className="board">
         {board.map((cell, index) => (
           <button
             key={index}
             onClick={() => makeMove(index)}
-            disabled={typeof cell === 'string'}
+            disabled={
+              typeof cell === 'string' ||
+              gameStatus.status !== 'running' ||
+              currentPlayer !== 'O' ||
+              Boolean(error)
+            }
           >
             {typeof cell === 'string' ? cell : ''}
           </button>
@@ -133,7 +168,22 @@ function TicTacToeBoard() {
 }
 ```
 
+The effect starts the session only after mounting. Its cleanup resets the game and cancels pending AI work, so React Strict Mode's extra setup–cleanup–setup cycle does not call `start()` twice without a reset. The captured initial snapshot is used for server rendering and hydration; this example always starts from the same empty board on both sides. `reset()` restarts the session explicitly, and buttons are disabled during the AI's turn.
+
 ### API
+
+#### `TicTacToe`
+
+| Property/Method | Description |
+| --------------- | ----------- |
+| `constructor(options)` | Select `pvp`, `singleplayer`, or `aivsai`; the returned instance type depends on the mode |
+| `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only access to the current game state |
+| `snapshot` | Cached `GameEventPayload`; its reference changes after a move or reset, and remains stable between state changes |
+| `subscribe(callback)` | Subscribe to snapshot changes in any mode. The callback receives no arguments; returns an idempotent unsubscribe function. Safe to pass directly to `useSyncExternalStore` |
+| `start()` / `playMove(index)` | Async lifecycle and move methods for `pvp` and `singleplayer`; register listeners before starting |
+| `step()` / `run()` | Perform one AI move or play to completion in `aivsai` mode |
+| `on(event, handler)` / `off(event, handler)` | Subscribe to or unsubscribe from typed session events; use the same handler reference when removing it |
+| `reset()` | Reset the board, notify subscribers, and abort stale work; call `start()` again in human-driven modes |
 
 #### `Game`
 
