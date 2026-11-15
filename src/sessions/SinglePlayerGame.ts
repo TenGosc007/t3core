@@ -51,7 +51,7 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
 
       // AI starts — run the AI's first move.
       const result = await this._runAiMove(gen);
-      return result === "aborted"
+      return this._generation !== gen || result === "aborted"
         ? { status: "aborted" }
         : { status: "success" };
     } finally {
@@ -71,6 +71,7 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
       }
 
       const status = this._game.savePlayerMove(index);
+      if (this._generation !== gen) return { status: "aborted" };
       if (status === PlayerMoveStatus.INVALID_INDEX) {
         return { status: "invalid_index" };
       }
@@ -82,15 +83,18 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
       }
 
       this._emit("move", { player: this._humanSymbol, position: index });
+      if (this._generation !== gen) return { status: "aborted" };
 
       if (this._game.gameStatus.status !== "running") {
         this._lifecycle = "finished";
         this._emit("finished", { result: this._game.gameStatus });
-        return { status: "success" };
+        return { status: this._generation === gen ? "success" : "aborted" };
       }
 
       const aiResult = await this._runAiMove(gen);
-      if (aiResult === "aborted") return { status: "aborted" };
+      if (this._generation !== gen || aiResult === "aborted") {
+        return { status: "aborted" };
+      }
       return { status: "success" };
     } finally {
       if (this._busyGeneration === gen) this._busyGeneration = null;
@@ -104,6 +108,7 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
    */
   private async _runAiMove(gen: number): Promise<"success" | "aborted"> {
     this._emit("ai-thinking", { player: this._aiSymbol });
+    if (this._generation !== gen) return "aborted";
 
     let aiMove: number;
     try {
@@ -115,14 +120,9 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
     } catch (e) {
       // Reset takes priority even when the strategy rejects.
       if (this._generation !== gen) return "aborted";
-      if (e instanceof MoveStrategyError && e.code === "no_legal_moves") {
-        // The session checked the game was running before invoking the
-        // strategy, so no_legal_moves in a running state means the board is
-        // full — treat as a draw finish.
-        this._lifecycle = "finished";
-        this._emit("finished", { result: this._game.gameStatus });
-        return "success";
-      }
+      // The session checked the game was running before invoking the
+      // strategy, so no_legal_moves in a running state violates its
+      // contract — propagate the error instead of reporting a finish.
       throw e;
     }
 
@@ -138,15 +138,17 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
     }
 
     this._game.savePlayerMove(aiMove);
+    if (this._generation !== gen) return "aborted";
     this._emit("move", { player: this._aiSymbol, position: aiMove });
+    if (this._generation !== gen) return "aborted";
 
     if (this._game.gameStatus.status !== "running") {
       this._lifecycle = "finished";
       this._emit("finished", { result: this._game.gameStatus });
-      return "success";
+      return this._generation === gen ? "success" : "aborted";
     }
 
     this._emit("turn", { player: this._humanSymbol });
-    return "success";
+    return this._generation === gen ? "success" : "aborted";
   }
 }

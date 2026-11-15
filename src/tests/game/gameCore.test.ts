@@ -9,6 +9,7 @@ import {
   GameVariant,
   PlayerMoveStatus,
 } from "@/game/types/Game.types";
+import { createGameWonByO } from "@/tests/game/fixtures";
 
 const initialBoard = () => new Array(9).fill(0).map((_, idx) => idx + 1);
 
@@ -92,12 +93,7 @@ test("savePlayerMove returns INVALID_INDEX for out-of-range or non-integer index
 });
 
 test("savePlayerMove returns GAME_NOT_RUNNING after game is won", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  game.savePlayerMove(3);
-  game.savePlayerMove(1);
-  game.savePlayerMove(4);
-  game.savePlayerMove(2);
+  const game = createGameWonByO();
 
   expect(game.gameStatus).toEqual({ status: "win", winner: "O" });
   const result = game.savePlayerMove(8);
@@ -279,12 +275,7 @@ test("STATE_CHANGE event fires on backToMove", () => {
 });
 
 test("STATE_CHANGE event does not fire after game is won", () => {
-  const game = new Game();
-  game.savePlayerMove(0);
-  game.savePlayerMove(3);
-  game.savePlayerMove(1);
-  game.savePlayerMove(4);
-  game.savePlayerMove(2);
+  const game = createGameWonByO();
   expect(game.gameStatus.status).toBe("win");
   const listener = vi.fn();
   game.on(GameEvent.STATE_CHANGE, listener);

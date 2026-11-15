@@ -40,6 +40,7 @@ export class PvPGame extends BaseSession implements GameSession {
     try {
       const player = this._game.currentPlayer;
       const status = this._game.savePlayerMove(index);
+      if (this._generation !== gen) return { status: "aborted" };
 
       if (status === PlayerMoveStatus.INVALID_INDEX) {
         return { status: "invalid_index" };
@@ -52,15 +53,16 @@ export class PvPGame extends BaseSession implements GameSession {
       }
 
       this._emit("move", { player, position: index });
+      if (this._generation !== gen) return { status: "aborted" };
 
       if (this._game.gameStatus.status !== "running") {
         this._lifecycle = "finished";
         this._emit("finished", { result: this._game.gameStatus });
-        return { status: "success" };
+        return { status: this._generation === gen ? "success" : "aborted" };
       }
 
       this._emit("turn", { player: this._game.currentPlayer });
-      return { status: "success" };
+      return { status: this._generation === gen ? "success" : "aborted" };
     } finally {
       if (this._busyGeneration === gen) this._busyGeneration = null;
     }

@@ -36,7 +36,7 @@ function inferOpponentSymbol(
  * @param options - Difficulty, symbols, and optional RNG seed.
  * @returns {@link AIMoveResult}:
  *   - `{ status: "success", index }` — a legal move was chosen.
- *   - `{ status: "no_moves" }` — the game is not running or the board is full.
+ *   - `no_moves` — game ended or board full; `invalid_state` — symbol is out of turn.
  * @throws {RangeError} When the board is not 9 cells (3x3 variant only), or when
  *   the opponent symbol cannot be inferred from an empty board.
  */
@@ -57,6 +57,9 @@ export function getBestMove(
   }
 
   const aiSymbol = options.symbol ?? game.currentPlayer;
+  if (aiSymbol !== game.currentPlayer) {
+    return { status: "invalid_state" };
+  }
   const opponentSymbol =
     options.opponentSymbol ?? inferOpponentSymbol(board, aiSymbol);
 

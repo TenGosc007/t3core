@@ -13,6 +13,34 @@ npm install t3core
 
 ## Usage as a Library
 
+Use `TicTacToe` for session-based gameplay. Its instance type depends on the selected mode: `pvp` and `singleplayer` expose `start()` / `playMove()`, while `aivsai` exposes `step()` / `run()`.
+
+```typescript
+import { TicTacToe, AIDifficulty } from 't3core';
+
+const game = new TicTacToe({
+  mode: 'singleplayer',
+  humanSymbol: 'O',
+  ai: { difficulty: AIDifficulty.HARD, seed: 12345 },
+});
+
+game.on('move', ({ player, position }) => {
+  console.log(player, position);
+});
+game.on('finished', ({ result }) => {
+  console.log(result);
+});
+
+await game.start();
+await game.playMove(4);
+```
+
+Register listeners before calling `start()`. In single-player mode, one `await playMove(index)` applies the human move and the AI reply, unless the human move ends the game. The default AI uses alpha-beta with `NORMAL` difficulty; use `humanSymbol: 'X'` to let the AI start.
+
+### Low-level `Game` API
+
+Use `Game` directly when you want to manage turns and AI orchestration yourself.
+
 ```typescript
 import { Game, GameVariant } from 't3core';
 
@@ -171,8 +199,13 @@ export { GameEvent } from 't3core';
 export { BackToMoveStatus, PlayerMoveStatus } from 't3core';
 
 // AI (Single Player)
-export { AIPlayer, getBestMove, AIDifficulty } from 't3core';
+export { TicTacToe, getBestMove, AIDifficulty, AlphaBetaStrategy, RandomStrategy, MoveStrategyError } from 't3core';
 export type { AIOptions, AIMoveResult } from 't3core';
+export { PvPGame, SinglePlayerGame, AIGame } from 't3core';
+export type { MoveStrategy, MoveContext, GameView, GameSession, GameSessionEvent } from 't3core';
+export type { TicTacToeOptions, PvpOptions, SinglePlayerOptions, AivsAiOptions, AIConfig } from 't3core';
+export type { PvPInstance, SinglePlayerInstance, AivsAiInstance, TicTacToeConstructor } from 't3core';
+export type { GameSessionEventType, GameSessionEventPayload, PlayMoveResult, StartResult, RunResult } from 't3core';
 ```
 
 ## Single Player (AI)
@@ -184,43 +217,49 @@ export type { AIOptions, AIMoveResult } from 't3core';
 | `AIDifficulty.NORMAL` | 1 | 30% | Sees only immediate moves; often plays randomly. Very beatable. |
 | `AIDifficulty.HARD` | 4 | 10% | Looks 4 plies ahead; occasional blunders. Strong, but beatable. |
 
-### `AIPlayer` — auto-play
+### PvP
 
 ```typescript
-import { Game, AIPlayer, AIDifficulty } from 't3core';
+import { TicTacToe } from 't3core';
 
-const game = new Game();
-const ai = new AIPlayer({
-  difficulty: AIDifficulty.HARD,
-  symbol: 'X',            // AI plays second by default
-  opponentSymbol: 'O',
+const game = new TicTacToe({ mode: 'pvp' });
+
+await game.start();
+await game.playMove(4);
+await game.playMove(0);
+```
+
+### AI vs AI
+
+```typescript
+import { TicTacToe, AIDifficulty } from 't3core';
+
+const game = new TicTacToe({
+  mode: 'aivsai',
+  aiPlayers: [
+    { difficulty: AIDifficulty.HARD, seed: 1 },
+    { engine: 'random', seed: 2 },
+  ],
 });
 
-ai.attach(game);          // subscribes to STATE_CHANGE; moves on its turn
-// ...human plays via game.savePlayerMove(index)...
-ai.detach();              // unsubscribe
-ai.setDifficulty(AIDifficulty.NORMAL);  // change level mid-game
+const result = await game.run();
+console.log(result);
 ```
 
-### `AIPlayer` — manual mode
+All sessions emit `move`, `turn`, and `finished`; AI sessions also emit `ai-thinking`. `reset()` clears the board and aborts in-flight work. Call `start()` again after reset in human-driven modes. Concurrent operations return `busy`; operations invalidated by reset return `aborted`.
 
-```typescript
-const ai = new AIPlayer({ difficulty: AIDifficulty.HARD, symbol: 'X', opponentSymbol: 'O' });
-const result = ai.nextMove(game);  // computes and applies the move
-if (result.status === 'success') {
-  console.log('AI played index', result.index);
-}
-```
+For custom AI, implement `MoveStrategy.calculateMove(board, context): Promise<number>` and pass it to `SinglePlayerGame` or pass two strategies to `AIGame`, together with a `Game` instance. Strategies must return an empty cell's index. Invalid moves and strategy failures reject the operation; a strategy reporting `no_legal_moves` during a running game is an error, not a completed game.
 
 ### `getBestMove` — stateless helper
 
 ```typescript
-import { getBestMove, AIDifficulty } from 't3core';
+import { Game, getBestMove, AIDifficulty } from 't3core';
 
+const game = new Game();
 const result = getBestMove(game, {
   difficulty: AIDifficulty.HARD,
-  symbol: 'X',
-  opponentSymbol: 'O',
+  symbol: 'O',
+  opponentSymbol: 'X',
   seed: 12345,            // optional — for reproducible behavior
 });
 if (result.status === 'success') {
@@ -232,10 +271,14 @@ if (result.status === 'success') {
 
 | Export | Description |
 | ------ | ----------- |
-| `AIPlayer` | Stateful wrapper. `attach(game)` for auto-play, `nextMove(game)` for manual, `setDifficulty(level)` to change level, `detach()` to unsubscribe |
-| `getBestMove(game, options?)` | Stateless helper. Returns `AIMoveResult` (`{ status: 'success', index }` \| `{ status: 'no_moves' }`). Does not mutate the game |
+| `TicTacToe` | Typed facade for `pvp`, `singleplayer`, and `aivsai` sessions |
+| `PvPGame`, `SinglePlayerGame`, `AIGame` | Sessions wrapping a low-level `Game`, with lifecycle controls and typed events |
+| `AlphaBetaStrategy`, `RandomStrategy` | Asynchronous move strategies with persistent seeded RNG |
+| `MoveStrategy`, `MoveContext`, `GameView` | Contracts for custom strategies and read-only AI state |
+| `MoveStrategyError` | Strategy failure with a `no_legal_moves` or `illegal_move` code |
+| `getBestMove(game, options?)` | Stateless helper. Returns `success` with an index, `no_moves`, or `invalid_state`. Does not mutate the game |
 | `AIDifficulty` | Enum: `NORMAL`, `HARD` |
 | `AIOptions` | Type: `{ difficulty?, symbol?, opponentSymbol?, seed? }` |
 | `AIMoveResult` | Type: discriminated union on `status` |
 
-> **Note:** `getBestMove` and `AIPlayer` support only the 3x3 variant (9-cell board). Passing a game with a different board size throws `RangeError`. When the AI moves first on an empty board, `opponentSymbol` must be provided explicitly (it cannot be inferred from the board).
+> **Note:** `getBestMove` and `AlphaBetaStrategy` support only the 3x3 variant (9-cell board). Passing a different board size throws `RangeError`. `getBestMove` defaults to `game.currentPlayer`; supplying a different `symbol` returns `invalid_state`. When using this helper on an empty board, provide `opponentSymbol` explicitly. Sessions supply the strategy context automatically.

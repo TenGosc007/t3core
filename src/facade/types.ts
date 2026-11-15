@@ -49,7 +49,7 @@ export type SinglePlayerOptions = BaseOptions & {
    */
   humanSymbol?: PlayerSymbol;
 
-  /** AI config. Default: `{ engine: 'alphabeta', difficulty: 'hard' }`. */
+  /** AI config. Default: `{ engine: 'alphabeta', difficulty: 'normal' }`. */
   ai?: AIConfig;
 };
 

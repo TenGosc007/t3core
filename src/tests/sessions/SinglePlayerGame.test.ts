@@ -229,7 +229,7 @@ test("strategy returning an illegal move throws MoveStrategyError", async () => 
   });
 });
 
-test("strategy throwing no_legal_moves results in finished event", async () => {
+test("strategy throwing no_legal_moves rejects without a finished event", async () => {
   const noMovesStrategy: MoveStrategy = {
     calculateMove: async () => {
       throw new MoveStrategyError("no_legal_moves", "test");
@@ -243,6 +243,9 @@ test("strategy throwing no_legal_moves results in finished event", async () => {
     finished = true;
   });
 
-  await session.playMove(0); // human moves, then AI "throws no_legal_moves"
-  expect(finished).toBe(true);
+  await expect(session.playMove(0)).rejects.toMatchObject({ // human moves, then AI "throws no_legal_moves"
+    code: "no_legal_moves",
+  });
+  expect(finished).toBe(false);
+  expect(session.gameStatus.status).toBe("running");
 });

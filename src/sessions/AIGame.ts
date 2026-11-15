@@ -38,7 +38,7 @@ export class AIGame extends BaseSession {
     this._busyGeneration = gen;
     try {
       const result = await this._performStep(gen);
-      return result;
+      return this._generation === gen ? result : { status: "aborted" };
     } finally {
       if (this._busyGeneration === gen) this._busyGeneration = null;
     }
@@ -57,7 +57,9 @@ export class AIGame extends BaseSession {
       this._lifecycle = "started";
       while (this._game.gameStatus.status === "running") {
         const result = await this._performStep(gen);
-        if (result.status === "aborted") return { status: "aborted" };
+        if (this._generation !== gen || result.status === "aborted") {
+          return { status: "aborted" };
+        }
         if (result.status !== "success") {
           // Should not happen in AI-vs-AI, but be defensive.
           return { status: "completed", result: this._game.gameStatus };
@@ -80,6 +82,7 @@ export class AIGame extends BaseSession {
     const opponent = this._symbols[(idx + 1) % 2] as PlayerSymbol;
 
     this._emit("ai-thinking", { player });
+    if (this._generation !== gen) return { status: "aborted" };
 
     let move: number;
     try {
@@ -90,11 +93,6 @@ export class AIGame extends BaseSession {
       });
     } catch (e) {
       if (this._generation !== gen) return { status: "aborted" };
-      if (e instanceof MoveStrategyError && e.code === "no_legal_moves") {
-        this._lifecycle = "finished";
-        this._emit("finished", { result: this._game.gameStatus });
-        return { status: "success" };
-      }
       throw e;
     }
 
@@ -108,20 +106,22 @@ export class AIGame extends BaseSession {
     }
 
     const status = this._game.savePlayerMove(move);
+    if (this._generation !== gen) return { status: "aborted" };
     if (status !== PlayerMoveStatus.SUCCESS) {
       return { status: "game_not_running" };
     }
 
     this._emit("move", { player, position: move });
+    if (this._generation !== gen) return { status: "aborted" };
 
     if (this._game.gameStatus.status !== "running") {
       this._lifecycle = "finished";
       this._emit("finished", { result: this._game.gameStatus });
-      return { status: "success" };
+      return { status: this._generation === gen ? "success" : "aborted" };
     }
 
     this._emit("turn", { player: this._game.currentPlayer });
-    return { status: "success" };
+    return { status: this._generation === gen ? "success" : "aborted" };
   }
 }
 

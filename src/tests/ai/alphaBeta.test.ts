@@ -7,7 +7,7 @@ import {
   DRAW_SCORE,
   LOSS_SCORE,
   WIN_SCORE,
-} from "@/ai/engines/alphabeta";
+} from "@/ai";
 
 const AI = "X";
 const OPP = "O";
@@ -92,7 +92,7 @@ test("alphaBeta does not mutate the input fields array", () => {
   expect(fields).toEqual(snapshot);
 });
 
-test("prefers faster wins over slower wins", () => {
+test("scores a win in one ply with depth adjustment", () => {
   // Win-in-1: X has 0,1 — playing 2 wins at depth 1 → score WIN_SCORE - 1 = 9.
   const winInOne: BoardField[] = ["X", "X", 3, "O", "O", 6, 7, 8, 9];
   const scoreOne = alphaBeta({

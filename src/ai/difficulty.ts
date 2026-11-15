@@ -26,8 +26,8 @@ export type AIOptions = {
   difficulty?: AIDifficulty;
 
   /**
-   * Symbol the AI plays. Defaults to the second player's symbol (`"X"` with the
-   * default `["O", "X"]` symbols), i.e. the AI moves second.
+   * Symbol the AI plays. Defaults to `game.currentPlayer`. If supplied, it must
+   * match the current player; otherwise `getBestMove` returns `invalid_state`.
    */
   symbol?: PlayerSymbol;
 

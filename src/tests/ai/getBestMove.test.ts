@@ -4,6 +4,7 @@ import { getBestMove } from "@/ai";
 import { AIDifficulty } from "@/ai/difficulty";
 import { Game } from "@/game/Game";
 import { GameVariant } from "@/game/types/Game.types";
+import { createGameWonByO } from "@/tests/game/fixtures";
 
 // All tests assume AI plays "X" (second player by default symbols ["O","X"]),
 // unless noted otherwise. We drive the game to a specific position by making
@@ -68,13 +69,7 @@ test("HARD takes the center on an empty board when it moves first", () => {
 });
 
 test("returns no_moves when the game is not running (won)", () => {
-  const game = new Game();
-  // O wins: 0,1,2
-  game.savePlayerMove(0); // O
-  game.savePlayerMove(3); // X
-  game.savePlayerMove(1); // O
-  game.savePlayerMove(4); // X
-  game.savePlayerMove(2); // O — win
+  const game = createGameWonByO();
   expect(game.gameStatus.status).toBe("win");
 
   const result = getBestMove(game, {
@@ -195,8 +190,55 @@ test("infers opponent symbol from the board when not provided", () => {
 
 test("throws when opponent symbol cannot be inferred from an empty board", () => {
   const game = new Game();
-  // Empty board, AI is "X", no opponentSymbol provided — cannot infer.
+  // Empty board, AI is "O", no opponentSymbol provided — cannot infer.
   expect(() =>
-    getBestMove(game, { difficulty: AIDifficulty.HARD, symbol: "X" }),
+    getBestMove(game, { difficulty: AIDifficulty.HARD, symbol: "O" }),
   ).toThrow(RangeError);
+});
+
+test("rejects a symbol that does not match the current player", () => {
+  const game = new Game();
+  for (const move of [0, 3, 1, 4]) game.savePlayerMove(move);
+  const snapshot = game.snapshot;
+
+  expect(
+    getBestMove(game, {
+      symbol: "X",
+      opponentSymbol: "O",
+      seed: 1,
+    }),
+  ).toEqual({ status: "invalid_state" });
+  expect(game.snapshot).toBe(snapshot);
+  expect(getBestMove(game, { opponentSymbol: "X", seed: 1 })).toEqual({
+    status: "success",
+    index: 2,
+  });
+});
+
+test("rejects an out-of-turn symbol before inferring an opponent", () => {
+  expect(getBestMove(new Game(), { symbol: "X" })).toEqual({
+    status: "invalid_state",
+  });
+});
+
+test("HARD selects an immediate win over a forced win in three plies", () => {
+  const moves = [4, 0, 6, 2, 1, 8];
+  const game = new Game();
+  for (const move of moves) game.savePlayerMove(move);
+
+  for (const reply of [3, 7]) {
+    const slowerWin = new Game();
+    for (const move of [...moves, 5, reply, reply === 3 ? 7 : 3]) {
+      slowerWin.savePlayerMove(move);
+    }
+    expect(slowerWin.gameStatus).toEqual({ status: "win", winner: "O" });
+  }
+
+  expect(
+    getBestMove(game, {
+      difficulty: AIDifficulty.HARD,
+      opponentSymbol: "X",
+      seed: 1,
+    }),
+  ).toEqual({ status: "success", index: 7 });
 });
