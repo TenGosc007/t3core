@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { DEFAULT_GAME_SYMBOLS } from "../constants/gameConstants";
+import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
 
 test("DEFAULT_GAME_SYMBOLS is ['O', 'X']", () => {
   expect(DEFAULT_GAME_SYMBOLS).toEqual(["O", "X"]);

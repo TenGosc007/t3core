@@ -16,5 +16,8 @@
     "unused-dependencies": "warn",
     "unused-files": "warn",
     "unused-exports": "warn"
+  },
+  "health": {
+    "coverage": "./coverage/coverage-final.json"
   }
 }

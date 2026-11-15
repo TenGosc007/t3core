@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { getWinnerFromFields } from "../../utils/getWinnerFromFields";
+import { getWinnerFromFields } from "@/utils/getWinnerFromFields";
 
 const COMBINATIONS = [
   [0, 1, 2],
@@ -64,7 +64,7 @@ test("getWinnerFromFields: anti-diagonal 2-4-6 wins", () => {
 });
 
 test("getWinnerFromFields: out-of-range combination index yields no winner instead of throwing", () => {
-  // Documented invariant: WINNING_COMBINATIONS indices must be in [0, fields.length).
+  // Documented invariant: winning-combination indices must be in [0, fields.length).
   // A malformed combination reads `undefined` and compares unequal — no throw.
   const fields = ["X", "X", "X", 4, 5, 6, 7, 8, 9];
   const malformedCombinations = [[0, 1, 99]] as const;

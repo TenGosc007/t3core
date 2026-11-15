@@ -5,7 +5,7 @@ import {
   GameEvent,
   GameVariant,
   PlayerMoveStatus,
-} from "../game/types/Game.types";
+} from "@/game/types/Game.types";
 
 test("GameVariant.CLASSIC_3X3 equals 'classic-3x3'", () => {
   expect(GameVariant.CLASSIC_3X3).toBe("classic-3x3");

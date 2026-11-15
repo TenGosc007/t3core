@@ -1,7 +1,7 @@
 import type { GameStrategy } from "./strategies.types";
 
-import { GameVariant, type GameOptions } from "../game/types/Game.types";
-import { classic3x3Strategy } from "./variants/classic3x3";
+import { GameVariant, type GameOptions } from "@/game/types/Game.types";
+import { classic3x3Strategy } from "@/strategies/variants/classic3x3";
 
 /** Internal mapping of predefined {@link GameVariant} values to their strategies. */
 const GAME_STRATEGIES = {
