@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    lint:
+      glob: "*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}"
+      run: yarn eslint -- {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: yarn commitlint --edit "{1}"

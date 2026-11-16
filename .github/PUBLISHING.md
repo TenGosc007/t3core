@@ -128,7 +128,11 @@ The plugin uses the `conventionalcommits` preset. Typical messages are:
 Use these messages for the commits that reach `main`, including squash-merge
 titles. Review the recommendation: older repository history contains
 non-Conventional Commit messages, so an explicit increment may be needed.
-Local commit-message enforcement remains a separate improvement.
+Local `commit-msg` hooks enforce the conventional preset through commitlint;
+CI checks PR titles for squash merges. See
+[local Git checks](../CONTRIBUTING.md#local-git-checks-and-commit-messages)
+for hook setup and accepted message formats. The generated
+`chore: release v<VERSION>` message also follows this format.
 
 ## Create a prerelease
 

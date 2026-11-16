@@ -9,7 +9,10 @@
     "package:check": "node scripts/check-package.mjs",
     "test": "vitest",
     "test:coverage": "vitest --coverage --run",
-    "lint": "eslint ./src/**/*.ts \"scripts/**/*.mjs\"",
+    "lint": "eslint src scripts \"*.{js,mjs,cjs,ts,mts,cts}\"",
+    "commitlint": "commitlint",
+    "commitlint:pr": "commitlint --config commitlint-pr.config.mjs",
+    "hooks:install": "lefthook install",
     "ts:check": "tsc --noEmit",
     "fallow": "fallow health --coverage coverage/coverage-final.json",
     "release": "release-it",
@@ -56,6 +59,8 @@
     "dist"
   ],
   "devDependencies": {
+    "@commitlint/cli": "^21.2.4",
+    "@commitlint/config-conventional": "^21.2.4",
     "@eslint/js": "^10.0.1",
     "@release-it/conventional-changelog": "^12.0.2",
     "@types/node": "^25.6.0",
@@ -67,6 +72,7 @@
     "fallow": "^2.87.0",
     "globals": "^17.6.0",
     "jiti": "^2.6.1",
+    "lefthook": "^2.2.2",
     "release-it": "^21.1.2",
     "tsup": "^8.5.1",
     "typescript": "^6.0.3",
