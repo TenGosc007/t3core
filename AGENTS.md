@@ -12,7 +12,8 @@ and [CONTRIBUTING.md](CONTRIBUTING.md) for setup and verification.
   messages and PR titles; see [the commit guide](CONTRIBUTING.md#local-git-checks-and-commit-messages).
   Pre-commit lints staged paths; full checks remain required in CI.
 - Write code comments and new developer documentation in English. Preserve
-  the language and conventions of existing documents.
+  the language and conventions of existing documents; follow
+  [`.editorconfig`](.editorconfig) for whitespace and line endings.
 - Keep rules and state in `game`/`strategies`, move selection in `ai`,
   lifecycle and cancellation in `sessions`, and mode construction in `facade`.
   Keep UI dependencies outside the runtime library.

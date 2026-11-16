@@ -37,6 +37,24 @@ The project keeps its existing Yarn Classic lockfile. Use Yarn for dependency
 changes and commit `yarn.lock` together with the corresponding `package.json`
 changes. Migrating to Yarn 4 is outside this environment setup.
 
+## Editor settings and GitHub templates
+
+[`.editorconfig`](.editorconfig) defines UTF-8, LF line endings, two-space
+indentation, a final newline, and trimming of trailing whitespace. Markdown
+retains trailing spaces because two spaces can represent an intentional
+line break. Enable EditorConfig support in your editor to apply these settings.
+
+Use the [bug report form](.github/ISSUE_TEMPLATE/bug_report.yml) for a
+reproducible problem and include the installed package version, environment,
+minimal reproduction, and expected/actual behavior. The
+[feature request form](.github/ISSUE_TEMPLATE/feature_request.yml) asks for
+the use case, proposed API, alternatives, and compatibility concerns.
+
+The [pull request template](.github/PULL_REQUEST_TEMPLATE.md) covers user
+impact, compatibility and migration, verification results, and documentation
+updates. Mark checks you ran and explain skipped ones; use a Conventional
+Commit PR title as described below.
+
 ## Local Git checks and commit messages
 
 [`lefthook.yml`](lefthook.yml) configures two local hooks:
