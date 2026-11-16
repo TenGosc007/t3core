@@ -125,6 +125,8 @@ installs it in a temporary consumer project, and checks both types and runtime
 behavior for ESM and CommonJS. It checks Node16 and NodeNext resolution for
 both formats, Bundler resolution for ESM, and TypeScript's CommonJS
 `import = require` syntax. Declaration checking uses `skipLibCheck: false`.
+It also verifies ISC license metadata and that the installed archive contains
+the complete [LICENSE](LICENSE) text from the repository.
 The check needs npm and registry access to install runtime dependencies;
 it removes its temporary project and tarball afterwards. CI, publication,
 and `release:check` run this check automatically.

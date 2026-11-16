@@ -52,6 +52,13 @@ try {
   }
   const installedPackage = JSON.parse(readFileSync(path.join(installedRoot, "package.json"), "utf8"));
   assert.equal(installedPackage.types, "./dist/index.d.ts");
+  assert.equal(installedPackage.license, "ISC");
+  assert.equal(
+    readFileSync(path.join(installedRoot, "LICENSE"), "utf8"),
+    readFileSync(path.join(projectRoot, "LICENSE"), "utf8"),
+    "The npm archive must contain the complete project license",
+  );
+  console.log("Package OK: ISC license included with matching contents");
 
   for (const format of ["module", "commonjs"]) {
     const consumer = path.join(directory, format);
