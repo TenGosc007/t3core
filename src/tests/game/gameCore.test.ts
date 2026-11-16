@@ -1,6 +1,7 @@
 import type { BoardField } from "@/game/types/Board.types";
+import type { GameEventPayload } from "@/game/types/Game.types";
 
-import { expect, test, vi } from "vitest";
+import { assert, expect, test, vi } from "vitest";
 
 import { Game } from "@/game/Game";
 import {
@@ -142,12 +143,13 @@ test("mutating the public board snapshot does not change the game state", () => 
 
 test("event payload board is frozen", () => {
   const game = new Game();
-  const listener = vi.fn();
+  const listener = vi.fn<(payload: GameEventPayload) => void>();
   game.on(GameEvent.STATE_CHANGE, listener);
 
   game.savePlayerMove(0);
 
-  const payload = listener.mock.calls[0][0];
+  const payload = listener.mock.calls[0]?.[0];
+  assert.isDefined(payload);
   expect(Object.isFrozen(payload.board)).toBe(true);
 });
 
@@ -204,6 +206,21 @@ test("backToMove returns SUCCESS when history index is valid", () => {
   expect(game.backToMove(1)).toBe(BackToMoveStatus.SUCCESS);
 });
 
+test.each([
+  [0, "O"],
+  [1, "X"],
+  [2, "O"],
+  [3, "X"],
+] as const)("backToMove(%i) restores %s's turn", (index, symbol) => {
+  const game = new Game();
+  game.savePlayerMove(0);
+  game.savePlayerMove(1);
+  game.savePlayerMove(2);
+
+  expect(game.backToMove(index)).toBe(BackToMoveStatus.SUCCESS);
+  expect(game.currentPlayer).toBe(symbol);
+});
+
 test("backToMove returns INVALID_HISTORY_INDEX for invalid history index", () => {
   const game = new Game();
   game.savePlayerMove(4);
@@ -245,11 +262,12 @@ test("savePlayerMove returns ALREADY_SELECTED on occupied field", () => {
 
 test("STATE_CHANGE event fires on savePlayerMove", () => {
   const game = new Game();
-  const listener = vi.fn();
+  const listener = vi.fn<(payload: GameEventPayload) => void>();
   game.on(GameEvent.STATE_CHANGE, listener);
   game.savePlayerMove(0);
   expect(listener).toHaveBeenCalledOnce();
-  const payload = listener.mock.calls[0][0];
+  const payload = listener.mock.calls[0]?.[0];
+  assert.isDefined(payload);
   expect(payload.board).toBeDefined();
   expect(payload.currentPlayer).toBeDefined();
   expect(payload.gameStatus).toBeDefined();

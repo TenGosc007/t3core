@@ -1,0 +1,27 @@
+name: Feature request
+description: Propose a capability or API improvement for t3core.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe what you are trying to achieve, who needs it, and the limitation in the current API.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_api
+    attributes:
+      label: Proposed API or behavior
+      description: Describe the proposed change. Include a TypeScript usage example and expected results where possible.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe existing workarounds or other API designs you considered.
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and scope
+      description: Note any effects on existing imports, types, game modes, events, defaults, or session lifecycle. Describe a migration path if existing usage would change.

@@ -2,7 +2,7 @@ import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { PlayerSymbol, PlayerSymbols } from "@/game/types/Symbol.types";
 import type { GameStrategy } from "@/strategies";
 
-import EventEmitter from "eventemitter3";
+import { EventEmitter } from "eventemitter3";
 
 import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
 import {
@@ -229,7 +229,7 @@ export class Game implements IGame {
 
     const board = this._board;
     board.restoreBoardHistoryAt(index);
-    this._currentPlayer = this._symbols[index % 2];
+    this._currentPlayer = index % 2 === 0 ? this._symbols[0] : this._symbols[1];
     this._updateGameState();
 
     return BackToMoveStatus.SUCCESS;

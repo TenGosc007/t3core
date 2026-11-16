@@ -29,6 +29,13 @@ export default defineConfig([
   },
   tseslint.configs.recommended,
   {
+    // Consumer fixtures explicitly exercise TypeScript's CommonJS import syntax.
+    files: ["scripts/fixtures/package/*.cts"],
+    rules: {
+      "@typescript-eslint/no-require-imports": ["error", { allowAsImport: true }],
+    },
+  },
+  {
     plugins: {
       "import-x": importX,
       perfectionist,

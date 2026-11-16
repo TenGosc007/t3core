@@ -17,6 +17,8 @@ export function getWinnerFromFields<TSymbol extends string>(
 ): TSymbol | null {
   for (const combination of winningCombinations) {
     const firstIdx = combination[0];
+    if (firstIdx === undefined) continue;
+
     const field = fields[firstIdx];
     const isWinningCombination = combination.every((i) => fields[i] === field);
 

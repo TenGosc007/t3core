@@ -3,6 +3,7 @@
   "entry": ["src/index.{ts,tsx,js,jsx}", "src/main.{ts,tsx,js,jsx}"],
   "ignoreDependencies": ["jiti", "eslint-import-resolver-typescript"],
   "ignorePatterns": [
+    "scripts/fixtures/**",
     "**/*.d.ts",
     "**/vitest.config.*",
     "**/jest.config.*",

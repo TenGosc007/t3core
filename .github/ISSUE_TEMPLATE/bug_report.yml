@@ -1,0 +1,59 @@
+name: Bug report
+description: Report unexpected behavior in t3core.
+body:
+  - type: input
+    id: package_version
+    attributes:
+      label: t3core version
+      description: Exact installed version, available from npm ls t3core or yarn why t3core.
+      placeholder: e.g. 1.6.0
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the runtime and tools involved. For import or type errors, include module and moduleResolution from tsconfig.json.
+      placeholder: |
+        Node.js version:
+        TypeScript version (if used):
+        Runtime (Node.js or browser and version):
+        Operating system:
+        Framework/bundler (if used):
+        Package manager and version:
+        Module format and resolution (if relevant):
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Provide minimal code and steps to reproduce, or a small repository/playground link. Include the game mode, move sequence, AI engine, difficulty, and seed when relevant.
+      placeholder: |
+        1. Create a game with these options...
+        2. Apply these moves...
+        3. Observe...
+
+        Include the smallest code sample that reproduces the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What should happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What happens instead? Include the returned status or unexpected event sequence when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant error output
+      description: Include error messages, stack traces, or TypeScript diagnostics if available.
+      render: shell

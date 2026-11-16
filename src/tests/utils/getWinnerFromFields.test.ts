@@ -73,3 +73,9 @@ test("getWinnerFromFields: out-of-range combination index yields no winner inste
   ).not.toThrow();
   expect(getWinnerFromFields(fields, malformedCombinations)).toBe(null);
 });
+
+test("getWinnerFromFields: ignores empty combinations and continues checking", () => {
+  const fields = ["X", "X", "X", 4, 5, 6, 7, 8, 9];
+  expect(getWinnerFromFields(fields, [[]])).toBe(null);
+  expect(getWinnerFromFields(fields, [[], [0, 1, 2]])).toBe("X");
+});

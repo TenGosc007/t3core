@@ -9,7 +9,7 @@ import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-import EventEmitter from "eventemitter3";
+import { EventEmitter } from "eventemitter3";
 
 /**
  * Shared base for {@link PvPGame}, {@link SinglePlayerGame} and {@link AIGame}.

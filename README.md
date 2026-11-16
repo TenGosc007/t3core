@@ -332,3 +332,7 @@ if (result.status === 'success') {
 | `AIMoveResult` | Type: discriminated union on `status` |
 
 > **Note:** `getBestMove` and `AlphaBetaStrategy` support only the 3x3 variant (9-cell board). Passing a different board size throws `RangeError`. `getBestMove` defaults to `game.currentPlayer`; supplying a different `symbol` returns `invalid_state`. When using this helper on an empty board, provide `opponentSymbol` explicitly. Sessions supply the strategy context automatically.
+
+## License
+
+Licensed under the [ISC License](LICENSE).

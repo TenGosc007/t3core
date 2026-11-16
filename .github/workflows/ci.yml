@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -16,18 +21,25 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: yarn
+      - name: Setup Node.js and Yarn
+        uses: ./.github/actions/setup
 
       - run: yarn install --frozen-lockfile
+
+      - name: Check pull request title
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: printf '%s\n' "$PR_TITLE" | yarn commitlint:pr
 
       - name: Lint
         run: yarn lint
 
       - name: TypeScript check
         run: yarn ts:check
+
+      - name: Build and check packed package
+        run: yarn package:check
 
       - name: Tests with coverage
         run: yarn test:coverage

@@ -71,9 +71,9 @@ function searchMaximizing({
   let best = LOSS_SCORE + depth;
 
   for (const index of MOVE_ORDER_3X3) {
-    if (typeof fields[index] === "string") continue;
-
     const original = fields[index];
+    if (typeof original !== "number") continue;
+
     fields[index] = aiSymbol;
     const score = alphaBeta({
       fields,
@@ -111,9 +111,9 @@ function searchMinimizing({
   let best = WIN_SCORE - depth;
 
   for (const index of MOVE_ORDER_3X3) {
-    if (typeof fields[index] === "string") continue;
-
     const original = fields[index];
+    if (typeof original !== "number") continue;
+
     fields[index] = opponentSymbol;
     const score = alphaBeta({
       fields,

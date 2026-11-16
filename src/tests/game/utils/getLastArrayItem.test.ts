@@ -13,3 +13,14 @@ test("getLastArrayItem: works with a single-element array", () => {
 test("getLastArrayItem: throws RangeError on empty array", () => {
   expect(() => getLastArrayItem([])).toThrow(RangeError);
 });
+
+test("getLastArrayItem: preserves undefined as a valid last element", () => {
+  expect(getLastArrayItem([1, undefined])).toBeUndefined();
+  expect(getLastArrayItem([undefined])).toBeUndefined();
+});
+
+test("getLastArrayItem: does not mutate the array", () => {
+  const values = [1, 2, 3];
+  expect(getLastArrayItem(values)).toBe(3);
+  expect(values).toEqual([1, 2, 3]);
+});

@@ -4,8 +4,10 @@
  * @throws {RangeError} When `arr` is empty.
  */
 export const getLastArrayItem = <T>(arr: T[]): T => {
-  if (arr.length === 0) {
+  // Iterator completion distinguishes an empty array from an undefined value.
+  const last = arr.slice(-1).values().next();
+  if (last.done) {
     throw new RangeError("getLastArrayItem: array must not be empty");
   }
-  return arr[arr.length - 1];
+  return last.value;
 };

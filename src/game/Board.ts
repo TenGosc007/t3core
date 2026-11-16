@@ -70,12 +70,13 @@ export class Board implements IBoard {
    * @throws {RangeError} When `index` is out of range or not an integer.
    */
   getFieldByIndex(index: number) {
-    if (!this._isIndexValid(index)) {
+    const field = this._currentFields[index];
+    if (!this._isIndexValid(index) || field === undefined) {
       throw new RangeError(
         `index must be an integer in [0, ${this._size - 1}], got: ${index}`,
       );
     }
-    return this._currentFields[index];
+    return field;
   }
 
   /**
@@ -124,12 +125,13 @@ export class Board implements IBoard {
    * @throws {RangeError} When `index` is out of range or not an integer.
    */
   restoreBoardHistoryAt(index: number) {
-    if (!this._isHistoryIndexValid(index)) {
+    const snapshot = this._boardSnapshots[index];
+    if (!this._isHistoryIndexValid(index) || snapshot === undefined) {
       throw new RangeError(
         `history index must be an integer in [0, ${this.snapshotCount}], got: ${index}`,
       );
     }
-    this._currentFields = this._boardSnapshots[index];
+    this._currentFields = snapshot;
     this._currentSnapshotIndex = index;
     this._snapshot = null;
   }

@@ -1,7 +1,7 @@
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
-import type EventEmitter from "eventemitter3";
+import type { EventEmitter } from "eventemitter3";
 
 /**
  * Untyped event handler used internally by sessions to back the typed

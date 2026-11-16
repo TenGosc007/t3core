@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/TenGosc007/t3core#readme
+    about: Read installation instructions, examples, and the public API reference.
