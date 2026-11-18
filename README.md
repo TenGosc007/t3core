@@ -144,8 +144,25 @@ switch (result.status) {
 }
 ```
 
-Start/playMove/step/run/restart return promises. Stop/undo are synchronous;
-dispose returns void. AI failures are data and also appear in the snapshot.
+| Method | Return type | Possible refusal reasons |
+| --- | --- | --- |
+| `start()` | `Promise<StartResult>` | `busy`, `session_error`, `disposed` |
+| `playMove(index)` | `Promise<PlayMoveResult>` | `not_started`, `paused`, `game_finished`, `busy`, `invalid_index`, `already_selected`, `illegal_move`, `session_error`, `disposed` |
+| `step()` | `Promise<StepResult>` | `game_finished`, `busy`, `session_error`, `disposed` |
+| `run()` | `Promise<RunResult>` | `busy`, `session_error`, `disposed` |
+| `restart()` | `Promise<RestartResult>` | `disposed` |
+| `stop()` | `StopResult` | `disposed` |
+| `undo()` | `UndoResult` | `no_history`, `disposed` |
+| `dispose()` | `void` | None; repeated disposal is safe. |
+
+Success contains `value: undefined`, except `run()`, whose value is a win or draw.
+Repeating `run()` after completion returns the existing terminal result without
+notifications. Restart and valid undo cancel pending work instead of refusing
+with `busy`. Stop and undo can report `aborted` when a reentrant callback
+supersedes them; neither runs AI or returns an AI error.
+
+Ordinary refusals do not enter the error phase.
+AI failures are data and also appear in the snapshot.
 The error phase blocks new moves until restart or a valid undo. Constructor
 validation failures and application callback exceptions still throw; applied
 moves are not rolled back when a callback throws.

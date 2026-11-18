@@ -15,10 +15,11 @@ source paths and internal barrels are not supported package subpaths.
 An `export` inside an implementation file does not by itself make a symbol
 public to npm consumers.
 
-The [v2 contract review](docs/v2-contracts.md) describes implemented state,
-lifecycle, configuration and provider contracts. The [migration notes](docs/v2-migration.md)
-describe breaking observation changes. The descriptions below cover the current
-working branch; the package version is unchanged.
+The [README](README.md) describes public usage and action outcomes; the
+[provider guide](docs/ai-providers.md) covers custom AI engines. The
+[migration notes](docs/v2-migration.md) describe breaking API changes.
+The descriptions below cover the current working branch; the package version
+is unchanged.
 
 | Module | Responsibility | Boundary |
 | --- | --- | --- |
@@ -28,6 +29,19 @@ working branch; the package version is unchanged.
 | [`sessions`](src/sessions/BaseSession.ts) | Coordinates `Game`, human input, AI, lifecycle, events, and stale operations. | All session classes are internal; facade instance, event, result and snapshot contracts are public. |
 | [`facade`](src/facade/TicTacToe.ts) | Validates mode/configuration, resolves per-instance provider catalogs, constructs sessions and exposes capability metadata. | `TicTacToe` exposes mode-specific facades and static `getCapabilities`. Wrappers, catalog and construction helpers are internal. |
 | [`utils`](src/utils/getWinnerFromFields.ts), [`constants`](src/constants/gameConstants.ts) | Shared winner detection and default symbols. | Implementations and constants remain internal. |
+
+### Contract ownership
+
+| File | Responsibility |
+| --- | --- |
+| [game/contracts.ts](src/game/contracts.ts) | Fixed O/X symbols, immutable position types, implemented variant metadata, and running/terminal results. |
+| [sessions/state/types.ts](src/sessions/state/types.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
+| [sessions/results.ts](src/sessions/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
+| [facade/options.ts](src/facade/options.ts) | Mode-specific configuration with options tied to registered AI engine IDs. |
+| [facade/types.ts](src/facade/types.ts) | Runtime per-mode instances, generic constructor and static discovery. |
+| [ai/providers/types.ts](src/ai/providers/types.ts) | Provider metadata, normalized option validation, private factories and cancellable strategies. |
+| [facade/catalog/types.ts](src/facade/catalog/types.ts) | Read-only capability discovery inputs and outputs. |
+| [strategies/strategies.types.ts](src/strategies/strategies.types.ts) | Public simulation rules and internal variant strategy contract. |
 
 ## Dependency direction
 
@@ -101,6 +115,18 @@ The entire snapshot, including nested arrays and metadata, is frozen.
 Repeated reads reuse its reference. A phase-only change reuses the board and
 legal-moves array. Session `movesCount` counts occupied fields in the current
 position; it does not count retained future history.
+
+Snapshot types encode valid phase/result/input combinations. Narrowing on
+`phase` determines input availability and the result: `finished` has a terminal
+result and disables play, while `error` carries an AI error and a running
+position. PvP cannot enter AI phases; AI-vs-AI cannot enter `human-turn`.
+Disposed snapshots preserve the previous result/error but disable play and undo.
+
+Types cannot prove board length, numeric bounds, occupancy, turn ownership or
+consistency between the board and its result. Runtime rules validate moves;
+the session boundary validates O/X data and freezes the complete snapshot.
+Reference stability, notification ordering and independent subscription cleanup
+are runtime guarantees verified by tests, rather than by types alone.
 
 The store attaches no listeners to Game. Sessions commit state after their
 domain mutations and Game callbacks return. Direct constructors accept a
@@ -356,3 +382,9 @@ Conventional Commit PR titles. See the
 See [CONTRIBUTING.md](CONTRIBUTING.md) for environment setup, quality checks,
 and the API change checklist. See [Publishing to npm](.github/PUBLISHING.md)
 for release and publication mechanics.
+
+[Contract tests](src/tests/contracts/contracts.test.ts) include negative consumer
+examples marked with `@ts-expect-error`, and [usage scenarios](src/tests/contracts/examples.ts)
+use an injected public `TicTacToeConstructor`. Run `yarn ts:check` to validate
+these compiler expectations; Vitest alone does not check compiler diagnostics.
+The package check also verifies consumer declarations with `skipLibCheck: false`.

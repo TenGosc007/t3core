@@ -18,10 +18,10 @@ import { ALPHA_BETA_CONFIG } from "./config";
  * truth for difficulty knobs.
  *
  * The RNG is created once per instance (persistent), so a given `seed`
- * produces a reproducible sequence of moves across a whole game. This differs
- * from `getBestMove`, which rebuilds the RNG on every call (same seed → same
- * move every time). The persistent approach is correct for an instance-based
- * strategy: one game = one RNG sequence, reproducible via `seed`.
+ * produces a reproducible sequence across calculations and session restarts.
+ * The stateless `getBestMove` helper rebuilds its RNG on every call; the same
+ * seed and position reproduce the same move. Create a fresh strategy instance
+ * to replay its sequence from the beginning.
  */
 export class AlphaBetaStrategy implements MoveStrategy {
   private readonly _difficulty: AIDifficulty;

@@ -61,12 +61,12 @@ export type EventEmit<T> = <K extends keyof GameEventMap>(
   fn: (...args: GameEventMap[K]) => void,
 ) => T;
 
-/** Public contract for the `Game` class. */
+/** Internal contract for game state, rules, history and domain events. */
 export interface IGame {
   on: EventEmit<this>;
   off: EventEmit<this>;
 
-  /** Stable snapshot for external stores (e.g. `useSyncExternalStore`). */
+  /** Cached domain snapshot; UI consumers observe the full session snapshot. */
   readonly snapshot: GameEventPayload;
 
   /** Current game status. */
@@ -78,7 +78,7 @@ export interface IGame {
   /** Current board state as a read-only snapshot. */
   readonly board: BoardSnapshot;
 
-  /** Number of moves made in the current game. */
+  /** Number of moves retained in history, including future moves after restore. */
   readonly movesCount: number;
   readonly variant: VariantDescriptor;
   readonly rules: GameRules;

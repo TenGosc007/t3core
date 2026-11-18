@@ -7,13 +7,12 @@ import type { EventEmitter } from "eventemitter3";
 
 /**
  * Untyped event handler used internally by sessions to back the typed
- * `on`/`off` API. `eventemitter3` requires a homogeneous handler map, so we
- * erase the per-event payload type at the emitter boundary and restore it via
- * casts in each session's `on`/`off`/`_emit`.
+ * `on`/`off` API. BaseSession isolates payload casts at the emitter boundary;
+ * callers retain event-specific payload types through `on`/`off`/`_emit`.
  */
 export type SessionHandler = (payload: Record<string, unknown>) => void;
 
-/** Internal emitter type shared by `PvPGame`, `SinglePlayerGame`, `AIGame`. */
+/** Internal emitter owned by BaseSession and shared by all session modes. */
 export type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
 
 export type {
