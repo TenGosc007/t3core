@@ -2,7 +2,10 @@ import type * as Strategies from "@/strategies";
 
 import { expect, test, vi } from "vitest";
 
-import { Game, PlayerMoveStatus, PvPGame, SinglePlayerGame } from "@/index";
+import { Game } from "@/game/Game";
+import { PlayerMoveStatus } from "@/game/types/Game.types";
+import { PvPGame } from "@/sessions/PvPGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 vi.mock("@/strategies", async (importOriginal) => {
   const original = await importOriginal<typeof Strategies>();

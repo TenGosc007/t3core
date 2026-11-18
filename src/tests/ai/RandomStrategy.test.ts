@@ -1,4 +1,5 @@
 import type { MoveContext } from "@/ai";
+import type { BoardSnapshot } from "@/game/contracts";
 
 import { expect, test } from "vitest";
 
@@ -66,7 +67,7 @@ test("throws MoveStrategyError('no_legal_moves') on a full board", async () => {
   // X O O
   // O X O  → fields: O,X,X,X,O,O,O,X,O — check no winner.
   // Easier: build a draw position programmatically and assert no winner.
-  const drawBoard: (string | number)[] = [
+  const drawBoard: BoardSnapshot = [
     "O",
     "X",
     "X",
@@ -83,7 +84,7 @@ test("throws MoveStrategyError('no_legal_moves') on a full board", async () => {
   const strategy = new RandomStrategy();
   await expect(
     strategy.calculateMove(
-      drawBoard as unknown as readonly (number | string)[],
+      drawBoard,
       ctx(),
     ),
   ).rejects.toMatchObject({

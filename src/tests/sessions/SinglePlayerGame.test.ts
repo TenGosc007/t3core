@@ -190,12 +190,12 @@ test("game ends after human win: emits finished, no AI move", async () => {
   }
 });
 
-test("reset() during AI computation aborts the in-flight playMove", async () => {
+test("restart() during AI computation aborts the in-flight playMove", async () => {
   const { game, session } = slowSession("O");
   await session.start();
 
   const playPromise = session.playMove(0); // human moves, then AI "thinks"
-  session.reset(); // reset while AI is "thinking"
+  await session.restart(); // Restart while AI is thinking.
   resolveSlowMove(4); // AI "chooses" 4 — but generation changed, must abort
 
   const result = await playPromise;

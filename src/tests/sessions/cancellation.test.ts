@@ -1,6 +1,9 @@
 import { expect, test, vi } from "vitest";
 
-import { Game, GameEvent, PvPGame, SinglePlayerGame } from "@/index";
+import { Game } from "@/game/Game";
+import { GameEvent } from "@/game/types/Game.types";
+import { PvPGame } from "@/sessions/PvPGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 import { deferredStrategy, firstLegal, makeAI, makeSingle, success } from "./lifecycle.helpers";
 

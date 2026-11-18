@@ -101,7 +101,7 @@ test("throws RangeError for a non-3x3 board", () => {
   const fakeGame = {
     board: [1, 2, 3, 4],
     gameStatus: { status: "running" as const },
-    currentPlayer: "X",
+    currentPlayer: "X" as const,
   };
   expect(() =>
     getBestMove(fakeGame, {

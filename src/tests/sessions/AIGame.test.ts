@@ -81,7 +81,7 @@ test("step() performs a single AI move", async () => {
   expect(game.movesCount).toBe(1);
 });
 
-test("reset() allows a new run()", async () => {
+test("restart() allows a new run()", async () => {
   const game = new Game();
   const strategies = hardVsHard();
   const session = new AIGame({ game, strategies });
@@ -89,7 +89,7 @@ test("reset() allows a new run()", async () => {
   await session.run();
   expect(game.gameStatus.status).not.toBe("running");
 
-  session.reset();
+  await session.restart();
   expect(game.gameStatus.status).toBe("running");
   expect(game.movesCount).toBe(0);
 
@@ -110,13 +110,13 @@ test("second step() while one is in flight returns busy", async () => {
   await stepPromise;
 });
 
-test("reset() during run() aborts and clears the board", async () => {
+test("restart() during run() aborts and clears the board", async () => {
   const game = new Game();
   const strategies = slowFirstPlayer();
   const session = new AIGame({ game, strategies });
 
   const runPromise = session.run();
-  session.reset();
+  await session.restart();
   resolveSlowMove(4);
 
   const result = await runPromise;

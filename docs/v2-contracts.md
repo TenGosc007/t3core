@@ -8,8 +8,9 @@ implements configuration validation, shared variant rules and AI providers.
 Use the [README](../README.md) and [migration notes](v2-migration.md) for the
 currently implemented API. The package version is unchanged.
 
-The contracts below are used by runtime code. The final export review and
-removal of transitional API remain stage 5.
+The contracts below are used by runtime code. Stage 5 completes the public
+export review: `TicTacToe` and `AIProviderError` are the only runtime exports;
+configuration, domain data, instances and extension contracts are type exports.
 
 ## Contract ownership
 
@@ -26,9 +27,10 @@ removal of transitional API remain stage 5.
 
 The session snapshot types are now used by runtime sessions and exported from
 the package root, together with `EngineError`. Consumers must not import source
-paths. Internal `facade/contracts` files now re-export the adopted runtime
-contracts, with no separate option definitions. Transitional direct-session and
-low-level exports remain subject to the final API review. See the
+paths. The former `facade/contracts` scaffolding has been removed. There is one
+configuration definition in `facade/options.ts`, and one immutable domain contract
+in `game/contracts.ts`. Low-level classes and direct session constructors are
+internal. Session `reset()` is removed; new games use `restart()`. See the
 [provider guide](ai-providers.md) for custom engines and capability discovery.
 
 Only `classic-3x3` is accepted. Future 9x9/Gomoku identifiers are not added to
@@ -195,6 +197,7 @@ Contract tests run through both `yarn ts:check` and Vitest. Type checking also
 verifies negative consumer examples marked with `@ts-expect-error`; Vitest
 alone does not validate those compiler diagnostics.
 
-Lifecycle actions are implemented in stage 3 and providers in stage 4; final
-package migration remains stage 5. The final review also removes remaining temporary
-“Internal v2” annotations and duplicate draft types after their runtime adoption.
+Lifecycle actions, providers and final API consolidation are implemented.
+Source tests and installed package consumers exercise the public facade.
+Larger variants, Worker/WASM and framework adapters remain future work.
+The package version and release scheduling are unchanged.

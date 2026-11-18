@@ -105,8 +105,8 @@ The session validates the returned move through the same Game rules as human
 input. A rule-specific human refusal is `rejected/illegal_move`; an invalid AI
 answer produces `error/illegal_ai_move`.
 
-Each calculation receives a distinct `AbortSignal`. Stop, restart, valid undo,
-reset and disposal abort the active request and settle the old action as
+Each calculation receives a distinct `AbortSignal`. Stop, restart, valid undo
+and disposal abort the active request and settle the old action as
 `aborted`. A completed request's signal is not subsequently aborted. Remove
 abort listeners when the request completes. Cancellation must stop or discard
 the provider's own work; it does not destroy the strategy, which can be reused
@@ -132,8 +132,6 @@ structured-cloned into a Worker; a future provider bridge must transfer plain
 position data and select its matching rules inside the worker. WASM may run
 inside that worker. No worklet is needed for the current 3×3 engines.
 
-Direct session constructors still accept the transitional
-`MoveStrategy.calculateMove(board, context, request?)` interface. Its optional
-third argument carries the signal, and optional `dispose()` transfers cleanup
-to the session. The facade adapts the provider contract internally. Final export
-consolidation remains stage 5; custom facade integrations should use providers.
+Internal sessions use a board/context move interface behind an adapter. These
+classes and adapters are implementation details, not package exports. Consumer
+integrations use `AIProvider` and the required `AIStrategy` contract above.

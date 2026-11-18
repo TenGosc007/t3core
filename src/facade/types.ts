@@ -44,8 +44,6 @@ type InstanceEvents = {
   stop(): StopResult;
   undo(): UndoResult;
   dispose(): void;
-  /** @deprecated Transitional API; prefer restart() for a new game. */
-  reset(): void;
 };
 
 /** PvP instance with human input and shared lifecycle actions. No `step`/`run`. */

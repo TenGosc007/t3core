@@ -1,10 +1,10 @@
+import type { AIConfig, TicTacToeOptions } from "@/facade/options";
 import type {
   AivsAiInstance,
   PvPInstance,
   SinglePlayerInstance,
   TicTacToeConstructor,
-} from "@/facade/contracts/instance";
-import type { AIConfig, TicTacToeOptions } from "@/facade/contracts/options";
+} from "@/facade/types";
 import type { FinishedGameStatus, PlayerSymbol, VariantId } from "@/game/contracts";
 import type {
   ActionResult,
@@ -71,7 +71,7 @@ test("mode-specific instances expose the correct actions and synchronous cleanup
   expectTypeOf<PvPInstance["dispose"]>().returns.toBeVoid();
 });
 
-test("usage scenarios retain the draft configuration constructor with runtime lifecycle types", () => {
+test("usage scenarios share the runtime constructor and lifecycle types", () => {
   expectTypeOf(pvpExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(singlePlayerExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(aiVsAiExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();

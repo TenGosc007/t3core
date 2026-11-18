@@ -21,7 +21,7 @@ const factories = [
 for (const createGame of factories) {
   const mode = createGame().mode;
 
-  test(`${mode} exposes a stable bound subscribe function and snapshot`, () => {
+  test(`${mode} exposes a stable bound subscribe function and snapshot`, async () => {
     const game = createGame();
     const { subscribe, getSnapshot } = game;
     const snapshot = game.snapshot;
@@ -34,18 +34,19 @@ for (const createGame of factories) {
     expect(game.snapshot).toBe(snapshot);
     expect(listener).not.toHaveBeenCalled();
 
-    game.reset();
-    expect(listener).toHaveBeenCalledExactlyOnceWith();
+    await game.restart();
+    expect(listener).toHaveBeenCalledWith();
+    const count = listener.mock.calls.length;
     expect(game.snapshot).not.toBe(snapshot);
     expect(game.snapshot).toBe(game.snapshot);
 
     unsubscribe();
     unsubscribe();
-    game.reset();
-    expect(listener).toHaveBeenCalledTimes(1);
+    await game.restart();
+    expect(listener).toHaveBeenCalledTimes(count);
   });
 
-  test(`${mode} notifies subscribers after a move and reset`, async () => {
+  test(`${mode} notifies subscribers after a move and restart`, async () => {
     const game = createGame();
     const snapshots: SessionSnapshot[] = [];
     const unsubscribe = game.subscribe(() => snapshots.push(game.snapshot));
@@ -65,8 +66,8 @@ for (const createGame of factories) {
     ).toHaveLength(1);
     const movesCount = game.movesCount;
 
-    game.reset();
-    expect(snapshots).toHaveLength(movesCount + 2);
+    await game.restart();
+    expect(snapshots).toHaveLength(movesCount + (game.mode === "aivsai" ? 2 : 3));
     expect(snapshots[snapshots.length - 1]).toBe(game.snapshot);
     expect(game.snapshot.board).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(game.snapshot.currentPlayer).toBe("O");
@@ -74,14 +75,14 @@ for (const createGame of factories) {
     unsubscribe();
   });
 
-  test(`${mode} aborts stale moves if a subscriber resets the game`, async () => {
+  test(`${mode} aborts stale moves if a subscriber restarts the game`, async () => {
     const game = createGame();
     const moves = vi.fn();
     game.on("move", moves);
     if (game.mode !== "aivsai") await game.start();
     const unsubscribe = game.subscribe(() => {
       unsubscribe();
-      game.reset();
+      void game.restart();
     });
 
     const result =
@@ -93,7 +94,7 @@ for (const createGame of factories) {
   });
 }
 
-test("each subscription has independent, idempotent cleanup", () => {
+test("each subscription has independent, idempotent cleanup", async () => {
   const game = new TicTacToe({ mode: "pvp" });
   const listener = vi.fn();
   const otherListener = vi.fn();
@@ -101,26 +102,26 @@ test("each subscription has independent, idempotent cleanup", () => {
   const unsubscribeAgain = game.subscribe(listener);
   const unsubscribeOther = game.subscribe(otherListener);
 
-  game.reset();
+  await game.start();
   expect(listener).toHaveBeenCalledTimes(2);
   expect(otherListener).toHaveBeenCalledTimes(1);
 
   unsubscribe();
   unsubscribe();
-  game.reset();
+  await game.playMove(0);
   expect(listener).toHaveBeenCalledTimes(3);
   expect(otherListener).toHaveBeenCalledTimes(2);
 
   unsubscribeAgain();
   const unsubscribeNew = game.subscribe(listener);
   unsubscribeAgain();
-  game.reset();
+  await game.playMove(1);
   expect(listener).toHaveBeenCalledTimes(4);
   expect(otherListener).toHaveBeenCalledTimes(3);
 
   unsubscribeNew();
   unsubscribeOther();
-  game.reset();
+  await game.restart();
   expect(listener).toHaveBeenCalledTimes(4);
   expect(otherListener).toHaveBeenCalledTimes(3);
 });
@@ -190,7 +191,7 @@ test("effect setup, cleanup and setup abort the old AI opening without stale upd
   const firstStart = game.start();
 
   unsubscribe();
-  game.reset();
+  game.stop();
 
   const snapshots: SessionSnapshot[] = [];
   const unsubscribeAgain = game.subscribe(() => snapshots.push(game.snapshot));
@@ -204,6 +205,6 @@ test("effect setup, cleanup and setup abort the old AI opening without stale upd
   expect(game.movesCount).toBe(1);
 
   unsubscribeAgain();
-  game.reset();
+  game.stop();
   expect(snapshots).toHaveLength(2);
 });

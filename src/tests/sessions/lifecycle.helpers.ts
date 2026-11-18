@@ -1,8 +1,10 @@
-import type { MoveStrategy } from "@/index";
+import type { MoveStrategy } from "@/ai/types";
 
 import { vi } from "vitest";
 
-import { AIGame, Game, SinglePlayerGame } from "@/index";
+import { Game } from "@/game/Game";
+import { AIGame } from "@/sessions/AIGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 export const success = { status: "success", value: undefined };
 

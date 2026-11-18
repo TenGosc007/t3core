@@ -2,7 +2,9 @@ import type { SessionSnapshot } from "@/index";
 
 import { expect, test, vi } from "vitest";
 
-import { Game, PvPGame, TicTacToe } from "@/index";
+import { Game } from "@/game/Game";
+import { TicTacToe } from "@/index";
+import { PvPGame } from "@/sessions/PvPGame";
 
 import { deferredStrategy, makeAI, makeSingle, success } from "./lifecycle.helpers";
 
@@ -92,7 +94,6 @@ for (const mode of ["pvp", "singleplayer", "aivsai"] as const) {
       expect(await game.start()).toEqual({ status: "rejected", reason: "disposed" });
       expect(await game.playMove(0)).toEqual({ status: "rejected", reason: "disposed" });
     }
-    game.reset(); // The transitional void method is a no-op after disposal.
     game.dispose();
     expect(game.getSnapshot()).toBe(disposed);
     expect(changed).toHaveBeenCalledTimes(count);

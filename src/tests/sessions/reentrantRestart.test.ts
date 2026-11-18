@@ -1,18 +1,17 @@
-import type { GameSessionEventType, MoveStrategy } from "@/index";
+import type { MoveStrategy } from "@/ai/types";
+import type { GameSessionEventType } from "@/index";
 
 import { expect, test } from "vitest";
 
-import {
-  AIGame,
-  Game,
-  GameEvent,
-  MoveStrategyError,
-  PvPGame,
-  SinglePlayerGame,
-} from "@/index";
+import { MoveStrategyError } from "@/ai/types";
+import { Game } from "@/game/Game";
+import { GameEvent } from "@/game/types/Game.types";
+import { AIGame } from "@/sessions/AIGame";
+import { PvPGame } from "@/sessions/PvPGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 for (const event of ["move", "turn", "finished"] as const) {
-  test(`PvP aborts when a ${event} listener resets the session`, async () => {
+  test(`PvP aborts when a ${event} listener restarts the session`, async () => {
     const game = new Game();
     const session = new PvPGame({ game });
     await session.start();
@@ -23,18 +22,22 @@ for (const event of ["move", "turn", "finished"] as const) {
     for (const type of ["move", "turn", "finished"] as const) {
       session.on(type, () => events.push(type));
     }
-    const reset = () => session.reset();
+    let restarted: ReturnType<typeof session.restart> | undefined;
+    const reset = () => {
+      session.off(event, reset);
+      restarted = session.restart();
+    };
     session.on(event, reset);
 
     expect(await session.playMove(2)).toEqual({ status: "aborted" });
-    expect(events[events.length - 1]).toBe(event);
+    expect(await restarted).toEqual({ status: "success", value: undefined });
     expect(session.movesCount).toBe(0);
     session.off(event, reset);
     expect(await session.start()).toEqual({ status: "success", value: undefined });
   });
 }
 
-test("reset in a human move listener prevents AI computation", async () => {
+test("restart in a human move listener prevents AI computation", async () => {
   let calls = 0;
   const session = new SinglePlayerGame({
     game: new Game(),
@@ -50,7 +53,7 @@ test("reset in a human move listener prevents AI computation", async () => {
   await session.start();
   const events: string[] = [];
   session.on("ai-thinking", () => events.push("ai-thinking"));
-  session.on("move", () => session.reset());
+  session.on("move", () => { void session.restart(); });
 
   expect(await session.playMove(0)).toEqual({ status: "aborted" });
   expect(calls).toBe(0);
@@ -67,7 +70,7 @@ const aiEvents: GameSessionEventType[] = [
 
 for (const mode of ["singleplayer", "step", "run"] as const) {
   for (const event of aiEvents) {
-    test(`${mode} aborts when a ${event} listener resets the session`, async () => {
+    test(`${mode} aborts when a ${event} listener restarts the session`, async () => {
       const game = new Game();
       if (event === "finished") {
         for (const move of [0, 3, 1, 4]) game.savePlayerMove(move);
@@ -92,7 +95,12 @@ for (const mode of ["singleplayer", "step", "run"] as const) {
       for (const type of aiEvents) {
         session.on(type, () => events.push(type));
       }
-      session.on(event, () => session.reset());
+      let restarted: ReturnType<typeof session.restart> | undefined;
+      const restart = () => {
+        session.off(event, restart);
+        restarted = session.restart();
+      };
+      session.on(event, restart);
 
       const result =
         session instanceof SinglePlayerGame
@@ -102,10 +110,11 @@ for (const mode of ["singleplayer", "step", "run"] as const) {
             : await session.run();
 
       expect(result).toEqual({ status: "aborted" });
-      expect(events[events.length - 1]).toBe(event);
-      expect(calls).toBe(event === "ai-thinking" ? 0 : 1);
-      expect(session.movesCount).toBe(0);
-      expect(session.currentPlayer).toBe("O");
+      expect(await restarted).toEqual({ status: "success", value: undefined });
+      expect(events).toContain(event);
+      expect(calls).toBe((event === "ai-thinking" ? 0 : 1) + (mode === "singleplayer" ? 1 : 0));
+      expect(session.movesCount).toBe(mode === "singleplayer" ? 1 : 0);
+      expect(session.currentPlayer).toBe(mode === "singleplayer" ? "X" : "O");
     });
   }
 }
@@ -139,7 +148,7 @@ for (const method of ["step", "run"] as const) {
 }
 
 for (const mode of ["pvp", "singleplayer", "aivsai"] as const) {
-  test(`${mode} aborts if the underlying Game listener resets during a move`, async () => {
+  test(`${mode} aborts if the underlying Game listener restarts during a move`, async () => {
     const game = new Game();
     const strategy: MoveStrategy = { calculateMove: async () => 0 };
     const session =
@@ -159,7 +168,7 @@ for (const mode of ["pvp", "singleplayer", "aivsai"] as const) {
     session.on("ai-thinking", () => events.push("ai-thinking"));
     const reset = () => {
       game.off(GameEvent.STATE_CHANGE, reset);
-      session.reset();
+      void session.restart();
     };
     game.on(GameEvent.STATE_CHANGE, reset);
 
@@ -175,10 +184,10 @@ for (const mode of ["pvp", "singleplayer", "aivsai"] as const) {
 }
 
 for (const mode of ["singleplayer", "aivsai"] as const) {
-  test(`${mode} prioritizes reset when a stale strategy rejects`, async () => {
+  test(`${mode} prioritizes stop when a stale strategy rejects`, async () => {
     const strategy: MoveStrategy = {
       calculateMove: async () => {
-        session.reset();
+        session.stop();
         throw new MoveStrategyError("no_legal_moves", "stale computation");
       },
     };

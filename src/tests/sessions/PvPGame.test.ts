@@ -74,17 +74,13 @@ test("already-selected field returns already_selected", async () => {
   expect(result).toEqual({ status: "rejected", reason: "already_selected" });
 });
 
-test("reset() allows a new game to start", async () => {
-  const game = new Game();
-  const session = new PvPGame({ game });
+test("restart() clears history and starts the next game", async () => {
+  const session = new PvPGame({ game: new Game() });
   await session.start();
   await session.playMove(0);
-  session.reset();
-  const result = await session.playMove(1);
-  expect(result).toEqual({ status: "rejected", reason: "not_started" });
-  await session.start();
-  const r2 = await session.playMove(1);
-  expect(r2.status).toBe("success");
+  await session.restart();
+  expect(session.movesCount).toBe(0);
+  expect((await session.playMove(1)).status).toBe("success");
 });
 
 test("start() called twice is an idempotent success", async () => {

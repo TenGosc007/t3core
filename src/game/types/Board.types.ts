@@ -1,12 +1,8 @@
-import type { PlayerSymbol } from "./Symbol.types";
+import type { BoardField, BoardSnapshot, PlayerSymbol } from "../contracts";
 
-/** A single board cell: either a numeric placeholder (empty slot label) or a player symbol. */
-export type BoardField = number | PlayerSymbol;
+export type { BoardField, BoardSnapshot } from "../contracts";
 
-/** Read-only snapshot of the board fields, safe for external consumers and referential-equality checks. */
-export type BoardSnapshot = readonly BoardField[];
-
-/** Public contract for a Tic Tac Toe board. */
+/** Internal board storage and history contract. */
 export interface IBoard {
   /** Current board state as a frozen snapshot. */
   fields: BoardSnapshot;

@@ -1,10 +1,8 @@
-/**
- * Immutable O/X domain data used by session snapshots. The low-level Game
- * retains its existing broader types until the domain migration.
- */
+/** Immutable domain contracts shared by rules, AI and observable sessions. */
 export type PlayerSymbol = "O" | "X";
 
-export type BoardSnapshot = readonly (number | PlayerSymbol)[];
+export type BoardField = number | PlayerSymbol;
+export type BoardSnapshot = readonly BoardField[];
 
 /** Only implemented variants belong here; future names are not accepted yet. */
 export type VariantId = "classic-3x3";

@@ -4,7 +4,7 @@ import type { VariantDescriptor } from "@/game/contracts";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameRules } from "@/strategies/strategies.types";
 
-/** Bridges the transitional direct-session strategy API to the provider contract. */
+/** Adapts a provider to the internal board/context move-selection interface. */
 export class ProviderMoveStrategy implements MoveStrategy {
   private _disposed = false;
 

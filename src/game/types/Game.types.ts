@@ -1,16 +1,10 @@
-import type { VariantDescriptor } from "../contracts";
+import type { GameStatus, VariantDescriptor } from "../contracts";
 import type { BoardSnapshot } from "./Board.types";
 import type { PlayerSymbol } from "./Symbol.types";
 import type { GameRules } from "@/strategies/strategies.types";
 
-type GameStatusWin = { status: "win"; winner: PlayerSymbol };
-type GameStatusDraw = { status: "draw" };
-type GameStatusRunning = { status: "running" };
+export type { GameStatus } from "../contracts";
 
-/** Union of all possible game states. */
-export type GameStatus = GameStatusWin | GameStatusDraw | GameStatusRunning;
-
-/** Predefined game variants. New variants are added here as the library grows. */
 export const GameVariant = {
   CLASSIC_3X3: "classic-3x3",
 } as const;

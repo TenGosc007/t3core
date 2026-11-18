@@ -1,8 +1,13 @@
-import type { MoveStrategy, SessionSnapshot } from "@/index";
+import type { MoveStrategy } from "@/ai/types";
+import type { SessionSnapshot } from "@/index";
 
 import { expect, test, vi } from "vitest";
 
-import { AIGame, Game, GameEvent, PvPGame, SinglePlayerGame } from "@/index";
+import { Game } from "@/game/Game";
+import { GameEvent } from "@/game/types/Game.types";
+import { AIGame } from "@/sessions/AIGame";
+import { PvPGame } from "@/sessions/PvPGame";
+import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
 function deferredMove() {
   let resolve: (move: number) => void = () => { throw new Error("Not initialized"); };
@@ -148,13 +153,14 @@ for (const mode of ["singleplayer", "aivsai"] as const) {
       expect(session.snapshot.board).toBe(initial.board);
       expect(session.snapshot.legalMoves).toBe(initial.legalMoves);
       expect(Object.isFrozen(session.snapshot.error)).toBe(true);
-      session.reset();
-      expect(session.snapshot).toMatchObject({ phase: "idle", error: null });
+      const publishedError = session.snapshot.error;
+      session.dispose();
+      expect(session.snapshot).toMatchObject({ phase: "disposed", error: publishedError });
     });
   }
 
   for (const completion of ["resolve", "reject"] as const) {
-    test(`${mode} ignores a late AI ${completion} after reset and a new operation`, async () => {
+    test(`${mode} ignores a late AI ${completion} after stop and a new operation`, async () => {
       const old = deferredMove();
       const fresh = deferredMove();
       let calls = 0;
@@ -166,7 +172,7 @@ for (const mode of ["singleplayer", "aivsai"] as const) {
         : new AIGame({ game: new Game(), strategies: [strategy, strategy] });
       const begin = () => session instanceof AIGame ? session.step() : session.start();
       const first = begin();
-      session.reset();
+      session.stop();
       const second = begin();
       const current = session.snapshot;
       const listener = vi.fn();
@@ -232,11 +238,11 @@ test("a ready-state subscriber can start a new operation without the old finally
   expect(session.snapshot).toMatchObject({ phase: "human-turn", movesCount: 4 });
 });
 
-test("nested reset supersedes notification delivery and removed listeners are skipped", async () => {
+test("nested stop supersedes notification delivery and removed listeners are skipped", async () => {
   const session = new PvPGame({ game: new Game() });
   const seen: string[] = [];
   session.subscribe(() => {
-    if (session.snapshot.phase === "human-turn") session.reset();
+    if (session.snapshot.phase === "human-turn") session.stop();
   });
   const removed = vi.fn();
   let remove = () => {};
@@ -244,7 +250,7 @@ test("nested reset supersedes notification delivery and removed listeners are sk
   remove = session.subscribe(removed);
   session.subscribe(() => seen.push(session.snapshot.phase));
   expect(await session.start()).toEqual({ status: "aborted" });
-  expect(seen).toEqual(["idle"]);
+  expect(seen).toEqual(["paused"]);
   expect(removed).not.toHaveBeenCalled();
 });
 
@@ -269,13 +275,19 @@ for (const source of ["subscriber", "event", "game"] as const) {
   });
 }
 
-test("reset from an error subscriber invalidates the original rejection", async () => {
-  const session = singlePlayer({ calculateMove: async () => { throw new Error("AI"); } }, "X");
+test("restart from an error subscriber invalidates the original rejection", async () => {
+  let calls = 0;
+  const session = singlePlayer({ calculateMove: async () => {
+    if (++calls === 1) throw new Error("AI");
+    return 4;
+  } }, "X");
+  let restarted: ReturnType<typeof session.restart> | undefined;
   session.subscribe(() => {
-    if (session.snapshot.phase === "error") session.reset();
+    if (session.snapshot.phase === "error") restarted = session.restart();
   });
   expect(await session.start()).toEqual({ status: "aborted" });
-  expect(session.snapshot).toMatchObject({ phase: "idle", error: null, movesCount: 0 });
+  expect(await restarted).toEqual({ status: "success", value: undefined });
+  expect(session.snapshot).toMatchObject({ phase: "human-turn", error: null, movesCount: 1 });
 });
 
 test("session move count describes the restored position, not retained future history", () => {
@@ -287,31 +299,29 @@ test("session move count describes the restored position, not retained future hi
   expect(session.movesCount).toBeLessThan(game.movesCount);
 });
 
-test("reset commits idle even when a low-level Game callback throws", async () => {
+test("restart pauses coherently when a low-level Game callback throws", async () => {
   const pending = deferredMove();
   const game = new Game();
   const session = new SinglePlayerGame({
     game, strategy: pending.strategy, humanSymbol: "X", aiSymbol: "O",
   });
   const opening = session.start();
-  const error = new Error("Reset callback");
+  const error = new Error("Restart callback");
   game.on(GameEvent.STATE_CHANGE, () => { throw error; });
 
-  expect(() => session.reset()).toThrow(error);
-  expect(session.snapshot).toMatchObject({ phase: "idle", error: null, movesCount: 0 });
+  await expect(session.restart()).rejects.toBe(error);
+  expect(session.snapshot).toMatchObject({ phase: "paused", error: null, movesCount: 0 });
   pending.resolve(4);
   expect(await opening).toEqual({ status: "aborted" });
-  expect(session.snapshot.phase).toBe("idle");
+  expect(session.snapshot.phase).toBe("paused");
 });
 
-test("a new start in a Game reset callback is not overwritten by idle publication", async () => {
+test("a nested stop in a Game restart callback supersedes the restarting operation", async () => {
   const game = new Game();
   const session = new PvPGame({ game });
   await session.start();
   await session.playMove(0);
-  let started: ReturnType<typeof session.start> | undefined;
-  game.on(GameEvent.STATE_CHANGE, () => { started = session.start(); });
-  session.reset();
-  expect(await started).toEqual({ status: "success", value: undefined });
-  expect(session.snapshot).toMatchObject({ phase: "human-turn", canPlay: true, movesCount: 0 });
+  game.on(GameEvent.STATE_CHANGE, () => { session.stop(); });
+  expect(await session.restart()).toEqual({ status: "aborted" });
+  expect(session.snapshot).toMatchObject({ phase: "paused", canPlay: false, movesCount: 0 });
 });

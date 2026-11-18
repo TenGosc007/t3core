@@ -8,7 +8,8 @@ the runtime library has no React dependency.
 ## Public API and internal modules
 
 The public API is the set of values and types re-exported by
-[`src/index.ts`](src/index.ts). Consumers import from `t3core`.
+[`src/index.ts`](src/index.ts). Consumers import from `t3core`. Its only runtime exports are `TicTacToe` and
+`AIProviderError`; other exports are types.
 [`package.json`](package.json) exposes the package root and `t3core/package.json`;
 source paths and internal barrels are not supported package subpaths.
 An `export` inside an implementation file does not by itself make a symbol
@@ -21,12 +22,12 @@ working branch; the package version is unchanged.
 
 | Module | Responsibility | Boundary |
 | --- | --- | --- |
-| [`game`](src/game/Game.ts) | Owns board state, player turns, status, history, and synchronous state notifications. | `Game` and selected contracts are public; the `Board` implementation is internal. |
+| [`game`](src/game/Game.ts) | Owns board state, player turns, status, history, and synchronous state notifications. | `Game` and `Board` are internal; immutable domain data types are public. |
 | [`strategies`](src/strategies/strategies.types.ts) | Defines variant metadata, move legality, legal indices and status evaluation for live and simulated positions. | Read-only `GameRules` is public; `GameStrategy` and variant resolution are internal. Only classic 3×3 is supported. |
-| [`ai`](src/ai/providers/types.ts) | Chooses moves; defines provider validation, factories, cancellation and cleanup contracts. Includes alpha-beta, random selection, and seeded RNG. | Public `AIProvider` creates private `AIStrategy` instances. Direct `MoveStrategy` exports remain transitional; search helpers and adapters stay internal. |
-| [`sessions`](src/sessions/BaseSession.ts) | Coordinates `Game`, human input, AI, lifecycle, events, and stale operations. | `PvPGame`, `SinglePlayerGame`, `AIGame`, and selected contracts are public; `BaseSession` is internal. |
-| [`facade`](src/facade/TicTacToe.ts) | Validates mode/configuration, resolves per-instance provider catalogs, constructs sessions and exposes capability metadata. | `TicTacToe` exposes mode-specific instance types and static `getCapabilities`. Its implementation, catalog and construction helpers are internal. |
-| [`utils`](src/utils/getWinnerFromFields.ts), [`constants`](src/constants/gameConstants.ts) | Shared winner detection and default symbols. | Only explicit root re-exports are public. |
+| [`ai`](src/ai/providers/types.ts) | Chooses moves; defines provider validation, factories, cancellation and cleanup contracts. Includes alpha-beta, random selection, and seeded RNG. | Public `AIProvider` creates private `AIStrategy` instances. `MoveStrategy`, engine classes, search helpers and adapters are internal. |
+| [`sessions`](src/sessions/BaseSession.ts) | Coordinates `Game`, human input, AI, lifecycle, events, and stale operations. | All session classes are internal; facade instance, event, result and snapshot contracts are public. |
+| [`facade`](src/facade/TicTacToe.ts) | Validates mode/configuration, resolves per-instance provider catalogs, constructs sessions and exposes capability metadata. | `TicTacToe` exposes mode-specific facades and static `getCapabilities`. Wrappers, catalog and construction helpers are internal. |
+| [`utils`](src/utils/getWinnerFromFields.ts), [`constants`](src/constants/gameConstants.ts) | Shared winner detection and default symbols. | Implementations and constants remain internal. |
 
 ## Dependency direction
 
@@ -46,12 +47,24 @@ flowchart TD
     Rules --> Utils
 ```
 
+The facade constructs either a human-driven wrapper or an AI-vs-AI wrapper
+([instances.ts](src/facade/instances.ts)), so unsupported mode methods are absent
+at runtime as well as in types. Common observation/lifecycle delegation is shared.
+The overloaded constructor type is attached at a single documented TypeScript
+boundary; source and installed-consumer tests check its mode-specific guarantees.
+The constructor returns a concrete facade object; consumers identify its mode
+through `mode`, not class identity.
+
 Keep orchestration in sessions and construction in the facade. The game
 layer must remain usable without AI or sessions. AI strategies receive
 read-only data rather than a mutable game or a UI callback. Variant rules
 must stay independent of session lifecycle. Shared contracts live with
 their owning module; avoid importing the public root barrel back into
 implementation modules and introducing dependency cycles.
+
+The canonical [domain contracts](src/game/contracts.ts) define fixed O/X symbols,
+board cells and immutable running/terminal results. Internal leaf type files
+re-export these definitions; public providers and snapshots use the same types.
 
 `GameStrategy` describes a variant and evaluates legality and status without
 owning mutable state. Game delegates both human and AI validation to these rules.
@@ -184,11 +197,12 @@ A callback exception can also publish `paused` when it interrupts a move.
 
 Callbacks run synchronously at each emission. Listener exceptions propagate;
 they do not roll back an already applied move. A callback can also call
-`reset()` or start another operation from a ready-state callback, so session code
+`restart()` or start another operation from a ready-state callback, so session code
 checks generation and operation identity after callbacks and awaited work.
 A nested publication supersedes the remaining old notification delivery.
-Reset notifies state subscribers but does not itself
-emit a session `turn` or `finished` event.
+Restart publishes the reset position and resumes according to mode. Low-level
+Game reset emits only its own domain notification; session observation remains
+owned by the session.
 
 ## Lifecycle, concurrency, and cancellation
 
@@ -240,8 +254,8 @@ player is cleaned up even if another cleanup fails. The subscriber exception
 takes precedence over cleanup exceptions. Later subscriptions are inert. Gameplay
 event delivery stops when a listener invalidates the operation or disposes;
 remaining listeners do not receive an obsolete event. Repeated disposal is safe.
-The transitional deprecated `reset(): void` remains reset-to-idle until stage 5;
-it is a no-op after disposal. Use restart for new games.
+Session/facade `reset()` has been removed. Use restart for new games; only
+internal Game/Board storage retains synchronous reset operations.
 
 [`results`](src/sessions/results.ts) owns the adopted shared action envelope:
 `success` with `value`, `rejected` with `reason`, `aborted`, or `error`.
@@ -292,7 +306,9 @@ It has a required synchronous `dispose()` method. See the
 player options or invokes factories. Its default is alpha-beta when compatible,
 otherwise null. No implicit fallback to custom providers is selected.
 
-The internal adapter retains compatibility with direct session constructors:
+The internal adapter separates the provider extension contract from existing
+board/context engine implementations. This is an internal boundary, not a second
+consumer API:
 [`MoveStrategy.calculateMove`](src/ai/types.ts) receives a `BoardSnapshot`
 and `MoveContext` (`aiSymbol`, `opponentSymbol`, `gameStatus`), plus an optional
 third `{ signal }` request, and returns
@@ -305,9 +321,9 @@ when no empty field exists. Sessions validate returned indices and report an
 `illegal_ai_move` error action for an invalid result. Other current strategy
 errors report `ai_failed`. `AIProviderError` supplies `ai_initialization_failed`
 and `ai_timeout`; these become serializable error actions. A failure is never
-converted into a successful finish. Direct strategies may supply optional
-`dispose()`, transferring ownership to their session. Final export consolidation
-remains stage 5.
+converted into a successful finish. Internal strategies may supply optional
+`dispose()`, transferring ownership to their session. Consumer extensions always
+use providers and required `AIStrategy.dispose()`.
 
 Seeded strategy instances keep an RNG sequence across calculations. A
 session reset does not recreate its strategies or rewind their RNGs;

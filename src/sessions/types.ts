@@ -61,8 +61,6 @@ export interface GameSession {
   stop(): StopResult;
   undo(): UndoResult;
   dispose(): void;
-  /** @deprecated Transitional API; prefer restart() for a new game. */
-  reset(): void;
   on<K extends GameSessionEventType>(
     event: K,
     handler: (payload: GameSessionEventPayload<K>) => void,

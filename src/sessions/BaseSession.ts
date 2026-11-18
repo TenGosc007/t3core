@@ -72,20 +72,6 @@ export abstract class BaseSession {
   readonly subscribe = (callback: () => void): (() => void) =>
     this._disposed ? () => {} : this._store.subscribe(callback);
 
-  /** @deprecated Transitional API. Use restart() to reset and start atomically. */
-  reset(): void {
-    if (this._disposed) return;
-    const generation = this._invalidateOperations();
-    if (!this._canBegin(generation)) return;
-    try {
-      this._game.reset();
-    } finally {
-      if (this._generation === generation && this._latestOperation === null) {
-        this._store.publish("idle");
-      }
-    }
-  }
-
   async restart(): Promise<RestartResult> {
     if (this._disposed) return { status: "rejected", reason: "disposed" };
     const generation = this._invalidateOperations();

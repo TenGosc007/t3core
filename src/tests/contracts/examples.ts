@@ -1,8 +1,7 @@
 /**
- * Type-checked lifecycle scenarios. The injected constructor retains stricter
- * draft configuration; per-mode instance types are shared with the runtime.
+ * Type-checked lifecycle scenarios using the public facade contract.
  */
-import type { TicTacToeConstructor } from "@/facade/contracts/instance";
+import type { TicTacToeConstructor } from "@/facade/types";
 import type { PlayerSymbol } from "@/game/contracts";
 import type { SnapshotFor } from "@/sessions/state/types";
 

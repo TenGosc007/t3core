@@ -1,4 +1,4 @@
-// Public AI API — re-exported from `src/index.ts` as `t3core`.
+// Internal AI barrel. Consumers use the facade and provider contracts.
 //
 // Layout:
 // - `types.ts`        — `MoveStrategy` contract + `MoveStrategyError`.
