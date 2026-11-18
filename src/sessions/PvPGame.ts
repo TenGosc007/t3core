@@ -11,34 +11,25 @@ export class PvPGame extends BaseSession implements GameSession {
     super(options.game, { mode: "pvp", humanSymbol: null });
   }
 
-  async start(): Promise<StartResult> {
-    if (this._busyOperation !== null) return { status: "busy" };
-    if (this._lifecycle === "started") {
-      throw new Error("start() called twice without reset().");
-    }
-    const operation = this._beginOperation();
-    try {
-      this._lifecycle = this._game.gameStatus.status === "running" ? "started" : "finished";
-      const phase = this._lifecycle === "started" ? "human-turn" : "finished";
-      if (!this._publish(operation, phase, true)) return { status: "aborted" };
-      if (phase === "human-turn") this._emit("turn", { player: this._game.currentPlayer });
-      return { status: this._isCurrent(operation) ? "success" : "aborted" };
-    } finally {
-      this._endOperation(operation);
-    }
+  start(): Promise<StartResult> {
+    return this._startSession();
   }
 
   async playMove(index: number): Promise<PlayMoveResult> {
-    if (this._busyOperation !== null) return { status: "busy" };
-    if (this._lifecycle !== "started") return { status: "game_not_running" };
+    const refusal = this._playRefusal();
+    if (refusal) return refusal;
     const operation = this._beginOperation();
     try {
       const player = this._game.currentPlayer;
       const status = this._game.savePlayerMove(index);
       if (!this._isCurrent(operation)) return { status: "aborted" };
-      if (status !== PlayerMoveStatus.SUCCESS) return { status };
+      if (status !== PlayerMoveStatus.SUCCESS) {
+        if (status === PlayerMoveStatus.GAME_NOT_RUNNING) {
+          return { status: "rejected", reason: "game_finished" };
+        }
+        return { status: "rejected", reason: status };
+      }
       const finished = this._game.gameStatus.status !== "running";
-      if (finished) this._lifecycle = "finished";
       if (!this._publish(operation, finished ? "finished" : "human-turn", true)) {
         return { status: "aborted" };
       }
@@ -46,7 +37,7 @@ export class PvPGame extends BaseSession implements GameSession {
       if (!this._isCurrent(operation)) return { status: "aborted" };
       if (finished) this._emit("finished", { result: this._game.gameStatus });
       else this._emit("turn", { player: this._game.currentPlayer });
-      return { status: this._isCurrent(operation) ? "success" : "aborted" };
+      return this._outcome(operation);
     } finally {
       this._endOperation(operation);
     }

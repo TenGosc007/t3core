@@ -5,6 +5,10 @@ import type {
   MoveStrategy,
   PvPInstance,
   SessionSnapshot,
+  StartResult,
+  RestartResult,
+  StopResult,
+  UndoResult,
   SnapshotFor,
 } from "t3core";
 
@@ -13,6 +17,7 @@ import {
   GameEvent,
   PlayerMoveStatus,
   RandomStrategy,
+  SinglePlayerGame,
   TicTacToe,
 } from "t3core";
 
@@ -43,7 +48,18 @@ async function verifyConsumer() {
     throw new Error("Bound snapshot observation or immutability is broken");
   }
   unsubscribe();
-  pvp.reset();
+  const restarted: RestartResult = await pvp.restart();
+  if (restarted.status !== "success" || pvp.getSnapshot().phase !== "human-turn") {
+    throw new Error("Restart did not start the new game");
+  }
+  const started: StartResult = await pvp.start();
+  const stopped: StopResult = pvp.stop();
+  const undone: UndoResult = pvp.undo();
+  if (started.status !== "success" || stopped.status !== "success" ||
+      undone.status !== "rejected" || undone.reason !== "no_history") {
+    throw new Error("Lifecycle action declarations or results are broken");
+  }
+  pvp.dispose();
   if (observedStates.length !== 2) throw new Error("Subscription cleanup is broken");
 
   const strategy: MoveStrategy = new RandomStrategy({ seed: 1 });
@@ -60,9 +76,28 @@ async function verifyConsumer() {
     mode: "aivsai",
     aiPlayers: [{ engine: "random", seed: 1 }, { engine: "random", seed: 2 }],
   });
-  if ((await ai.run()).status !== "completed" || ai.gameStatus.status === "running") {
-    throw new Error("AI facade does not finish a game");
+  const completed = await ai.run();
+  if (completed.status !== "success" || completed.value.status === undefined) {
+    throw new Error("AI facade does not return a terminal result");
   }
+  const terminal: "win" | "draw" = completed.value.status;
+  if (terminal !== ai.gameStatus.status) throw new Error("AI result and snapshot disagree");
+  if (ai.undo().status !== "success" || ai.getSnapshot().phase !== "ai-ready") {
+    throw new Error("AI undo did not stop at a ready position");
+  }
+  ai.dispose();
+  if ((await ai.run()).status !== "rejected") throw new Error("Disposed AI session accepted work");
+  const failing = new SinglePlayerGame({
+    game: new Game(), humanSymbol: "X", aiSymbol: "O",
+    strategy: { calculateMove: async () => { throw new Error("Provider failure"); } },
+  });
+  const failed = await failing.start();
+  if (failed.status !== "error" || failed.error.code !== "ai_failed" ||
+      failing.getSnapshot().phase !== "error") {
+    throw new Error("AI failure did not return a session error action");
+  }
+  failing.dispose();
+
 }
 
 // These calls must be rejected during type checking, without executing them.
@@ -81,6 +116,23 @@ export function checkInvalidCalls() {
     const running: "running" = state.gameStatus.status;
     void running;
   }
+  // @ts-expect-error Stop returns its action result synchronously.
+  const stopPromise: Promise<StopResult> = pvp.stop();
+  void stopPromise;
+  const stopped = pvp.stop();
+  if (stopped.status === "success") {
+    // @ts-expect-error Stop success has no numeric value.
+    const value: number = stopped.value;
+    void value;
+  }
+  const ai = new TicTacToe({ mode: "aivsai", aiPlayers: [{}, {}] });
+  void ai.run().then((result) => {
+    if (result.status === "success") {
+      // @ts-expect-error A successful run cannot contain a running result.
+      const running: "running" = result.value.status;
+      void running;
+    }
+  });
   // @ts-expect-error PvP instances do not expose AI-only methods.
   pvp.step();
   // @ts-expect-error Board indices must be numbers.

@@ -1,4 +1,4 @@
-/** Draft action results; EngineError is already used by public session state. */
+/** Shared action outcomes and serializable session errors. */
 import type { FinishedGameStatus } from "@/game/contracts";
 
 export type EngineError = {
@@ -85,3 +85,6 @@ export type UndoResult =
   | ActionSuccess
   | ActionRejected<"no_history" | "disposed">
   | ActionAborted;
+
+/** Internal completion of an operation that has already passed its guards. */
+export type OperationResult = ActionSuccess | ActionAborted | ActionError;

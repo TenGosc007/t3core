@@ -8,6 +8,10 @@ import type {
   GameSessionEventPayload,
   GameSessionEventType,
   PlayMoveResult,
+  RestartResult,
+  StepResult,
+  StopResult,
+  UndoResult,
   RunResult,
   StartResult,
 } from "@/sessions/types";
@@ -74,7 +78,7 @@ type InstanceAccessors<Mode extends SessionMode> = {
   readonly movesCount: number;
 };
 
-/** Common event subscription + reset methods. */
+/** Shared observation, events and lifecycle actions. */
 type InstanceEvents = {
   subscribe(callback: () => void): () => void;
   on<K extends GameSessionEventType>(
@@ -85,10 +89,15 @@ type InstanceEvents = {
     event: K,
     handler: (payload: GameSessionEventPayload<K>) => void,
   ): unknown;
+  restart(): Promise<RestartResult>;
+  stop(): StopResult;
+  undo(): UndoResult;
+  dispose(): void;
+  /** @deprecated Transitional API; prefer restart() for a new game. */
   reset(): void;
 };
 
-/** PvP instance — `playMove` + `start` + `reset` + events. No `step`/`run`. */
+/** PvP instance with human input and shared lifecycle actions. No `step`/`run`. */
 export interface PvPInstance extends InstanceAccessors<"pvp">, InstanceEvents {
   start(): Promise<StartResult>;
   playMove(index: number): Promise<PlayMoveResult>;
@@ -103,9 +112,9 @@ export interface SinglePlayerInstance
   readonly mode: "singleplayer";
 }
 
-/** AI vs AI instance — `step` + `run` + `reset` + events. No `playMove`/`start`. */
+/** AI-vs-AI instance with stepping, autoplay and shared lifecycle actions. No `playMove`/`start`. */
 export interface AivsAiInstance extends InstanceAccessors<"aivsai">, InstanceEvents {
-  step(): Promise<PlayMoveResult>;
+  step(): Promise<StepResult>;
   run(): Promise<RunResult>;
   readonly mode: "aivsai";
 }

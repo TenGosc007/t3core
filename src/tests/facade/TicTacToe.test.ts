@@ -62,9 +62,9 @@ test("aivsai run() reaches a terminal state", async () => {
     ],
   });
   const result = await game.run();
-  expect(result.status).toBe("completed");
-  if (result.status === "completed") {
-    expect(["win", "draw"]).toContain(result.result.status);
+  expect(result.status).toBe("success");
+  if (result.status === "success") {
+    expect(["win", "draw"]).toContain(result.value.status);
   }
 });
 
@@ -92,9 +92,9 @@ test("reset() allows a new game", async () => {
   game.reset();
   expect(game.movesCount).toBe(0);
 
-  // playMove before start() after reset → game_not_running
+  // playMove before start() after reset → not_started
   const r = await game.playMove(0);
-  expect(r.status).toBe("game_not_running");
+  expect(r).toEqual({ status: "rejected", reason: "not_started" });
 
   await game.start();
   const r2 = await game.playMove(0);

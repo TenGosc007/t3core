@@ -44,9 +44,9 @@ test("run() plays a full game and reaches a terminal state", async () => {
   const session = new AIGame({ game, strategies });
 
   const result = await session.run();
-  expect(result.status).toBe("completed");
-  if (result.status === "completed") {
-    expect(["win", "draw"]).toContain(result.result.status);
+  expect(result.status).toBe("success");
+  if (result.status === "success") {
+    expect(["win", "draw"]).toContain(result.value.status);
   }
 });
 
@@ -94,7 +94,7 @@ test("reset() allows a new run()", async () => {
   expect(game.movesCount).toBe(0);
 
   const result = await session.run();
-  expect(result.status).toBe("completed");
+  expect(result.status).toBe("success");
 });
 
 test("second step() while one is in flight returns busy", async () => {
@@ -104,7 +104,7 @@ test("second step() while one is in flight returns busy", async () => {
 
   const stepPromise = session.step();
   const result2 = await session.step();
-  expect(result2.status).toBe("busy");
+  expect(result2).toEqual({ status: "rejected", reason: "busy" });
 
   resolveSlowMove(4);
   await stepPromise;

@@ -133,7 +133,7 @@ test("invalid human move does not trigger AI", async () => {
   });
 
   const result = await session.playMove(99);
-  expect(result.status).toBe("invalid_index");
+  expect(result).toEqual({ status: "rejected", reason: "invalid_index" });
   expect(aiThinking).toBe(false);
 });
 
@@ -148,14 +148,14 @@ test("already-selected field does not trigger AI", async () => {
   });
 
   const result = await session.playMove(0);
-  expect(result.status).toBe("already_selected");
+  expect(result).toEqual({ status: "rejected", reason: "already_selected" });
   expect(aiThinking).toBe(false);
 });
 
-test("playMove before start() returns game_not_running", async () => {
+test("playMove before start() returns not_started", async () => {
   const { session } = hardSession("O");
   const result = await session.playMove(0);
-  expect(result.status).toBe("game_not_running");
+  expect(result).toEqual({ status: "rejected", reason: "not_started" });
 });
 
 test("game ends after human win: emits finished, no AI move", async () => {
@@ -209,13 +209,13 @@ test("second playMove during AI computation returns busy", async () => {
 
   const playPromise = session.playMove(0);
   const result2 = await session.playMove(1);
-  expect(result2.status).toBe("busy");
+  expect(result2).toEqual({ status: "rejected", reason: "busy" });
 
   resolveSlowMove(4);
   await playPromise;
 });
 
-test("strategy returning an illegal move throws MoveStrategyError", async () => {
+test("strategy returning an illegal move returns a session error", async () => {
   // Strategy always returns 0 — after the human plays 0, the AI "chooses" 0
   // which is now occupied → illegal_move.
   const badStrategy: MoveStrategy = {
@@ -223,13 +223,12 @@ test("strategy returning an illegal move throws MoveStrategyError", async () => 
   };
   const { session } = stubSession(badStrategy, "O");
   await session.start();
-  await expect(session.playMove(0)).rejects.toMatchObject({
-    code: "illegal_move",
-    name: "MoveStrategyError",
+  expect(await session.playMove(0)).toMatchObject({
+    status: "error", error: { code: "illegal_ai_move" },
   });
 });
 
-test("strategy throwing no_legal_moves rejects without a finished event", async () => {
+test("strategy throwing no_legal_moves returns an error without a finished event", async () => {
   const noMovesStrategy: MoveStrategy = {
     calculateMove: async () => {
       throw new MoveStrategyError("no_legal_moves", "test");
@@ -243,8 +242,8 @@ test("strategy throwing no_legal_moves rejects without a finished event", async 
     finished = true;
   });
 
-  await expect(session.playMove(0)).rejects.toMatchObject({ // human moves, then AI "throws no_legal_moves"
-    code: "no_legal_moves",
+  expect(await session.playMove(0)).toMatchObject({
+    status: "error", error: { code: "ai_failed", message: "test" },
   });
   expect(finished).toBe(false);
   expect(session.gameStatus.status).toBe("running");

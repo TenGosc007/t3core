@@ -2,12 +2,13 @@
 
 This document describes the target `2.0.0` API and the remaining draft
 contracts. Stage 2 implements full session snapshots, bound `getSnapshot`
-and `subscribe`, phase notifications and serializable AI error state.
+and `subscribe`, phase notifications and serializable AI error state. Stage 3
+implements the lifecycle methods and shared action result envelope.
 Use the [README](../README.md) and [migration notes](v2-migration.md) for the
 currently implemented API. The package version is unchanged.
 
-`restart`, `stop`, `undo`, `dispose` and the uniform action result envelope
-below remain future work. The exported constructor does not yet implement them.
+The remaining facade/options drafts concern configuration validation and the final
+API review. Lifecycle and snapshot contracts below are implemented.
 
 ## Contract ownership
 
@@ -15,13 +16,13 @@ below remain future work. The exported constructor does not yet implement them.
 | --- | --- |
 | [game/contracts.ts](../src/game/contracts.ts) | Fixed O/X symbols, immutable position types, implemented variant metadata, and running/terminal results. |
 | [sessions/state/types.ts](../src/sessions/state/types.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
-| [sessions/contracts/results.ts](../src/sessions/contracts/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
+| [sessions/results.ts](../src/sessions/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
 | [facade/contracts/options.ts](../src/facade/contracts/options.ts) | Mode-specific configuration and built-in AI options. |
-| [facade/contracts/instance.ts](../src/facade/contracts/instance.ts) | Proposed constructor and per-mode instance interfaces. |
+| [facade/contracts/instance.ts](../src/facade/contracts/instance.ts) | Draft configuration constructor; reuses runtime per-mode instances. |
 
 The session snapshot types are now used by runtime sessions and exported from
 the package root, together with `EngineError`. Consumers must not import source
-paths. The facade/options/action contracts remain internal review scaffolding.
+paths. Only the facade/options contracts remain internal review scaffolding.
 Later stages will adopt them in their owning layers and consolidate the existing
 types; they will not introduce a second permanent public API. Custom providers and capability discovery belong to stage 4.
 
@@ -29,14 +30,14 @@ Only `classic-3x3` is accepted. Future 9x9/Gomoku identifiers are not added to
 the type union or variant registry. The random engine does not accept a
 difficulty; alpha-beta accepts `normal` or `hard` and remains the default.
 
-## Future JavaScript usage
+## JavaScript usage
 
-These snippets assume the future `TicTacToe` implementation is available.
-`render` is supplied by the application. Subscribe before starting, perform an
-initial render explicitly, and release the instance when removing the view.
-The compiled [usage scenarios](../src/tests/contracts/examples.ts) verify the
-same flows against an injected proposed constructor, without pretending that
-the existing implementation already supports them.
+These lifecycle flows are implemented. `render` is supplied by the application.
+Subscribe before starting, perform an initial render explicitly, and dispose
+the instance when permanently removing the view.
+The compiled [usage scenarios](../src/tests/contracts/examples.ts) retain an
+injected constructor with the stricter proposed configuration types. The runtime
+facade is also exercised by the session tests and installed package consumers.
 
 ### Local PvP
 
@@ -189,6 +190,6 @@ Contract tests run through both `yarn ts:check` and Vitest. Type checking also
 verifies negative consumer examples marked with `@ts-expect-error`; Vitest
 alone does not validate those compiler diagnostics.
 
-Lifecycle actions follow in stage 3, providers in stage 4, and final package
-migration in stage 5. The final review also removes remaining temporary
+Lifecycle actions are implemented in stage 3; providers follow in stage 4, and
+final package migration in stage 5. The final review also removes remaining temporary
 “Internal v2” annotations and duplicate draft types after their runtime adoption.

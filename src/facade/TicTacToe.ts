@@ -101,6 +101,11 @@ class TicTacToeImpl {
     this._session.reset();
   }
 
+  restart() { return this._session.restart(); }
+  stop() { return this._session.stop(); }
+  undo() { return this._session.undo(); }
+  dispose(): void { this._session.dispose(); }
+
   readonly getSnapshot = () => this._session.getSnapshot();
 
   readonly subscribe = (callback: () => void): (() => void) =>
@@ -117,28 +122,38 @@ class TicTacToeImpl {
     if (this._mode === "aivsai") {
       throw new Error("start() is not available in 'aivsai' mode.");
     }
-    return (this._session as PvPGame | SinglePlayerGame).start();
+    return this._humanSession().start();
   }
 
   playMove(index: number): Promise<unknown> {
     if (this._mode === "aivsai") {
       throw new Error("playMove() is not available in 'aivsai' mode.");
     }
-    return (this._session as PvPGame | SinglePlayerGame).playMove(index);
+    return this._humanSession().playMove(index);
   }
 
   step(): Promise<unknown> {
     if (this._mode !== "aivsai") {
       throw new Error("step() is not available in this mode.");
     }
-    return (this._session as AIGame).step();
+    return this._aiSession().step();
   }
 
   run(): Promise<unknown> {
     if (this._mode !== "aivsai") {
       throw new Error("run() is not available in this mode.");
     }
-    return (this._session as AIGame).run();
+    return this._aiSession().run();
+  }
+
+  private _humanSession(): PvPGame | SinglePlayerGame {
+    if (this._session instanceof AIGame) throw new Error("Human input is unavailable in AI-vs-AI.");
+    return this._session;
+  }
+
+  private _aiSession(): AIGame {
+    if (!(this._session instanceof AIGame)) throw new Error("AI stepping requires AI-vs-AI.");
+    return this._session;
   }
 
   private _delegateEvent(method: "on" | "off", args: never[]): this {

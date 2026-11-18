@@ -1,6 +1,6 @@
 /**
- * Type-checked usage scenarios for the proposed v2 constructor. These functions
- * are not executed against v1 and must not cast the existing facade to v2.
+ * Type-checked lifecycle scenarios. The injected constructor retains stricter
+ * draft configuration; per-mode instance types are shared with the runtime.
  */
 import type { TicTacToeConstructor } from "@/facade/contracts/instance";
 import type { PlayerSymbol } from "@/game/contracts";

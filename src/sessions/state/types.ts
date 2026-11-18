@@ -1,5 +1,5 @@
 /** Immutable session state shared by runtime sessions and the facade. */
-import type { EngineError } from "../contracts/results";
+import type { EngineError } from "../results";
 import type {
   BoardSnapshot,
   FinishedGameStatus,
@@ -41,7 +41,6 @@ export type SessionSnapshot = SnapshotBase & (
   | (SessionIdentity & RunningState & {
     readonly phase: "idle";
     readonly canPlay: false;
-    readonly canUndo: false;
   })
   | (HumanIdentity & RunningState & {
     readonly phase: "human-turn";

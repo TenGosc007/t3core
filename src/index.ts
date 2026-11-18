@@ -157,6 +157,11 @@ export type {
   PlayMoveResult,
   StartResult,
   RunResult,
+  StepResult,
+  RestartResult,
+  StopResult,
+  UndoResult,
+  ActionResult,
 } from "@/sessions/types";
 
 // ─── Facade (v2.1) ─────────────────────────────────────────────────────
@@ -188,4 +193,4 @@ export type {
   SessionMode,
   SnapshotFor,
 } from "@/sessions/state/types";
-export type { EngineError } from "@/sessions/contracts/results";
+export type { EngineError } from "@/sessions/results";

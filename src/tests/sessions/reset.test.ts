@@ -30,7 +30,7 @@ for (const event of ["move", "turn", "finished"] as const) {
     expect(events[events.length - 1]).toBe(event);
     expect(session.movesCount).toBe(0);
     session.off(event, reset);
-    expect(await session.start()).toEqual({ status: "success" });
+    expect(await session.start()).toEqual({ status: "success", value: undefined });
   });
 }
 
@@ -111,7 +111,7 @@ for (const mode of ["singleplayer", "step", "run"] as const) {
 }
 
 for (const method of ["step", "run"] as const) {
-  test(`AI ${method} propagates no_legal_moves without retrying or finishing`, async () => {
+  test(`AI ${method} returns an error for no_legal_moves without retrying or finishing`, async () => {
     let calls = 0;
     const error = new MoveStrategyError("no_legal_moves", "test");
     const strategy: MoveStrategy = {
@@ -129,7 +129,9 @@ for (const method of ["step", "run"] as const) {
       finished = true;
     });
 
-    await expect(session[method]()).rejects.toBe(error);
+    expect(await session[method]()).toMatchObject({
+      status: "error", error: { code: "ai_failed", message: error.message },
+    });
     expect(calls).toBe(1);
     expect(finished).toBe(false);
     expect(session.gameStatus.status).toBe("running");

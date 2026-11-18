@@ -75,10 +75,10 @@ test("the human move and thinking phase are published together before events and
   });
   expect(session.snapshot.legalMoves).not.toContain(0);
   const thinking = session.snapshot;
-  expect(await session.playMove(1)).toEqual({ status: "busy" });
+  expect(await session.playMove(1)).toEqual({ status: "rejected", reason: "busy" });
   expect(session.snapshot).toBe(thinking);
   pending.resolve(4);
-  expect(await result).toEqual({ status: "success" });
+  expect(await result).toEqual({ status: "success", value: undefined });
   expect(order).toEqual([
     "snapshot:ai-thinking", "move:O", "thinking",
     "snapshot:human-turn", "move:X", "turn",
@@ -137,7 +137,9 @@ for (const mode of ["singleplayer", "aivsai"] as const) {
       const phases: string[] = [];
       session.subscribe(() => phases.push(session.snapshot.phase));
       const result = session instanceof AIGame ? session.step() : session.start();
-      await expect(result).rejects.toThrow(failure === "reject" ? error : "illegal index");
+      expect(await result).toMatchObject({
+        status: "error", error: { code: failure === "reject" ? "ai_failed" : "illegal_ai_move" },
+      });
       expect(phases).toEqual(["ai-thinking", "error"]);
       expect(session.snapshot).toMatchObject({
         phase: "error", canPlay: false, gameStatus: { status: "running" },
@@ -174,9 +176,9 @@ for (const mode of ["singleplayer", "aivsai"] as const) {
       expect(await first).toEqual({ status: "aborted" });
       expect(session.snapshot).toBe(current);
       expect(listener).not.toHaveBeenCalled();
-      expect(await begin()).toEqual({ status: "busy" });
+      expect(await begin()).toEqual({ status: "rejected", reason: "busy" });
       fresh.resolve(4);
-      expect(await second).toEqual({ status: "success" });
+      expect(await second).toEqual({ status: "success", value: undefined });
       expect(session.snapshot.board[4]).toBe("O");
     });
   }
@@ -224,9 +226,9 @@ test("a ready-state subscriber can start a new operation without the old finally
   first.resolve(4);
   expect(await previous).toEqual({ status: "aborted" });
   expect(second.calculateMove).toHaveBeenCalledTimes(1);
-  expect(await session.playMove(2)).toEqual({ status: "busy" });
+  expect(await session.playMove(2)).toEqual({ status: "rejected", reason: "busy" });
   second.resolve(5);
-  expect(await next).toEqual({ status: "success" });
+  expect(await next).toEqual({ status: "success", value: undefined });
   expect(session.snapshot).toMatchObject({ phase: "human-turn", movesCount: 4 });
 });
 
@@ -310,6 +312,6 @@ test("a new start in a Game reset callback is not overwritten by idle publicatio
   let started: ReturnType<typeof session.start> | undefined;
   game.on(GameEvent.STATE_CHANGE, () => { started = session.start(); });
   session.reset();
-  expect(await started).toEqual({ status: "success" });
+  expect(await started).toEqual({ status: "success", value: undefined });
   expect(session.snapshot).toMatchObject({ phase: "human-turn", canPlay: true, movesCount: 0 });
 });

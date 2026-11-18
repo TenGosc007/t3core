@@ -1,4 +1,4 @@
-import type { EngineError } from "../contracts/results";
+import type { EngineError } from "../results";
 import type { SessionIdentity, SessionSnapshot } from "./types";
 import type {
   BoardSnapshot,
@@ -7,6 +7,8 @@ import type {
   VariantDescriptor,
 } from "@/game/contracts";
 import type { Game } from "@/game/Game";
+
+import { getUndoTarget } from "./getUndoTarget";
 
 const CLASSIC_VARIANT: VariantDescriptor = Object.freeze({
   id: "classic-3x3",
@@ -32,7 +34,11 @@ function isSessionBoard(board: readonly (number | string)[]): board is BoardSnap
 function readStatus(game: Game, previous?: SessionSnapshot): GameStatus {
   const status = game.gameStatus;
   if (status.status === "running") return RUNNING;
-  if (status.status === "draw") return Object.freeze({ status: "draw" });
+  if (status.status === "draw") {
+    return previous?.gameStatus.status === "draw"
+      ? previous.gameStatus
+      : Object.freeze({ status: "draw" });
+  }
   const winner = parsePlayerSymbol(status.winner);
   if (previous?.gameStatus.status === "win" && previous.gameStatus.winner === winner) {
     return previous.gameStatus;
@@ -62,13 +68,11 @@ export function createSnapshot(
     currentPlayer,
     movesCount,
     legalMoves,
-    canUndo: identity.mode === "singleplayer"
-      ? board.includes(identity.humanSymbol)
-      : movesCount > 0,
+    canUndo: getUndoTarget(game, identity) !== null,
   };
 
   if (phase === "disposed") {
-    return Object.freeze({ ...common, ...identity, phase, gameStatus, error, canPlay: false, canUndo: false });
+    return Object.freeze({ ...common, ...identity, phase, gameStatus, error: error === null ? null : Object.freeze({ ...error }), canPlay: false, canUndo: false });
   }
   if (gameStatus.status !== "running") {
     return Object.freeze({ ...common, ...identity, phase: "finished", gameStatus, error: null, canPlay: false, legalMoves: NO_MOVES });
@@ -76,7 +80,7 @@ export function createSnapshot(
   const running = { ...common, gameStatus, error: null };
   switch (phase) {
     case "idle":
-      return Object.freeze({ ...running, ...identity, phase, canPlay: false, canUndo: false });
+      return Object.freeze({ ...running, ...identity, phase, canPlay: false });
     case "human-turn":
       if (identity.mode === "aivsai") break;
       return Object.freeze({ ...running, ...identity, phase, canPlay: true });

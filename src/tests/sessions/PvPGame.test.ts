@@ -50,11 +50,11 @@ test("emits finished (not turn) when a move ends the game", async () => {
   expect(game.gameStatus.status).toBe("win");
 });
 
-test("playMove before start() returns game_not_running", async () => {
+test("playMove before start() returns not_started", async () => {
   const game = new Game();
   const session = new PvPGame({ game });
   const result = await session.playMove(0);
-  expect(result.status).toBe("game_not_running");
+  expect(result).toEqual({ status: "rejected", reason: "not_started" });
 });
 
 test("invalid index returns invalid_index", async () => {
@@ -62,7 +62,7 @@ test("invalid index returns invalid_index", async () => {
   const session = new PvPGame({ game });
   await session.start();
   const result = await session.playMove(99);
-  expect(result.status).toBe("invalid_index");
+  expect(result).toEqual({ status: "rejected", reason: "invalid_index" });
 });
 
 test("already-selected field returns already_selected", async () => {
@@ -71,7 +71,7 @@ test("already-selected field returns already_selected", async () => {
   await session.start();
   await session.playMove(0);
   const result = await session.playMove(0);
-  expect(result.status).toBe("already_selected");
+  expect(result).toEqual({ status: "rejected", reason: "already_selected" });
 });
 
 test("reset() allows a new game to start", async () => {
@@ -81,15 +81,17 @@ test("reset() allows a new game to start", async () => {
   await session.playMove(0);
   session.reset();
   const result = await session.playMove(1);
-  expect(result.status).toBe("game_not_running");
+  expect(result).toEqual({ status: "rejected", reason: "not_started" });
   await session.start();
   const r2 = await session.playMove(1);
   expect(r2.status).toBe("success");
 });
 
-test("start() called twice without reset() throws", async () => {
+test("start() called twice is an idempotent success", async () => {
   const game = new Game();
   const session = new PvPGame({ game });
   await session.start();
-  await expect(session.start()).rejects.toThrow();
+  const snapshot = session.snapshot;
+  expect(await session.start()).toEqual({ status: "success", value: undefined });
+  expect(session.snapshot).toBe(snapshot);
 });

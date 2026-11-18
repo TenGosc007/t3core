@@ -15,7 +15,7 @@ An `export` inside an implementation file does not by itself make a symbol
 public to npm consumers.
 
 The [v2 contract review](docs/v2-contracts.md) distinguishes implemented session
-state from the remaining draft lifecycle contracts. The [migration notes](docs/v2-migration.md)
+state and lifecycle from the remaining draft configuration contracts. The [migration notes](docs/v2-migration.md)
 describe breaking observation changes. The descriptions below cover the current
 working branch; the package version is unchanged.
 
@@ -149,9 +149,35 @@ flowchart LR
     Thinking --> Error[error]
 ```
 
-The diagram shows single-player; reset returns every mode to idle.
-The current runtime can also publish `paused` if an application callback
-interrupts an AI turn, so the UI does not keep displaying active calculation.
+The diagram shows the main single-player turn. Stop enters `paused`; start
+resumes it. Restart resets and starts a human-driven game, or returns AI-vs-AI
+to `ai-ready`. Undo restores a decision without triggering AI. Dispose is final.
+
+```mermaid
+stateDiagram-v2
+    [*] --> idle
+    idle --> active: start / step / run
+    active --> paused: stop
+    paused --> active: start / step / run
+    active --> finished: terminal move
+    active --> error: AI failure
+    finished --> active: undo
+    error --> active: undo with history
+    active --> active: undo / restart
+    paused --> paused: undo
+    paused --> active: restart
+    error --> active: restart
+    finished --> active: restart
+    idle --> disposed: dispose
+    active --> disposed: dispose
+    paused --> disposed: dispose
+    finished --> disposed: dispose
+    error --> disposed: dispose
+```
+
+Here `active` groups human turns, AI calculation and AI-vs-AI readiness.
+For AI-vs-AI, restart/undo stop at readiness rather than continuing autoplay.
+A callback exception can also publish `paused` when it interrupts a move.
 
 Callbacks run synchronously at each emission. Listener exceptions propagate;
 they do not roll back an already applied move. A callback can also call
@@ -166,36 +192,63 @@ emit a session `turn` or `finished` event.
 Construction performs no moves and emits no opening events. Register
 listeners before starting a session.
 
-| Mode | Entry points | After reset |
+| Mode | Entry points | After restart / undo |
 | --- | --- | --- |
-| `pvp` | `start()`, then `playMove(index)` | Call `start()` again. |
-| `singleplayer` | `start()`, then `playMove(index)`; `start()` applies an AI opening when the human plays second. | Call `start()` again. |
-| `aivsai` | `step()` for one move or `run()` to completion; these start the session themselves. | Use `step()` or `run()` again. |
+| `pvp` | `start()`, then `playMove(index)` | Human turn; undo restores one move. |
+| `singleplayer` | `start()`, then `playMove(index)`; start/resume calculates an AI turn when needed. | Restart starts automatically; undo restores the last human decision and any AI reply. |
+| `aivsai` | `step()` for one move or `run()` to completion. | `ai-ready` without autoplay; undo restores one move. |
 
-[`BaseSession`](src/sessions/BaseSession.ts) owns the lifecycle
-(`idle`, `started`, `finished`, `error`), a generation counter, and an operation
-lock. The public snapshot phase is more precise than this internal lifecycle.
-Overlapping operations return `busy`. Calling `start()` while already
-started throws. `reset()` returns the session to `idle`, resets the game,
-increments the generation, and releases the lock for new work.
+[`BaseSession`](src/sessions/BaseSession.ts) owns generation/operation guards,
+shared lifecycle actions, snapshot publication and event dispatch. Snapshot
+phase is the lifecycle authority; there is no parallel lifecycle enum.
+The shared start flow delegates turn resumption to `_resume` (Template Method);
+single-player overrides it to calculate AI when appropriate.
+[`SessionOperation`](src/sessions/operations/SessionOperation.ts) owns the lock
+identity and a cancellation promise. Variant rules and history remain in Game.
 
-Every asynchronous operation captures its generation. If reset invalidates
-it, a late strategy result or rejection is discarded and the operation
-reports `aborted`. Check the generation before validating or applying a
-returned move, and after callbacks that may reset the session. An old
-operation's `finally` must release only its own lock by identity. Before
-publishing a ready state, the session releases the completed operation's lock
-so `canPlay` accurately reflects availability, including reentrant callbacks.
-A newer operation supersedes the old continuation even within one generation.
+`start` is idempotent on active or finished human-driven sessions. An overlapping
+action returns `rejected/busy`. `stop` preserves the position in pause; the
+mode's start/step/run resumes it. Stop before start, after completion, in error
+or while already paused is a successful no-op. Error state blocks further
+start/playMove/step/run until restart or a valid undo.
 
-Cancellation prevents stale work from changing state. The strategy contract
-has no `AbortSignal`, so reset does not interrupt a running calculation or
-stop external worker/network work initiated by a custom strategy. A custom
-strategy must manage those resources itself. Current strategy errors publish
-a serializable error snapshot and then propagate. Application callback exceptions
-propagate without being classified as AI failures; applied moves are not rolled
-back. An interrupted operation refreshes its position in a paused/terminal state
-when necessary. Full stop/undo/dispose and normalized action results are stage 3.
+`restart`, `stop`, valid `undo` and `dispose` invalidate old work before callbacks.
+Every asynchronous continuation checks generation and operation identity before
+validation or mutation and after helpers/callbacks. Old actions promptly report
+`aborted` even if a strategy never resolves. Late rejections are consumed without
+changing the current position/error. Only a lock's owner can release it.
+A ready-state publication releases its lock before notifying, so a reentrant
+action can start immediately; it supersedes the old event/result continuation.
+
+[`getUndoTarget`](src/sessions/state/getUndoTarget.ts) finds the previous decision
+using the current number of plies and fixed alternating O/X turns. PvP/AI-vs-AI
+undo one ply. Single-player restores the position before the last human move:
+one ply if AI has not replied (including a terminal human move), otherwise two.
+An AI opening alone has no undo target. The target is a Game history index;
+restoring and branching use the existing domain history. Undo clears errors,
+preserves pause, emits no new-move/turn events and never starts AI.
+A no-history refusal does not cancel work.
+
+`dispose` marks the instance closed before notifications, publishes a final
+frozen snapshot preserving board/result/error, and removes all listeners in
+`finally` even if a subscriber throws. Later subscriptions are inert. Gameplay
+event delivery stops when a listener invalidates the operation or disposes;
+remaining listeners do not receive an obsolete event. Repeated disposal is safe.
+The transitional deprecated `reset(): void` remains reset-to-idle until stage 5;
+it is a no-op after disposal. Use restart for new games.
+
+[`results`](src/sessions/results.ts) owns the adopted shared action envelope:
+`success` with `value`, `rejected` with `reason`, `aborted`, or `error`.
+All actions are asynchronous except synchronous stop/undo and void dispose.
+Run's success value is a frozen terminal result; repeating run after completion
+returns it without new moves or notifications. AI failures return serializable
+error data and publish error state. Constructor and application callback errors
+still throw without rolling back applied moves; callback errors are not AI errors.
+
+Logical cancellation does not preempt synchronous JavaScript. The current
+strategy contract still has no AbortSignal or resource cleanup hook; it cannot
+terminate a custom Worker. Stage 4 adds provider cancellation/resource ownership.
+Sessions currently release their own operations, subscriptions and event listeners.
 
 ## AI strategy contract
 
@@ -206,10 +259,9 @@ must preserve their input board. Built-in alpha-beta searches a private copy
 and restores simulated moves while searching.
 
 Built-in strategies reject with `MoveStrategyError("no_legal_moves", ...)`
-when no empty field exists. Sessions validate returned indices and throw
-`MoveStrategyError("illegal_move", ...)` for an invalid result. A strategy
-error while a current session is running is not converted into a successful
-finish. Custom strategies can be supplied to session constructors; the
+when no empty field exists. Sessions validate returned indices and report an
+`illegal_ai_move` error action for an invalid result. Other current strategy
+errors report `ai_failed`. A failure is never converted into a successful finish. Custom strategies can be supplied to session constructors; the
 `TicTacToe` facade configures the built-in engines.
 
 Seeded strategy instances keep an RNG sequence across calculations. A

@@ -40,11 +40,51 @@ game.on('finished', ({ result }) => {
 await game.start();
 await game.playMove(4);
 
-// When removing the view:
+// When removing the view permanently:
 unsubscribe();
+game.dispose();
 ```
 
 Register listeners before calling `start()`. In single-player mode, one `await playMove(index)` applies the human move and the AI reply, unless the human move ends the game. The default AI uses alpha-beta with `NORMAL` difficulty; use `humanSymbol: 'X'` to let the AI start.
+
+### Session lifecycle and action results
+
+Use `await game.restart()` for a new game. In human-driven modes it starts
+automatically, including an AI opening; in AI-vs-AI it returns to `ai-ready`
+until `step()` or `run()` is called.
+
+`stop()` pauses immediately without clearing the board. Resume with `start()`
+in human-driven modes, or `step()` / `run()` in AI-vs-AI. Repeated `start()`
+on an active or finished game is a successful no-op; overlapping work returns
+a `busy` refusal.
+
+`undo()` removes one move in PvP/AI-vs-AI, or the last human move together
+with its AI reply in single-player. It cancels a pending reply first.
+An AI opening alone cannot be undone. Undo preserves pause and never starts AI.
+`dispose()` closes the instance permanently and removes its subscriptions.
+
+```typescript
+const result = await game.playMove(4);
+switch (result.status) {
+  case 'success':
+    // value is undefined; run() instead supplies the terminal game result.
+    break;
+  case 'rejected':
+    console.log(result.reason); // busy, invalid_index, paused, etc.
+    break;
+  case 'aborted':
+    // Another action superseded this operation.
+    break;
+  case 'error':
+    console.error(result.error.code, result.error.message);
+    break;
+}
+```
+
+AI failures are returned as data and also appear in the snapshot. Start/step/run
+refuse further work in the error phase; use restart, or undo when history permits.
+Invalid configuration and application callback exceptions still throw.
+See the [migration notes](docs/v2-migration.md) for changed 1.x result shapes.
 
 ### Low-level `Game` API
 
@@ -136,7 +176,7 @@ function useTicTacToe() {
 
   useEffect(() => {
     void game.start().catch(reportError);
-    return () => game.reset();
+    return () => { game.stop(); };
   }, [game, reportError]);
 
   return {
@@ -145,14 +185,13 @@ function useTicTacToe() {
     gameStatus: state.gameStatus,
     canPlay: state.canPlay,
     phase: state.phase,
-    error,
+    error: state.error?.message ?? error,
     makeMove: (index: number) => {
       void game.playMove(index).catch(reportError);
     },
     reset: () => {
       setError(null);
-      game.reset();
-      void game.start().catch(reportError);
+      void game.restart().catch(reportError);
     },
   };
 }
@@ -188,7 +227,13 @@ export default function TicTacToeBoard() {
 }
 ```
 
-The effect starts the session only after mounting. Its cleanup resets the game and cancels pending AI work, so React Strict Mode's extra setup–cleanup–setup cycle does not call `start()` twice without a reset. The captured initial snapshot is used for server rendering and hydration; this example always starts from the same empty board on both sides. `reset()` restarts the session explicitly, and buttons are disabled during the AI's turn.
+The effect starts the session after mounting. Its cleanup calls `stop()` so
+React Strict Mode can reuse and resume the instance in its extra setup–cleanup–setup
+cycle. The captured initial snapshot supports hydration of this initially empty
+board. The new-game handler calls `restart()`. The component reads AI errors,
+input availability and thinking state from the session snapshot. An owner that
+permanently releases an instance calls `dispose()`; a reusable effect cleanup
+must not dispose an instance that its next setup will use.
 
 ### API
 
@@ -200,10 +245,14 @@ The effect starts the session only after mounting. Its cleanup resets the game a
 | `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only session state; `movesCount` counts occupied fields in the current position |
 | `snapshot` / `getSnapshot()` | Cached, deeply frozen `SnapshotFor<Mode>`; changes after a move, reset or phase change. `getSnapshot` is bound and stable |
 | `subscribe(callback)` | Subscribe to snapshot changes in any mode. The callback receives no arguments; returns an idempotent unsubscribe function. Safe to pass directly to `useSyncExternalStore` |
-| `start()` / `playMove(index)` | Async lifecycle and move methods for `pvp` and `singleplayer`; register listeners before starting |
+| `start()` / `playMove(index)` | Async start/resume and human input in `pvp` and `singleplayer`; return typed action results |
 | `step()` / `run()` | Perform one AI move or play to completion in `aivsai` mode |
 | `on(event, handler)` / `off(event, handler)` | Subscribe to or unsubscribe from typed session events; use the same handler reference when removing it |
-| `reset()` | Reset the board, notify subscribers, and abort stale work; call `start()` again in human-driven modes |
+| `restart()` | Cancel old work and start a new human-driven game, or return AI-vs-AI to `ai-ready` |
+| `stop()` | Pause and cancel active work synchronously; repeated stop is safe |
+| `undo()` | Synchronously undo a move/decision; preserve pause and clear an AI error when history permits |
+| `dispose()` | Publish the final disposed snapshot, remove listeners and permanently reject further actions |
+| `reset()` | Deprecated transitional reset-to-idle; migrate to `restart()`. It is a no-op after disposal |
 
 #### `Game`
 
@@ -275,7 +324,9 @@ export { PvPGame, SinglePlayerGame, AIGame } from 't3core';
 export type { MoveStrategy, MoveContext, GameView, GameSession, GameSessionEvent } from 't3core';
 export type { TicTacToeOptions, PvpOptions, SinglePlayerOptions, AivsAiOptions, AIConfig } from 't3core';
 export type { PvPInstance, SinglePlayerInstance, AivsAiInstance, TicTacToeConstructor } from 't3core';
-export type { GameSessionEventType, GameSessionEventPayload, PlayMoveResult, StartResult, RunResult } from 't3core';
+export type { GameSessionEventType, GameSessionEventPayload } from 't3core';
+export type { ActionResult, PlayMoveResult, StartResult, RunResult, StepResult, RestartResult, StopResult, UndoResult } from 't3core';
+export type { SessionSnapshot, SnapshotFor, SessionMode, EngineError } from 't3core';
 ```
 
 ## Single Player (AI)
@@ -316,9 +367,9 @@ const result = await game.run();
 console.log(result);
 ```
 
-All sessions emit `move`, `turn`, and `finished`; AI sessions also emit `ai-thinking`. `reset()` clears the board and aborts in-flight work. Call `start()` again after reset in human-driven modes. Concurrent operations return `busy`; operations invalidated by reset return `aborted`.
+All sessions emit `move`, `turn`, and `finished`; AI sessions also emit `ai-thinking`. Use `restart()` for a new game, `stop()` for pause and `undo()` to restore a move/decision. Concurrent operations return `rejected` with reason `busy`; invalidated operations return `aborted`.
 
-For custom AI, implement `MoveStrategy.calculateMove(board, context): Promise<number>` and pass it to `SinglePlayerGame` or pass two strategies to `AIGame`, together with a `Game` instance. Strategies must return an empty cell's index. Invalid moves and strategy failures reject the operation; a strategy reporting `no_legal_moves` during a running game is an error, not a completed game.
+For custom AI, implement `MoveStrategy.calculateMove(board, context): Promise<number>` and pass it to `SinglePlayerGame` or pass two strategies to `AIGame`, together with a `Game` instance. Strategies must return an empty cell's index. Invalid AI moves and strategy failures return an `error` action and publish error state; a strategy reporting `no_legal_moves` during a running game is an error, not a completed game. Direct strategy calls still reject on failure.
 
 ### `getBestMove` — stateless helper
 

@@ -1,4 +1,4 @@
-import type { EngineError } from "../contracts/results";
+import type { EngineError } from "../results";
 import type { SessionIdentity, SessionSnapshot } from "./types";
 import type { Game } from "@/game/Game";
 import type { GameEventPayload } from "@/game/types/Game.types";
@@ -28,6 +28,10 @@ export class SessionStore {
       this._listeners.delete(entry);
     };
   };
+
+  clear(): void {
+    this._listeners.clear();
+  }
 
   publish(phase: SessionSnapshot["phase"], error: EngineError | null = null): void {
     if (

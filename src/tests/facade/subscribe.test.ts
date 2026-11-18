@@ -134,8 +134,8 @@ test("invalid or rejected moves do not notify or replace the snapshot", async ()
   listener.mockClear();
   const snapshot = game.snapshot;
 
-  expect(await game.playMove(4)).toEqual({ status: "already_selected" });
-  expect(await game.playMove(-1)).toEqual({ status: "invalid_index" });
+  expect(await game.playMove(4)).toEqual({ status: "rejected", reason: "already_selected" });
+  expect(await game.playMove(-1)).toEqual({ status: "rejected", reason: "invalid_index" });
   expect(listener).not.toHaveBeenCalled();
   expect(game.snapshot).toBe(snapshot);
 });
@@ -197,7 +197,7 @@ test("effect setup, cleanup and setup abort the old AI opening without stale upd
   const secondStart = game.start();
 
   expect(await firstStart).toEqual({ status: "aborted" });
-  expect(await secondStart).toEqual({ status: "success" });
+  expect(await secondStart).toEqual({ status: "success", value: undefined });
   expect(firstListener).toHaveBeenCalledTimes(1);
   expect(snapshots.map((state) => state.phase)).toEqual(["ai-thinking", "human-turn"]);
   expect(snapshots[1]).toBe(game.snapshot);

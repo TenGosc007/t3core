@@ -20,3 +20,11 @@ pvp.reset();
 if (state.phase !== "idle" || notifications !== 1 || !Object.isFrozen(getSnapshot())) {
   throw new Error("CommonJS session observation does not work");
 }
+
+const stopped: core.StopResult = pvp.stop();
+const undone: core.UndoResult = pvp.undo();
+if (stopped.status !== "success" || undone.status !== "rejected" || undone.reason !== "no_history") {
+  throw new Error("CommonJS lifecycle results are broken");
+}
+pvp.dispose();
+if (pvp.getSnapshot().phase !== "disposed") throw new Error("CommonJS disposal is broken");

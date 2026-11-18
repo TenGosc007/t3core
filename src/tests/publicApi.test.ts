@@ -74,7 +74,7 @@ test("public strategy exports calculate legal moves", async () => {
 test("public facade supports all three modes", async () => {
   const pvp = new TicTacToe({ mode: "pvp" });
   await pvp.start();
-  expect(await pvp.playMove(4)).toEqual({ status: "success" });
+  expect(await pvp.playMove(4)).toEqual({ status: "success", value: undefined });
   expect(pvp.movesCount).toBe(1);
 
   const singleplayer = new TicTacToe({
@@ -82,13 +82,13 @@ test("public facade supports all three modes", async () => {
     ai: { engine: "random", seed: 1 },
   });
   await singleplayer.start();
-  expect(await singleplayer.playMove(4)).toEqual({ status: "success" });
+  expect(await singleplayer.playMove(4)).toEqual({ status: "success", value: undefined });
   expect(singleplayer.movesCount).toBe(2);
 
   const aivsai = new TicTacToe({
     mode: "aivsai",
     aiPlayers: [{ seed: 1 }, { seed: 2 }],
   });
-  expect((await aivsai.run()).status).toBe("completed");
+  expect((await aivsai.run()).status).toBe("success");
   expect(["win", "draw"]).toContain(aivsai.gameStatus.status);
 });

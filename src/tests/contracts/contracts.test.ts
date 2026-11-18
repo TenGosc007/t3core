@@ -16,7 +16,7 @@ import type {
   StepResult,
   StopResult,
   UndoResult,
-} from "@/sessions/contracts/results";
+} from "@/sessions/results";
 import type { SessionSnapshot, SnapshotFor } from "@/sessions/state/types";
 
 import { expectTypeOf, test } from "vitest";
@@ -71,7 +71,7 @@ test("mode-specific instances expose the correct actions and synchronous cleanup
   expectTypeOf<PvPInstance["dispose"]>().returns.toBeVoid();
 });
 
-test("usage scenarios require the proposed constructor instead of executing future API on v1", () => {
+test("usage scenarios retain the draft configuration constructor with runtime lifecycle types", () => {
   expectTypeOf(pvpExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(singlePlayerExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(aiVsAiExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();

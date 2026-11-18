@@ -1,3 +1,4 @@
+import type { PlayMoveResult, RestartResult, StartResult, StopResult, UndoResult } from "./results";
 import type { SessionSnapshot } from "./state/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameStatus } from "@/game/types/Game.types";
@@ -15,29 +16,16 @@ export type SessionHandler = (payload: Record<string, unknown>) => void;
 /** Internal emitter type shared by `PvPGame`, `SinglePlayerGame`, `AIGame`. */
 export type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
 
-/** Lifecycle of a session — independent of `GameStatus`. */
-export type SessionLifecycle = "idle" | "started" | "finished";
-
-/** Result of `playMove(index)` on a session. */
-export type PlayMoveResult =
-  | { status: "success" }
-  | { status: "invalid_index" }
-  | { status: "already_selected" }
-  | { status: "game_not_running" }
-  | { status: "busy" } // playMove called while another playMove is in flight
-  | { status: "aborted" }; // playMove aborted by reset() during AI computation
-
-/** Result of `start()` on a session. */
-export type StartResult =
-  | { status: "success" }
-  | { status: "busy" }
-  | { status: "aborted" };
-
-/** Result of `run()` on `AIGame`. */
-export type RunResult =
-  | { status: "completed"; result: GameStatus }
-  | { status: "busy" }
-  | { status: "aborted" };
+export type {
+  ActionResult,
+  PlayMoveResult,
+  RestartResult,
+  RunResult,
+  StartResult,
+  StepResult,
+  StopResult,
+  UndoResult,
+} from "./results";
 
 /** Events emitted by sessions. */
 export type GameSessionEvent =
@@ -65,20 +53,15 @@ export type GameSessionEventPayload<K extends GameSessionEventType> = Omit<
  * instead of `playMove()`/`start()`.
  */
 export interface GameSession {
-  /**
-   * Starts the game. Called ONCE after listeners are registered via `on`.
-   * - PvP: emits `turn` for player 1 ('O').
-   * - Single Player, human starts: emits `turn` for the human.
-   * - Single Player, AI starts: emits `ai-thinking`, performs the AI move,
-   *   then emits `turn` for the human (or `finished` if the AI won).
-   *
-   * The constructor does NOT perform moves — it is sync and cannot safely
-   * run async AI before the UI registers listeners. `start()` solves this:
-   * the UI calls `on()` after the constructor, then `await start()`.
-   */
+  /** Starts or resumes play; repeated starts do not replay opening events. */
   start(): Promise<StartResult>;
 
   playMove(index: number): Promise<PlayMoveResult>;
+  restart(): Promise<RestartResult>;
+  stop(): StopResult;
+  undo(): UndoResult;
+  dispose(): void;
+  /** @deprecated Transitional API; prefer restart() for a new game. */
   reset(): void;
   on<K extends GameSessionEventType>(
     event: K,
