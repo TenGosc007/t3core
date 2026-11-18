@@ -13,6 +13,9 @@ npm install t3core
 
 ## Usage as a Library
 
+This branch is implementing v2 in stages; see the [migration notes](docs/v2-migration.md).
+The published package version is unchanged.
+
 Use `TicTacToe` for session-based gameplay. Its instance type depends on the selected mode: `pvp` and `singleplayer` expose `start()` / `playMove()`, while `aivsai` exposes `step()` / `run()`.
 
 ```typescript
@@ -24,15 +27,21 @@ const game = new TicTacToe({
   ai: { difficulty: AIDifficulty.HARD, seed: 12345 },
 });
 
-game.on('move', ({ player, position }) => {
-  console.log(player, position);
+const unsubscribe = game.subscribe(() => {
+  const state = game.getSnapshot();
+  renderBoard(state.board, state.canPlay); // Application-provided rendering.
+  showThinking(state.phase === 'ai-thinking');
 });
+renderBoard(game.getSnapshot().board, false);
 game.on('finished', ({ result }) => {
   console.log(result);
 });
 
 await game.start();
 await game.playMove(4);
+
+// When removing the view:
+unsubscribe();
 ```
 
 Register listeners before calling `start()`. In single-player mode, one `await playMove(index)` applies the human move and the AI reply, unless the human move ends the game. The default AI uses alpha-beta with `NORMAL` difficulty; use `humanSymbol: 'X'` to let the AI start.
@@ -78,7 +87,18 @@ game.reset();
 
 ### React Integration with `useSyncExternalStore`
 
-`TicTacToe.subscribe(callback)` is a stable, bound function that returns an unsubscribe function. It notifies synchronously after every human move, AI move, and reset, once the new `snapshot` is available. It does not notify immediately when subscribing, or for session-only events such as `ai-thinking`. Read `snapshot` for board state; use `on` / `off` separately for gameplay events.
+`TicTacToe.getSnapshot()` and `subscribe(callback)` are stable, bound functions.
+The full session snapshot includes the board, resolved variant, phase, input
+availability, legal moves, current move count and AI error. It is deeply frozen
+and cached until a state change; changing only the phase preserves the board
+and legal-moves array references. Subscriptions notify synchronously after moves,
+reset and phase changes, including an AI opening before any move. Registering a
+subscription does not notify immediately. Use `on` / `off` for gameplay effects.
+
+The existing example below uses React directly; a dedicated `t3core/react`
+adapter remains deferred. A thinking snapshot lets a UI show progress, but a
+short calculation may finish before the browser paints. Costly future strategies
+will need a Worker or cooperative scheduling for responsiveness.
 
 ```tsx
 'use client';
@@ -88,7 +108,7 @@ import { TicTacToe, AIDifficulty } from 't3core';
 
 function useTicTacToe() {
   // Create one stable game instance per mounted board
-  const [{ game, getSnapshot, getServerSnapshot }] = useState(() => {
+  const [{ game, getServerSnapshot }] = useState(() => {
     const game = new TicTacToe({
       mode: 'singleplayer',
       humanSymbol: 'O',
@@ -98,7 +118,6 @@ function useTicTacToe() {
 
     return {
       game,
-      getSnapshot: () => game.snapshot,
       getServerSnapshot: () => initialSnapshot,
     };
   });
@@ -111,7 +130,7 @@ function useTicTacToe() {
     // Subscribe function
     game.subscribe,
     // Get snapshot function
-    getSnapshot,
+    game.getSnapshot,
     getServerSnapshot
   );
 
@@ -124,6 +143,8 @@ function useTicTacToe() {
     board: state.board,
     currentPlayer: state.currentPlayer,
     gameStatus: state.gameStatus,
+    canPlay: state.canPlay,
+    phase: state.phase,
     error,
     makeMove: (index: number) => {
       void game.playMove(index).catch(reportError);
@@ -138,11 +159,11 @@ function useTicTacToe() {
 
 // Component usage
 export default function TicTacToeBoard() {
-  const { board, currentPlayer, gameStatus, error, makeMove, reset } = useTicTacToe();
+  const { board, currentPlayer, gameStatus, canPlay, phase, error, makeMove, reset } = useTicTacToe();
 
   return (
     <div>
-      <p>Current Player: {currentPlayer}</p>
+      <p>{phase === 'ai-thinking' ? 'AI is thinking…' : `Current Player: ${currentPlayer}`}</p>
       {error && <p role="alert">{error}</p>}
       <div className="board">
         {board.map((cell, index) => (
@@ -151,8 +172,7 @@ export default function TicTacToeBoard() {
             onClick={() => makeMove(index)}
             disabled={
               typeof cell === 'string' ||
-              gameStatus.status !== 'running' ||
-              currentPlayer !== 'O' ||
+              !canPlay ||
               Boolean(error)
             }
           >
@@ -177,8 +197,8 @@ The effect starts the session only after mounting. Its cleanup resets the game a
 | Property/Method | Description |
 | --------------- | ----------- |
 | `constructor(options)` | Select `pvp`, `singleplayer`, or `aivsai`; the returned instance type depends on the mode |
-| `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only access to the current game state |
-| `snapshot` | Cached `GameEventPayload`; its reference changes after a move or reset, and remains stable between state changes |
+| `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only session state; `movesCount` counts occupied fields in the current position |
+| `snapshot` / `getSnapshot()` | Cached, deeply frozen `SnapshotFor<Mode>`; changes after a move, reset or phase change. `getSnapshot` is bound and stable |
 | `subscribe(callback)` | Subscribe to snapshot changes in any mode. The callback receives no arguments; returns an idempotent unsubscribe function. Safe to pass directly to `useSyncExternalStore` |
 | `start()` / `playMove(index)` | Async lifecycle and move methods for `pvp` and `singleplayer`; register listeners before starting |
 | `step()` / `run()` | Perform one AI move or play to completion in `aivsai` mode |
@@ -196,7 +216,7 @@ The effect starts the session only after mounting. Its cleanup resets the game a
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
 | `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` (`success`, `already_selected`, `game_not_running`, `invalid_index`) |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
-| `movesCount` | Number of moves made in the current game |
+| `movesCount` | Number of recorded moves, including retained future history after `backToMove` |
 | `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` (`success`, `invalid_history_index`) |
 | `on(event, fn)` | Subscribe to events (`STATE_CHANGE`). Returns `this` for chaining |
 | `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |

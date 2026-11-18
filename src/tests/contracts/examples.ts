@@ -4,7 +4,7 @@
  */
 import type { TicTacToeConstructor } from "@/facade/contracts/instance";
 import type { PlayerSymbol } from "@/game/contracts";
-import type { SnapshotFor } from "@/sessions/contracts/snapshot";
+import type { SnapshotFor } from "@/sessions/state/types";
 
 export async function pvpExample(
   TicTacToe: TicTacToeConstructor,

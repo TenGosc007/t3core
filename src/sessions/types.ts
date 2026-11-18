@@ -1,5 +1,6 @@
+import type { SessionSnapshot } from "./state/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
-import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
+import type { GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 import type { EventEmitter } from "eventemitter3";
 
@@ -91,6 +92,8 @@ export interface GameSession {
   readonly board: BoardSnapshot;
   readonly currentPlayer: PlayerSymbol;
   readonly gameStatus: GameStatus;
-  readonly snapshot: GameEventPayload;
+  readonly snapshot: SessionSnapshot;
+  getSnapshot(): SessionSnapshot;
+  subscribe(callback: () => void): () => void;
   readonly movesCount: number;
 }

@@ -1,8 +1,9 @@
 import type { AIDifficulty } from "@/ai/difficulty";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameVariant } from "@/game/types/Game.types";
-import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
+import type { GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
+import type { SessionMode, SnapshotFor } from "@/sessions/state/types";
 import type {
   GameSessionEventPayload,
   GameSessionEventType,
@@ -64,11 +65,12 @@ export type AivsAiOptions = BaseOptions & {
 export type TicTacToeOptions = PvpOptions | SinglePlayerOptions | AivsAiOptions;
 
 /** Common read-only accessors shared by all instance interfaces. */
-type InstanceAccessors = {
+type InstanceAccessors<Mode extends SessionMode> = {
   readonly board: BoardSnapshot;
   readonly currentPlayer: PlayerSymbol;
   readonly gameStatus: GameStatus;
-  readonly snapshot: GameEventPayload;
+  readonly snapshot: SnapshotFor<Mode>;
+  getSnapshot(): SnapshotFor<Mode>;
   readonly movesCount: number;
 };
 
@@ -87,7 +89,7 @@ type InstanceEvents = {
 };
 
 /** PvP instance — `playMove` + `start` + `reset` + events. No `step`/`run`. */
-export interface PvPInstance extends InstanceAccessors, InstanceEvents {
+export interface PvPInstance extends InstanceAccessors<"pvp">, InstanceEvents {
   start(): Promise<StartResult>;
   playMove(index: number): Promise<PlayMoveResult>;
   readonly mode: "pvp";
@@ -95,14 +97,14 @@ export interface PvPInstance extends InstanceAccessors, InstanceEvents {
 
 /** Single Player instance — same surface as PvP. No `step`/`run`. */
 export interface SinglePlayerInstance
-  extends InstanceAccessors, InstanceEvents {
+  extends InstanceAccessors<"singleplayer">, InstanceEvents {
   start(): Promise<StartResult>;
   playMove(index: number): Promise<PlayMoveResult>;
   readonly mode: "singleplayer";
 }
 
 /** AI vs AI instance — `step` + `run` + `reset` + events. No `playMove`/`start`. */
-export interface AivsAiInstance extends InstanceAccessors, InstanceEvents {
+export interface AivsAiInstance extends InstanceAccessors<"aivsai">, InstanceEvents {
   step(): Promise<PlayMoveResult>;
   run(): Promise<RunResult>;
   readonly mode: "aivsai";

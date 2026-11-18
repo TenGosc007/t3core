@@ -10,7 +10,7 @@ import type {
   StopResult,
   UndoResult,
 } from "@/sessions/contracts/results";
-import type { SessionMode, SnapshotFor } from "@/sessions/contracts/snapshot";
+import type { SessionMode, SnapshotFor } from "@/sessions/state/types";
 
 type EventPayloads = {
   readonly move: { readonly player: PlayerSymbol; readonly position: number };

@@ -14,10 +14,10 @@ source paths and internal barrels are not supported package subpaths.
 An `export` inside an implementation file does not by itself make a symbol
 public to npm consumers.
 
-The [v2 contract review](docs/v2-contracts.md) describes staged internal type
-contracts under `game/contracts`, `sessions/contracts`, and `facade/contracts`.
-They are not package exports and are not yet implemented by the runtime facade.
-The module and behavior descriptions below continue to describe the working API.
+The [v2 contract review](docs/v2-contracts.md) distinguishes implemented session
+state from the remaining draft lifecycle contracts. The [migration notes](docs/v2-migration.md)
+describe breaking observation changes. The descriptions below cover the current
+working branch; the package version is unchanged.
 
 | Module | Responsibility | Boundary |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ The module and behavior descriptions below continue to describe the working API.
 | [`strategies`](src/strategies/strategies.types.ts) | Defines variant rules: board size and winner detection. | `GameStrategy` and variant resolution are internal. Currently only classic 3×3 is supported. |
 | [`ai`](src/ai/types.ts) | Chooses a move from a board snapshot and context. Includes alpha-beta, random selection, and seeded RNG. | Public strategies implement `MoveStrategy`; search helpers and RNG internals stay behind the package entry. |
 | [`sessions`](src/sessions/BaseSession.ts) | Coordinates `Game`, human input, AI, lifecycle, events, and stale operations. | `PvPGame`, `SinglePlayerGame`, `AIGame`, and selected contracts are public; `BaseSession` is internal. |
-| [`facade`](src/facade/TicTacToe.ts) | Constructs a game, strategies, and a session for the chosen mode; adapts snapshot subscriptions. | `TicTacToe` exposes mode-specific instance types. `TicTacToeImpl` is internal. |
+| [`facade`](src/facade/TicTacToe.ts) | Constructs a game, strategies, and a session for the chosen mode; delegates state observation. | `TicTacToe` exposes mode-specific instance types. `TicTacToeImpl` is internal. |
 | [`utils`](src/utils/getWinnerFromFields.ts), [`constants`](src/constants/gameConstants.ts) | Shared winner detection and default symbols. | Only explicit root re-exports are public. |
 
 ## Dependency direction
@@ -74,9 +74,22 @@ truncate that count.
 `Game.snapshot` caches `{ board, currentPlayer, gameStatus }`. Its reference
 remains stable between accepted state operations and changes after a
 successful `savePlayerMove`, successful `backToMove`, or `reset`. Rejected
-moves do not replace it. Sessions and the facade expose this same snapshot.
-Treat the entire snapshot as read-only: only its board array is frozen at
-runtime; the surrounding snapshot and status objects are not deeply frozen.
+moves do not replace it. Only its board array is frozen at runtime; treat the
+surrounding snapshot and status objects as read-only too.
+
+Sessions own a separate [SessionStore](src/sessions/state/SessionStore.ts).
+`snapshot` and stable bound `getSnapshot()` return the same full session state:
+board, resolved variant, mode, human symbol, current player, result, phase,
+input availability, legal moves, current move count, undo availability and error.
+The entire snapshot, including nested arrays and metadata, is frozen.
+Repeated reads reuse its reference. A phase-only change reuses the board and
+legal-moves array. Session `movesCount` counts occupied fields in the current
+position; it does not count retained future history.
+
+The store attaches no listeners to Game. Sessions commit state after their
+domain mutations and Game callbacks return. Direct constructors accept a
+pre-populated Game, but subsequent mutations must go through the session.
+External writes to an injected Game bypass coherent session observation.
 
 Board accessors throw `RangeError` for invalid indices. `Game.savePlayerMove`
 and `Game.backToMove` instead return their documented status values for
@@ -90,12 +103,12 @@ There are three notification surfaces:
 | Surface | Payload | When it notifies |
 | --- | --- | --- |
 | `Game.on(GameEvent.STATE_CHANGE, handler)` | `GameEventPayload`: `{ board, currentPlayer, gameStatus }` | Synchronously after an accepted move, history restore, or reset has updated the snapshot. |
-| `TicTacToe.subscribe(callback)` | No arguments; read `snapshot` in the callback. | On the underlying game's state changes, in every mode. |
+| Session/facade `subscribe(callback)` | No arguments; read `getSnapshot()` in the callback. | After session moves, phase changes, errors and reset, in every mode. |
 | Session/facade `on(event, handler)` | Typed gameplay payload from `GameSessionEventPayload`. | During session operations, as described below. |
 
-`subscribe` is a stable, bound function. It does not notify immediately when
-registering and does not notify for session-only events. Each subscription
-has its own idempotent cleanup, even when the same callback is registered
+`subscribe` and `getSnapshot` are stable, bound functions. Registration does not
+notify immediately. A phase change can notify without changing the board.
+Each subscription has its own idempotent cleanup, even when the same callback is registered
 twice. For `on`/`off`, remove a listener with the same handler reference.
 
 Session events carry these payloads, without a `type` field:
@@ -107,19 +120,45 @@ Session events carry these payloads, without a `type` field:
 | `ai-thinking` | `{ player }` | An AI calculation is about to start. |
 | `finished` | `{ result }` | The session reached a win or draw. |
 
-When callbacks do not reset the game or throw, an accepted move updates the
-game state and emits `STATE_CHANGE` (including facade subscribers) before
-the session emits `move`. A terminal move is followed by `finished`.
+When callbacks do not invalidate the operation or throw, an accepted move updates
+Game and emits `STATE_CHANGE`. The session then commits its full snapshot and
+notifies session/facade subscribers before emitting `move`. A terminal move
+is followed by `finished`.
 A nonterminal PvP or AI move is followed by `turn`. A nonterminal human move
 in single-player instead starts `ai-thinking` and the AI calculation; the
 AI's reply then emits its own `move` and `turn` or `finished`. Subscribers
 observe both board snapshots separately. If the human ends the game, there
 is no AI reply.
 
+An opening AI turn publishes `ai-thinking` before its event and calculation.
+A human move commits the board together with `ai-thinking`; the reply commits
+`human-turn` or `finished`. AI-vs-AI `step` commits `ai-ready` after a nonterminal
+move, while `run` stays in `ai-thinking` between moves. The terminal snapshot
+is published once. Reads and rejected/busy actions do not notify.
+
+```mermaid
+flowchart LR
+    Idle[idle] --> Start[start]
+    Start --> Human[human-turn]
+    Start --> Thinking[ai-thinking: AI opens]
+    Human --> Move[human move]
+    Move --> Thinking
+    Thinking --> Human
+    Thinking --> Finished[finished]
+    Move --> Finished
+    Thinking --> Error[error]
+```
+
+The diagram shows single-player; reset returns every mode to idle.
+The current runtime can also publish `paused` if an application callback
+interrupts an AI turn, so the UI does not keep displaying active calculation.
+
 Callbacks run synchronously at each emission. Listener exceptions propagate;
 they do not roll back an already applied move. A callback can also call
-`reset()`, so session code checks its generation after emissions as well as
-after awaited work. Reset notifies state subscribers but does not itself
+`reset()` or start another operation from a ready-state callback, so session code
+checks generation and operation identity after callbacks and awaited work.
+A nested publication supersedes the remaining old notification delivery.
+Reset notifies state subscribers but does not itself
 emit a session `turn` or `finished` event.
 
 ## Lifecycle, concurrency, and cancellation
@@ -134,7 +173,8 @@ listeners before starting a session.
 | `aivsai` | `step()` for one move or `run()` to completion; these start the session themselves. | Use `step()` or `run()` again. |
 
 [`BaseSession`](src/sessions/BaseSession.ts) owns the lifecycle
-(`idle`, `started`, `finished`), a generation counter, and an operation lock.
+(`idle`, `started`, `finished`, `error`), a generation counter, and an operation
+lock. The public snapshot phase is more precise than this internal lifecycle.
 Overlapping operations return `busy`. Calling `start()` while already
 started throws. `reset()` returns the session to `idle`, resets the game,
 increments the generation, and releases the lock for new work.
@@ -143,13 +183,19 @@ Every asynchronous operation captures its generation. If reset invalidates
 it, a late strategy result or rejection is discarded and the operation
 reports `aborted`. Check the generation before validating or applying a
 returned move, and after callbacks that may reset the session. An old
-operation's `finally` must release only its own generation's lock.
+operation's `finally` must release only its own lock by identity. Before
+publishing a ready state, the session releases the completed operation's lock
+so `canPlay` accurately reflects availability, including reentrant callbacks.
+A newer operation supersedes the old continuation even within one generation.
 
 Cancellation prevents stale work from changing state. The strategy contract
 has no `AbortSignal`, so reset does not interrupt a running calculation or
 stop external worker/network work initiated by a custom strategy. A custom
-strategy must manage those resources itself. Other strategy errors propagate
-when the operation is still current.
+strategy must manage those resources itself. Current strategy errors publish
+a serializable error snapshot and then propagate. Application callback exceptions
+propagate without being classified as AI failures; applied moves are not rolled
+back. An interrupted operation refreshes its position in a paused/terminal state
+when necessary. Full stop/undo/dispose and normalized action results are stage 3.
 
 ## AI strategy contract
 

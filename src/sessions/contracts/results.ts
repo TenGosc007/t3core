@@ -1,4 +1,4 @@
-/** Internal v2 action contracts; the current sessions still return v1 results. */
+/** Draft action results; EngineError is already used by public session state. */
 import type { FinishedGameStatus } from "@/game/contracts";
 
 export type EngineError = {

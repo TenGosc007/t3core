@@ -17,7 +17,7 @@ import type {
   StopResult,
   UndoResult,
 } from "@/sessions/contracts/results";
-import type { SessionSnapshot, SnapshotFor } from "@/sessions/contracts/snapshot";
+import type { SessionSnapshot, SnapshotFor } from "@/sessions/state/types";
 
 import { expectTypeOf, test } from "vitest";
 

@@ -5,66 +5,50 @@ import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 import { BaseSession } from "./BaseSession";
 
-/**
- * Local two-player session. No AI — each `playMove` applies one human move and
- * emits `move` + (`turn` | `finished`).
- */
+/** Local two-player orchestration; rules and state mutations belong to Game. */
 export class PvPGame extends BaseSession implements GameSession {
   constructor(options: { game: Game }) {
-    super(options.game);
+    super(options.game, { mode: "pvp", humanSymbol: null });
   }
 
   async start(): Promise<StartResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
+    if (this._busyOperation !== null) return { status: "busy" };
     if (this._lifecycle === "started") {
       throw new Error("start() called twice without reset().");
     }
-    const gen = this._generation;
-    this._busyGeneration = gen;
+    const operation = this._beginOperation();
     try {
-      this._lifecycle = "started";
-      this._emit("turn", { player: this._game.currentPlayer });
-      if (this._generation !== gen) return { status: "aborted" };
-      return { status: "success" };
+      this._lifecycle = this._game.gameStatus.status === "running" ? "started" : "finished";
+      const phase = this._lifecycle === "started" ? "human-turn" : "finished";
+      if (!this._publish(operation, phase, true)) return { status: "aborted" };
+      if (phase === "human-turn") this._emit("turn", { player: this._game.currentPlayer });
+      return { status: this._isCurrent(operation) ? "success" : "aborted" };
     } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
+      this._endOperation(operation);
     }
   }
 
   async playMove(index: number): Promise<PlayMoveResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
+    if (this._busyOperation !== null) return { status: "busy" };
     if (this._lifecycle !== "started") return { status: "game_not_running" };
-
-    const gen = this._generation;
-    this._busyGeneration = gen;
+    const operation = this._beginOperation();
     try {
       const player = this._game.currentPlayer;
       const status = this._game.savePlayerMove(index);
-      if (this._generation !== gen) return { status: "aborted" };
-
-      if (status === PlayerMoveStatus.INVALID_INDEX) {
-        return { status: "invalid_index" };
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (status !== PlayerMoveStatus.SUCCESS) return { status };
+      const finished = this._game.gameStatus.status !== "running";
+      if (finished) this._lifecycle = "finished";
+      if (!this._publish(operation, finished ? "finished" : "human-turn", true)) {
+        return { status: "aborted" };
       }
-      if (status === PlayerMoveStatus.ALREADY_SELECTED) {
-        return { status: "already_selected" };
-      }
-      if (status === PlayerMoveStatus.GAME_NOT_RUNNING) {
-        return { status: "game_not_running" };
-      }
-
       this._emit("move", { player, position: index });
-      if (this._generation !== gen) return { status: "aborted" };
-
-      if (this._game.gameStatus.status !== "running") {
-        this._lifecycle = "finished";
-        this._emit("finished", { result: this._game.gameStatus });
-        return { status: this._generation === gen ? "success" : "aborted" };
-      }
-
-      this._emit("turn", { player: this._game.currentPlayer });
-      return { status: this._generation === gen ? "success" : "aborted" };
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (finished) this._emit("finished", { result: this._game.gameStatus });
+      else this._emit("turn", { player: this._game.currentPlayer });
+      return { status: this._isCurrent(operation) ? "success" : "aborted" };
     } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
+      this._endOperation(operation);
     }
   }
 }

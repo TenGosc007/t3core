@@ -1,5 +1,5 @@
-/** Internal v2 snapshot contract. Runtime freezing and publication come later. */
-import type { EngineError } from "./results";
+/** Immutable session state shared by runtime sessions and the facade. */
+import type { EngineError } from "../contracts/results";
 import type {
   BoardSnapshot,
   FinishedGameStatus,
@@ -9,7 +9,7 @@ import type {
   VariantDescriptor,
 } from "@/game/contracts";
 
-type SessionIdentity =
+export type SessionIdentity =
   | { readonly mode: "pvp"; readonly humanSymbol: null }
   | { readonly mode: "singleplayer"; readonly humanSymbol: PlayerSymbol }
   | { readonly mode: "aivsai"; readonly humanSymbol: null };

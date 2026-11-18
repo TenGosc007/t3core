@@ -181,3 +181,11 @@ export type {
   AivsAiInstance,
   TicTacToeConstructor,
 } from "@/facade/types";
+
+/** Immutable, observable session state shared by vanilla and framework consumers. */
+export type {
+  SessionSnapshot,
+  SessionMode,
+  SnapshotFor,
+} from "@/sessions/state/types";
+export type { EngineError } from "@/sessions/contracts/results";

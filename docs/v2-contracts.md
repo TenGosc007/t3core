@@ -1,28 +1,29 @@
-# V2 contracts: stage 1 review
+# V2 contracts and implementation status
 
-This document describes the proposed `2.0.0` API, not the currently exported
-`TicTacToe` implementation. Stage 1 adds internal, type-checked contracts and
-usage scenarios. It does not implement the new session lifecycle or change
-package exports, runtime behavior, or the package version.
+This document describes the target `2.0.0` API and the remaining draft
+contracts. Stage 2 implements full session snapshots, bound `getSnapshot`
+and `subscribe`, phase notifications and serializable AI error state.
+Use the [README](../README.md) and [migration notes](v2-migration.md) for the
+currently implemented API. The package version is unchanged.
 
-Use the [README](../README.md) for the working 1.x API. In particular,
-`getSnapshot`, `restart`, `stop`, `undo`, and `dispose` in the examples below
-are future methods; they cannot yet be called on the exported constructor.
+`restart`, `stop`, `undo`, `dispose` and the uniform action result envelope
+below remain future work. The exported constructor does not yet implement them.
 
 ## Contract ownership
 
 | File | Responsibility |
 | --- | --- |
 | [game/contracts.ts](../src/game/contracts.ts) | Fixed O/X symbols, immutable position types, implemented variant metadata, and running/terminal results. |
-| [sessions/contracts/snapshot.ts](../src/sessions/contracts/snapshot.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
+| [sessions/state/types.ts](../src/sessions/state/types.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
 | [sessions/contracts/results.ts](../src/sessions/contracts/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
 | [facade/contracts/options.ts](../src/facade/contracts/options.ts) | Mode-specific configuration and built-in AI options. |
 | [facade/contracts/instance.ts](../src/facade/contracts/instance.ts) | Proposed constructor and per-mode instance interfaces. |
 
-These modules are internal review scaffolding. Consumers must not import their
-source paths. Later stages will adopt these contracts in their owning layers
-and consolidate the existing types; they will not introduce a second permanent
-public API. Custom providers and capability discovery belong to stage 4.
+The session snapshot types are now used by runtime sessions and exported from
+the package root, together with `EngineError`. Consumers must not import source
+paths. The facade/options/action contracts remain internal review scaffolding.
+Later stages will adopt them in their owning layers and consolidate the existing
+types; they will not introduce a second permanent public API. Custom providers and capability discovery belong to stage 4.
 
 Only `classic-3x3` is accepted. Future 9x9/Gomoku identifiers are not added to
 the type union or variant registry. The random engine does not accept a
@@ -179,15 +180,15 @@ reentrant callback invalidates it; neither operation runs AI or returns an AI er
   snapshots retain the last result/error but disable play and undo.
 - Arrays, variant metadata, results and error descriptions are readonly.
 - Types cannot prove board length, numeric bounds, occupancy, turn ownership,
-  or correspondence between a board and its result. Runtime validation and
-  freezing will implement those guarantees in later stages.
-- Cached snapshot identity, bound methods, publication ordering, and independent
-  unsubscribe cleanup are runtime obligations for stage 2, not claims that
-  type declarations can enforce.
+  or correspondence between a board and its result. Runtime rules validate moves;
+  the session boundary validates O/X data and freezes the complete snapshot.
+- Stage 2 tests verify cached snapshot identity, stable bound methods, publication
+  ordering and independent unsubscribe cleanup; types alone cannot enforce them.
 
 Contract tests run through both `yarn ts:check` and Vitest. Type checking also
 verifies negative consumer examples marked with `@ts-expect-error`; Vitest
 alone does not validate those compiler diagnostics.
 
-After stage 1 review, stage 2 implements the observable session state. Lifecycle
-actions follow in stage 3, providers in stage 4, and package migration in stage 5.
+Lifecycle actions follow in stage 3, providers in stage 4, and final package
+migration in stage 5. The final review also removes remaining temporary
+“Internal v2” annotations and duplicate draft types after their runtime adoption.

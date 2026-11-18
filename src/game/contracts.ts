@@ -1,6 +1,6 @@
 /**
- * Internal v2 contracts under review. These are not package exports and do not
- * change the current Game implementation. Adopt them as each layer migrates.
+ * Immutable O/X domain data used by session snapshots. The low-level Game
+ * retains its existing broader types until the domain migration.
  */
 export type PlayerSymbol = "O" | "X";
 

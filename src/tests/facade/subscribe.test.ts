@@ -1,4 +1,4 @@
-import type { GameEventPayload } from "@/index";
+import type { SessionSnapshot } from "@/index";
 
 import { expect, test, vi } from "vitest";
 
@@ -23,12 +23,14 @@ for (const createGame of factories) {
 
   test(`${mode} exposes a stable bound subscribe function and snapshot`, () => {
     const game = createGame();
-    const { subscribe } = game;
+    const { subscribe, getSnapshot } = game;
     const snapshot = game.snapshot;
     const listener = vi.fn();
     const unsubscribe = subscribe(listener);
 
     expect(game.subscribe).toBe(subscribe);
+    expect(game.getSnapshot).toBe(getSnapshot);
+    expect(getSnapshot()).toBe(snapshot);
     expect(game.snapshot).toBe(snapshot);
     expect(listener).not.toHaveBeenCalled();
 
@@ -45,26 +47,26 @@ for (const createGame of factories) {
 
   test(`${mode} notifies subscribers after a move and reset`, async () => {
     const game = createGame();
-    const snapshots: GameEventPayload[] = [];
+    const snapshots: SessionSnapshot[] = [];
     const unsubscribe = game.subscribe(() => snapshots.push(game.snapshot));
 
     if (game.mode === "aivsai") {
       await game.step();
     } else {
       await game.start();
-      expect(snapshots).toEqual([]);
+      expect(snapshots.map((state) => state.phase)).toEqual(["human-turn"]);
       await game.playMove(4);
     }
 
-    expect(snapshots.length).toBe(game.movesCount);
+    expect(snapshots.length).toBe(game.movesCount + 1);
     expect(snapshots[snapshots.length - 1]).toBe(game.snapshot);
     expect(
-      snapshots[0]?.board.filter((field) => typeof field === "string"),
+      snapshots[1]?.board.filter((field) => typeof field === "string"),
     ).toHaveLength(1);
     const movesCount = game.movesCount;
 
     game.reset();
-    expect(snapshots).toHaveLength(movesCount + 1);
+    expect(snapshots).toHaveLength(movesCount + 2);
     expect(snapshots[snapshots.length - 1]).toBe(game.snapshot);
     expect(game.snapshot.board).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
     expect(game.snapshot.currentPlayer).toBe("O");
@@ -76,12 +78,12 @@ for (const createGame of factories) {
     const game = createGame();
     const moves = vi.fn();
     game.on("move", moves);
+    if (game.mode !== "aivsai") await game.start();
     const unsubscribe = game.subscribe(() => {
       unsubscribe();
       game.reset();
     });
 
-    if (game.mode !== "aivsai") await game.start();
     const result =
       game.mode === "aivsai" ? await game.step() : await game.playMove(4);
 
@@ -143,9 +145,10 @@ test("singleplayer subscribers observe the human move before the AI reply", asyn
     mode: "singleplayer",
     ai: { seed: 1 },
   });
-  const snapshots: GameEventPayload[] = [];
+  const snapshots: SessionSnapshot[] = [];
   game.subscribe(() => snapshots.push(game.snapshot));
   await game.start();
+  snapshots.length = 0;
 
   const pending = game.playMove(4);
   expect(snapshots).toHaveLength(1);
@@ -166,12 +169,12 @@ test("aivsai subscribers observe every move including the terminal snapshot", as
     mode: "aivsai",
     aiPlayers: [{ seed: 1 }, { seed: 2 }],
   });
-  const snapshots: GameEventPayload[] = [];
+  const snapshots: SessionSnapshot[] = [];
   game.subscribe(() => snapshots.push(game.snapshot));
 
   await game.run();
 
-  expect(snapshots).toHaveLength(game.movesCount);
+  expect(snapshots).toHaveLength(game.movesCount + 1);
   expect(snapshots[snapshots.length - 1]).toBe(game.snapshot);
   expect(game.snapshot.gameStatus.status).not.toBe("running");
 });
@@ -189,17 +192,18 @@ test("effect setup, cleanup and setup abort the old AI opening without stale upd
   unsubscribe();
   game.reset();
 
-  const snapshots: GameEventPayload[] = [];
+  const snapshots: SessionSnapshot[] = [];
   const unsubscribeAgain = game.subscribe(() => snapshots.push(game.snapshot));
   const secondStart = game.start();
 
   expect(await firstStart).toEqual({ status: "aborted" });
   expect(await secondStart).toEqual({ status: "success" });
-  expect(firstListener).not.toHaveBeenCalled();
-  expect(snapshots).toEqual([game.snapshot]);
+  expect(firstListener).toHaveBeenCalledTimes(1);
+  expect(snapshots.map((state) => state.phase)).toEqual(["ai-thinking", "human-turn"]);
+  expect(snapshots[1]).toBe(game.snapshot);
   expect(game.movesCount).toBe(1);
 
   unsubscribeAgain();
   game.reset();
-  expect(snapshots).toHaveLength(1);
+  expect(snapshots).toHaveLength(2);
 });

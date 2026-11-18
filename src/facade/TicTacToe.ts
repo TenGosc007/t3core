@@ -7,7 +7,6 @@ import { RandomStrategy } from "@/ai";
 import { AIDifficulty } from "@/ai";
 import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
 import { Game } from "@/game/Game";
-import { GameEvent } from "@/game/types/Game.types";
 import { AIGame } from "@/sessions/AIGame";
 import { PvPGame } from "@/sessions/PvPGame";
 import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
@@ -33,13 +32,11 @@ function buildStrategy(config: {
  * is not exported directly — only the typed constant is.
  */
 class TicTacToeImpl {
-  private readonly _game: Game;
   private readonly _session: PvPGame | SinglePlayerGame | AIGame;
   private readonly _mode: "pvp" | "singleplayer" | "aivsai";
 
   constructor(options: TicTacToeOptions) {
     const game = new Game({ variant: options.variant });
-    this._game = game;
     const symbols = DEFAULT_GAME_SYMBOLS;
 
     switch (options.mode) {
@@ -104,13 +101,10 @@ class TicTacToeImpl {
     this._session.reset();
   }
 
-  subscribe = (callback: () => void): (() => void) => {
-    const listener = () => callback();
-    this._game.on(GameEvent.STATE_CHANGE, listener);
-    return () => {
-      this._game.off(GameEvent.STATE_CHANGE, listener);
-    };
-  };
+  readonly getSnapshot = () => this._session.getSnapshot();
+
+  readonly subscribe = (callback: () => void): (() => void) =>
+    this._session.subscribe(callback);
 
   on(...args: never[]) {
     return this._delegateEvent("on", args);

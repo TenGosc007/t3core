@@ -1,88 +1,61 @@
+import type { SessionOperation } from "./BaseSession";
 import type { PlayMoveResult, RunResult } from "./types";
 import type { MoveStrategy } from "@/ai";
 import type { Game } from "@/game/Game";
 import type { GameEventPayload } from "@/game/types/Game.types";
-import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 import { MoveStrategyError } from "@/ai";
-import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 import { BaseSession } from "./BaseSession";
+import { parsePlayerSymbol } from "./state/createSnapshot";
 import { isLegalMove } from "./utils";
 
-/**
- * AI-vs-AI session. Does NOT implement {@link GameSession} — there is no human
- * input, so `playMove(index)` makes no sense. Instead exposes `step()` (one AI
- * move) and `run()` (auto-play to the end). Useful for difficulty benchmarks
- * and regression demos.
- */
+/** AI-vs-AI orchestration with individual steps or continuous play. */
 export class AIGame extends BaseSession {
   private readonly _strategies: readonly [MoveStrategy, MoveStrategy];
-  private readonly _symbols: readonly [PlayerSymbol, PlayerSymbol];
 
-  constructor(options: {
-    game: Game;
-    strategies: [MoveStrategy, MoveStrategy]; // [player1='O', player2='X']
-  }) {
-    super(options.game);
+  constructor(options: { game: Game; strategies: [MoveStrategy, MoveStrategy] }) {
+    super(options.game, { mode: "aivsai", humanSymbol: null });
     this._strategies = options.strategies;
-    this._symbols = ["O", "X"] as const;
   }
 
-  /** Performs one AI move for the current player. */
   async step(): Promise<PlayMoveResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
-    if (this._lifecycle === "finished") return { status: "game_not_running" };
-
-    const gen = this._generation;
-    this._busyGeneration = gen;
+    if (this._busyOperation !== null) return { status: "busy" };
+    if (this._game.gameStatus.status !== "running") return { status: "game_not_running" };
+    const operation = this._beginOperation();
     try {
-      const result = await this._performStep(gen);
-      return this._generation === gen ? result : { status: "aborted" };
+      return await this._performStep(operation, false);
     } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
+      this._endOperation(operation);
     }
   }
 
-  /** Auto-plays to the end, emitting `move`/`turn` per move and `finished`. */
   async run(): Promise<RunResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
-    if (this._lifecycle === "finished") {
+    if (this._busyOperation !== null) return { status: "busy" };
+    if (this._game.gameStatus.status !== "running") {
       return { status: "completed", result: this._game.gameStatus };
     }
-
-    const gen = this._generation;
-    this._busyGeneration = gen;
+    const operation = this._beginOperation();
     try {
-      this._lifecycle = "started";
       while (this._game.gameStatus.status === "running") {
-        const result = await this._performStep(gen);
-        if (this._generation !== gen || result.status === "aborted") {
-          return { status: "aborted" };
-        }
-        if (result.status !== "success") {
-          // Should not happen in AI-vs-AI, but be defensive.
-          return { status: "completed", result: this._game.gameStatus };
-        }
+        const result = await this._performStep(operation, true);
+        if (!this._isCurrent(operation) || result.status === "aborted") return { status: "aborted" };
       }
-      if (this._generation !== gen) return { status: "aborted" };
       return { status: "completed", result: this._game.gameStatus };
     } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
+      this._endOperation(operation);
     }
   }
 
-  /** Performs one AI move without taking the lock — `step`/`run` hold it. */
-  private async _performStep(gen: number): Promise<PlayMoveResult> {
-    if (this._lifecycle === "idle") this._lifecycle = "started";
+  private async _performStep(operation: SessionOperation, continuous: boolean): Promise<PlayMoveResult> {
+    this._lifecycle = "started";
+    const player = parsePlayerSymbol(this._game.currentPlayer);
+    const strategy = this._strategies[player === "O" ? 0 : 1];
+    const opponent = player === "O" ? "X" : "O";
 
-    const player = this._game.currentPlayer;
-    const idx = this._symbols.indexOf(player);
-    const strategy = this._strategies[idx] as MoveStrategy;
-    const opponent = this._symbols[(idx + 1) % 2] as PlayerSymbol;
-
+    if (!this._publish(operation, "ai-thinking")) return { status: "aborted" };
     this._emit("ai-thinking", { player });
-    if (this._generation !== gen) return { status: "aborted" };
+    if (!this._isCurrent(operation)) return { status: "aborted" };
 
     let move: number;
     try {
@@ -91,39 +64,29 @@ export class AIGame extends BaseSession {
         opponentSymbol: opponent,
         gameStatus: this._game.gameStatus,
       });
-    } catch (e) {
-      if (this._generation !== gen) return { status: "aborted" };
-      throw e;
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (!isLegalMove(move, this._game.board)) {
+        throw new MoveStrategyError("illegal_move", `Strategy returned illegal index: ${move}`);
+      }
+    } catch (error) {
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      this._failAI(operation, error);
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      throw error;
     }
 
-    if (this._generation !== gen) return { status: "aborted" };
-
-    if (!isLegalMove(move, this._game.board)) {
-      throw new MoveStrategyError(
-        "illegal_move",
-        `Strategy returned illegal index: ${move}`,
-      );
-    }
-
-    const status = this._game.savePlayerMove(move);
-    if (this._generation !== gen) return { status: "aborted" };
-    if (status !== PlayerMoveStatus.SUCCESS) {
-      return { status: "game_not_running" };
-    }
-
+    this._game.savePlayerMove(move);
+    if (!this._isCurrent(operation)) return { status: "aborted" };
+    const finished = this._game.gameStatus.status !== "running";
+    if (finished) this._lifecycle = "finished";
+    const phase = finished ? "finished" : continuous ? "ai-thinking" : "ai-ready";
+    if (!this._publish(operation, phase, finished || !continuous)) return { status: "aborted" };
     this._emit("move", { player, position: move });
-    if (this._generation !== gen) return { status: "aborted" };
-
-    if (this._game.gameStatus.status !== "running") {
-      this._lifecycle = "finished";
-      this._emit("finished", { result: this._game.gameStatus });
-      return { status: this._generation === gen ? "success" : "aborted" };
-    }
-
-    this._emit("turn", { player: this._game.currentPlayer });
-    return { status: this._generation === gen ? "success" : "aborted" };
+    if (!this._isCurrent(operation)) return { status: "aborted" };
+    if (finished) this._emit("finished", { result: this._game.gameStatus });
+    else this._emit("turn", { player: this._game.currentPlayer });
+    return { status: this._isCurrent(operation) ? "success" : "aborted" };
   }
 }
 
-// Re-export for type-only consumers that want `GameEventPayload` shape.
 export type { GameEventPayload };
