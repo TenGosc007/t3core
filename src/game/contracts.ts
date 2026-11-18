@@ -11,11 +11,11 @@ export type VariantId = "classic-3x3";
 
 /** Resolved metadata, not a configuration object accepted by the constructor. */
 export type VariantDescriptor = {
-  readonly id: VariantId;
-  readonly rows: 3;
-  readonly columns: 3;
-  readonly winLength: 3;
-  readonly lineRule: "at-least";
+  readonly id: string;
+  readonly rows: number;
+  readonly columns: number;
+  readonly winLength: number;
+  readonly lineRule: "at-least" | "exact";
 };
 
 export type RunningGameStatus = { readonly status: "running" };

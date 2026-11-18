@@ -1,9 +1,11 @@
 import type { ActionAborted, ActionSuccess } from "../results";
 
-/** A lock owner with prompt logical cancellation, independent of the strategy. */
+/** A lock owner; each calculation has its own cooperatively cancellable request. */
 export class SessionOperation {
   readonly cancelled: Promise<ActionAborted>;
+  private _request: AbortController | null = null;
   private _cancel = () => {};
+  private _cancelled = false;
 
   constructor(readonly generation: number) {
     this.cancelled = new Promise((resolve) => {
@@ -11,8 +13,23 @@ export class SessionOperation {
     });
   }
 
+  beginRequest(): AbortSignal {
+    const controller = new AbortController();
+    this._request = controller;
+    if (this._cancelled) controller.abort();
+    return controller.signal;
+  }
+
+  finishRequest(signal: AbortSignal): void {
+    if (this._request?.signal === signal) this._request = null;
+  }
+
   cancel(): void {
+    this._cancelled = true;
     this._cancel();
+    const request = this._request;
+    this._request = null;
+    request?.abort();
   }
 
   waitFor<Value>(work: Promise<Value>): Promise<ActionSuccess<Value> | ActionAborted> {

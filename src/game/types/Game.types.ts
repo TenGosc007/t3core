@@ -1,5 +1,7 @@
+import type { VariantDescriptor } from "../contracts";
 import type { BoardSnapshot } from "./Board.types";
 import type { PlayerSymbol } from "./Symbol.types";
+import type { GameRules } from "@/strategies/strategies.types";
 
 type GameStatusWin = { status: "win"; winner: PlayerSymbol };
 type GameStatusDraw = { status: "draw" };
@@ -26,6 +28,7 @@ export const PlayerMoveStatus = {
   ALREADY_SELECTED: "already_selected",
   GAME_NOT_RUNNING: "game_not_running",
   INVALID_INDEX: "invalid_index",
+  ILLEGAL_MOVE: "illegal_move",
 } as const;
 export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
@@ -83,6 +86,11 @@ export interface IGame {
 
   /** Number of moves made in the current game. */
   readonly movesCount: number;
+  readonly variant: VariantDescriptor;
+  readonly rules: GameRules;
+  validateMove(index: number): PlayerMoveStatus;
+  isLegalMove(index: number): boolean;
+  getLegalMoves(): readonly number[];
 
   /** Resets the game to its initial state. */
   reset: () => void;

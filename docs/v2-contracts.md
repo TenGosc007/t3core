@@ -1,14 +1,15 @@
 # V2 contracts and implementation status
 
-This document describes the target `2.0.0` API and the remaining draft
-contracts. Stage 2 implements full session snapshots, bound `getSnapshot`
+This document describes the target `2.0.0` API and its implementation status.
+Stage 2 implements full session snapshots, bound `getSnapshot`
 and `subscribe`, phase notifications and serializable AI error state. Stage 3
-implements the lifecycle methods and shared action result envelope.
+implements the lifecycle methods and shared action result envelope. Stage 4
+implements configuration validation, shared variant rules and AI providers.
 Use the [README](../README.md) and [migration notes](v2-migration.md) for the
 currently implemented API. The package version is unchanged.
 
-The remaining facade/options drafts concern configuration validation and the final
-API review. Lifecycle and snapshot contracts below are implemented.
+The contracts below are used by runtime code. The final export review and
+removal of transitional API remain stage 5.
 
 ## Contract ownership
 
@@ -17,14 +18,18 @@ API review. Lifecycle and snapshot contracts below are implemented.
 | [game/contracts.ts](../src/game/contracts.ts) | Fixed O/X symbols, immutable position types, implemented variant metadata, and running/terminal results. |
 | [sessions/state/types.ts](../src/sessions/state/types.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
 | [sessions/results.ts](../src/sessions/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
-| [facade/contracts/options.ts](../src/facade/contracts/options.ts) | Mode-specific configuration and built-in AI options. |
-| [facade/contracts/instance.ts](../src/facade/contracts/instance.ts) | Draft configuration constructor; reuses runtime per-mode instances. |
+| [facade/options.ts](../src/facade/options.ts) | Mode-specific configuration with options tied to registered AI engine IDs. |
+| [facade/types.ts](../src/facade/types.ts) | Runtime per-mode instances, generic constructor and static discovery. |
+| [ai/providers/types.ts](../src/ai/providers/types.ts) | Provider metadata, normalized option validation, private factories and cancellable strategies. |
+| [facade/catalog/types.ts](../src/facade/catalog/types.ts) | Read-only capability discovery inputs and outputs. |
+| [strategies/strategies.types.ts](../src/strategies/strategies.types.ts) | Public simulation rules and internal variant strategy contract. |
 
 The session snapshot types are now used by runtime sessions and exported from
 the package root, together with `EngineError`. Consumers must not import source
-paths. Only the facade/options contracts remain internal review scaffolding.
-Later stages will adopt them in their owning layers and consolidate the existing
-types; they will not introduce a second permanent public API. Custom providers and capability discovery belong to stage 4.
+paths. Internal `facade/contracts` files now re-export the adopted runtime
+contracts, with no separate option definitions. Transitional direct-session and
+low-level exports remain subject to the final API review. See the
+[provider guide](ai-providers.md) for custom engines and capability discovery.
 
 Only `classic-3x3` is accepted. Future 9x9/Gomoku identifiers are not added to
 the type union or variant registry. The random engine does not accept a
@@ -35,8 +40,8 @@ difficulty; alpha-beta accepts `normal` or `hard` and remains the default.
 These lifecycle flows are implemented. `render` is supplied by the application.
 Subscribe before starting, perform an initial render explicitly, and dispose
 the instance when permanently removing the view.
-The compiled [usage scenarios](../src/tests/contracts/examples.ts) retain an
-injected constructor with the stricter proposed configuration types. The runtime
+The compiled [usage scenarios](../src/tests/contracts/examples.ts) use an
+injected constructor with the same runtime configuration types. The runtime
 facade is also exercised by the session tests and installed package consumers.
 
 ### Local PvP
@@ -157,7 +162,7 @@ Invalid constructor options and application listener exceptions still throw.
 | Method | Return type | Possible refusal reasons |
 | --- | --- | --- |
 | `start` | `Promise<StartResult>` | `busy`, `session_error`, `disposed` |
-| `playMove` | `Promise<PlayMoveResult>` | `not_started`, `paused`, `game_finished`, `busy`, `invalid_index`, `already_selected`, `session_error`, `disposed` |
+| `playMove` | `Promise<PlayMoveResult>` | `not_started`, `paused`, `game_finished`, `busy`, `invalid_index`, `already_selected`, `illegal_move`, `session_error`, `disposed` |
 | `step` | `Promise<StepResult>` | `game_finished`, `busy`, `session_error`, `disposed` |
 | `run` | `Promise<RunResult>` | `busy`, `session_error`, `disposed` |
 | `restart` | `Promise<RestartResult>` | `disposed` |
@@ -190,6 +195,6 @@ Contract tests run through both `yarn ts:check` and Vitest. Type checking also
 verifies negative consumer examples marked with `@ts-expect-error`; Vitest
 alone does not validate those compiler diagnostics.
 
-Lifecycle actions are implemented in stage 3; providers follow in stage 4, and
-final package migration in stage 5. The final review also removes remaining temporary
+Lifecycle actions are implemented in stage 3 and providers in stage 4; final
+package migration remains stage 5. The final review also removes remaining temporary
 “Internal v2” annotations and duplicate draft types after their runtime adoption.

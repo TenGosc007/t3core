@@ -37,7 +37,7 @@ export { GameVariant } from "@/game/types/Game.types";
 export { BackToMoveStatus } from "@/game/types/Game.types";
 
 /**
- * Result status of a player move: `success`, `already_selected`, `game_not_running`, `invalid_index`.
+ * Result status of a player move, including index, occupancy and variant-rule refusals.
  */
 export { PlayerMoveStatus } from "@/game/types/Game.types";
 
@@ -194,3 +194,10 @@ export type {
   SnapshotFor,
 } from "@/sessions/state/types";
 export type { EngineError } from "@/sessions/results";
+
+/** Provider extension contracts; Worker/WASM loading remains provider-owned. */
+export type { AIProvider, AIStrategy, AIInput, AIRequest, AIEngineMetadata } from "@/ai/providers/types";
+export { AIProviderError } from "@/ai/providers/AIProviderError";
+export type { GameCapabilities, CapabilitiesOptions } from "@/facade/catalog/types";
+export type { VariantDescriptor, VariantId } from "@/game/contracts";
+export type { GameRules } from "@/strategies/strategies.types";

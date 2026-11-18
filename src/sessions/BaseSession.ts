@@ -24,11 +24,12 @@ import type { Game } from "@/game/Game";
 import { EventEmitter } from "eventemitter3";
 
 import { MoveStrategyError } from "@/ai";
+import { AIProviderError } from "@/ai/providers/AIProviderError";
+import { disposeStrategies } from "@/ai/providers/disposeStrategies";
 
 import { SessionOperation as Operation } from "./operations/SessionOperation";
 import { getUndoTarget } from "./state/getUndoTarget";
 import { SessionStore } from "./state/SessionStore";
-import { isLegalMove } from "./utils";
 
 export type { SessionOperation } from "./operations/SessionOperation";
 
@@ -42,7 +43,11 @@ export abstract class BaseSession {
   private _latestOperation: SessionOperation | null = null;
   private readonly _store: SessionStore;
 
-  constructor(game: Game, private readonly _identity: SessionIdentity) {
+  constructor(
+    game: Game,
+    private readonly _identity: SessionIdentity,
+    private readonly _ownedStrategies: readonly MoveStrategy[] = [],
+  ) {
     this._game = game;
     this._store = new SessionStore(game, _identity);
   }
@@ -70,8 +75,8 @@ export abstract class BaseSession {
   /** @deprecated Transitional API. Use restart() to reset and start atomically. */
   reset(): void {
     if (this._disposed) return;
-    this._invalidateOperations();
-    const generation = this._generation;
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return;
     try {
       this._game.reset();
     } finally {
@@ -83,7 +88,8 @@ export abstract class BaseSession {
 
   async restart(): Promise<RestartResult> {
     if (this._disposed) return { status: "rejected", reason: "disposed" };
-    this._invalidateOperations();
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
     const operation = this._beginOperation();
     try {
       this._game.reset();
@@ -106,7 +112,8 @@ export abstract class BaseSession {
     if (this._busyOperation === null && inactive) {
       return { status: "success", value: undefined };
     }
-    this._invalidateOperations();
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
     const operation = this._beginOperation();
     try {
       return this._complete(operation, "paused");
@@ -120,7 +127,8 @@ export abstract class BaseSession {
     const target = getUndoTarget(this._game, this._identity);
     if (target === null) return { status: "rejected", reason: "no_history" };
     const paused = this.snapshot.phase === "paused";
-    this._invalidateOperations();
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
     const operation = this._beginOperation();
     try {
       this._game.backToMove(target);
@@ -135,12 +143,20 @@ export abstract class BaseSession {
     if (this._disposed) return;
     this._disposed = true;
     this._invalidateOperations();
+    let failure: { cause: unknown } | undefined;
     try {
       this._store.publish("disposed", this.snapshot.error);
-    } finally {
-      this._store.clear();
-      this._emitter.removeAllListeners();
+    } catch (cause) {
+      failure = { cause };
     }
+    this._store.clear();
+    this._emitter.removeAllListeners();
+    try {
+      disposeStrategies(this._ownedStrategies);
+    } catch (cause) {
+      failure ??= { cause };
+    }
+    if (failure) throw failure.cause;
   }
 
   on<K extends GameSessionEventType>(
@@ -217,11 +233,18 @@ export abstract class BaseSession {
     return operation;
   }
 
-  protected _invalidateOperations(): void {
-    ++this._generation;
-    this._latestOperation?.cancel();
+  protected _invalidateOperations(): number {
+    const generation = ++this._generation;
+    const previous = this._latestOperation;
     this._latestOperation = null;
     this._busyOperation = null;
+    // Abort listeners run synchronously and may initiate newer work.
+    previous?.cancel();
+    return generation;
+  }
+
+  private _canBegin(generation: number): boolean {
+    return !this._disposed && this._generation === generation && this._latestOperation === null;
   }
 
   protected _isCurrent(operation: SessionOperation): boolean {
@@ -265,18 +288,21 @@ export abstract class BaseSession {
     aiSymbol: PlayerSymbol,
     opponentSymbol: PlayerSymbol,
   ): Promise<ActionSuccess<number> | ActionAborted | ActionError> {
+    const signal = operation.beginRequest();
     try {
       const selected = await operation.waitFor(strategy.calculateMove(this._game.board, {
         aiSymbol, opponentSymbol, gameStatus: this._game.gameStatus,
-      }));
+      }, { signal }));
+      operation.finishRequest(signal);
       if (!this._isCurrent(operation) || selected.status === "aborted") {
         return { status: "aborted" };
       }
-      if (!isLegalMove(selected.value, this._game.board)) {
+      if (!this._game.isLegalMove(selected.value)) {
         throw new MoveStrategyError("illegal_move", "Strategy returned an illegal index: " + selected.value);
       }
       return selected;
     } catch (error) {
+      operation.finishRequest(signal);
       if (!this._isCurrent(operation)) return { status: "aborted" };
       return this._failAI(operation, error);
     }
@@ -285,9 +311,10 @@ export abstract class BaseSession {
   /** Callback errors thrown during publication escape this strategy-error handler. */
   private _failAI(operation: SessionOperation, cause: unknown): ActionError | ActionAborted {
     const error = Object.freeze({
-      code: cause instanceof MoveStrategyError && cause.code === "illegal_move"
-        ? "illegal_ai_move" as const
-        : "ai_failed" as const,
+      code: cause instanceof AIProviderError ? cause.code
+        : cause instanceof MoveStrategyError && cause.code === "illegal_move"
+          ? "illegal_ai_move" as const
+          : "ai_failed" as const,
       message: cause instanceof Error ? cause.message : "AI strategy failed.",
     });
     this._release(operation);

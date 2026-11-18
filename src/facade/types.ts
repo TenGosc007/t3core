@@ -1,6 +1,7 @@
-import type { AIDifficulty } from "@/ai/difficulty";
+import type { CapabilitiesOptions, GameCapabilities } from "./catalog/types";
+import type { PvpOptions, SinglePlayerOptions, AivsAiOptions } from "./options";
+import type { AIProvider } from "@/ai/providers/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
-import type { GameVariant } from "@/game/types/Game.types";
 import type { GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 import type { SessionMode, SnapshotFor } from "@/sessions/state/types";
@@ -16,57 +17,7 @@ import type {
   StartResult,
 } from "@/sessions/types";
 
-/** AI engine configuration shared by all modes that involve AI. */
-export type AIConfig = {
-  /**
-   * AI engine. Today:
-   * - `'alphabeta'` — Alfa-Beta with difficulty levels (default)
-   * - `'random'` — random legal move, no difficulty
-   * Future: `'mcts'`, `'wasm'`.
-   */
-  engine?: "alphabeta" | "random";
-
-  /** Difficulty level (only for `engine: 'alphabeta'`). Ignored by `random`. */
-  difficulty?: AIDifficulty;
-
-  /** Optional RNG seed for reproducibility (tests, benchmarks). */
-  seed?: number;
-};
-
-/** Base options for every mode. Symbols are fixed (`['O','X']`, 'O' starts). */
-type BaseOptions = {
-  /** Game variant. Today only `'classic-3x3'` (default). Future: `'5x5'`, etc. */
-  variant?: GameVariant;
-};
-
-/** PvP options. */
-export type PvpOptions = BaseOptions & {
-  mode: "pvp";
-};
-
-/** Single Player (human vs AI) options. */
-export type SinglePlayerOptions = BaseOptions & {
-  mode: "singleplayer";
-
-  /**
-   * Symbol of the human player. `'O'` = human starts (default), `'X'` = AI
-   * starts. The symbol implies turn order — no separate `startsFirst` field.
-   */
-  humanSymbol?: PlayerSymbol;
-
-  /** AI config. Default: `{ engine: 'alphabeta', difficulty: 'normal' }`. */
-  ai?: AIConfig;
-};
-
-/** AI vs AI options (benchmarks, demos). */
-export type AivsAiOptions = BaseOptions & {
-  mode: "aivsai";
-
-  /** Config for player 1 ('O', starts) and player 2 ('X'). */
-  aiPlayers: [AIConfig, AIConfig];
-};
-
-export type TicTacToeOptions = PvpOptions | SinglePlayerOptions | AivsAiOptions;
+export type { AIConfig, PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions } from "./options";
 
 /** Common read-only accessors shared by all instance interfaces. */
 type InstanceAccessors<Mode extends SessionMode> = {
@@ -121,7 +72,8 @@ export interface AivsAiInstance extends InstanceAccessors<"aivsai">, InstanceEve
 
 /** Overloaded construct signatures — the instance type depends on `mode`. */
 export interface TicTacToeConstructor {
-  new (options: PvpOptions): PvPInstance;
-  new (options: SinglePlayerOptions): SinglePlayerInstance;
-  new (options: AivsAiOptions): AivsAiInstance;
+  getCapabilities(options?: CapabilitiesOptions): GameCapabilities;
+  new <const Providers extends readonly AIProvider[] = readonly []>(options: PvpOptions<Providers>): PvPInstance;
+  new <const Providers extends readonly AIProvider[] = readonly []>(options: SinglePlayerOptions<Providers>): SinglePlayerInstance;
+  new <const Providers extends readonly AIProvider[] = readonly []>(options: AivsAiOptions<Providers>): AivsAiInstance;
 }

@@ -12,7 +12,7 @@ export class AIGame extends BaseSession {
   private readonly _strategies: readonly [MoveStrategy, MoveStrategy];
 
   constructor(options: { game: Game; strategies: [MoveStrategy, MoveStrategy] }) {
-    super(options.game, { mode: "aivsai", humanSymbol: null });
+    super(options.game, { mode: "aivsai", humanSymbol: null }, options.strategies);
     this._strategies = options.strategies;
   }
 

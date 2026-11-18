@@ -25,7 +25,7 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
     const humanSymbol = parsePlayerSymbol(options.humanSymbol);
     const aiSymbol = parsePlayerSymbol(options.aiSymbol);
     if (humanSymbol === aiSymbol) throw new RangeError("Players must use different symbols.");
-    super(options.game, { mode: "singleplayer", humanSymbol });
+    super(options.game, { mode: "singleplayer", humanSymbol }, [options.strategy]);
     this._strategy = options.strategy;
     this._humanSymbol = humanSymbol;
     this._aiSymbol = aiSymbol;

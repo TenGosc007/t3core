@@ -1,5 +1,12 @@
 import core = require("t3core");
 
+const capabilities: core.GameCapabilities = core.TicTacToe.getCapabilities();
+if (capabilities.defaultAIEngine !== "alphabeta" || !Object.isFrozen(capabilities)) {
+  throw new Error("CommonJS capability discovery does not work");
+}
+const timeout = new core.AIProviderError("ai_timeout", "Search budget exhausted");
+if (timeout.code !== "ai_timeout") throw new Error("CommonJS provider errors are unavailable");
+
 const game: core.IGame = new core.Game();
 if (game.savePlayerMove(0) !== core.PlayerMoveStatus.SUCCESS || game.board[0] !== "O") {
   throw new Error("CommonJS require does not expose a working Game");

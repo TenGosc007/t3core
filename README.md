@@ -61,7 +61,8 @@ a `busy` refusal.
 `undo()` removes one move in PvP/AI-vs-AI, or the last human move together
 with its AI reply in single-player. It cancels a pending reply first.
 An AI opening alone cannot be undone. Undo preserves pause and never starts AI.
-`dispose()` closes the instance permanently and removes its subscriptions.
+`dispose()` closes the instance permanently, removes its subscriptions and
+releases its AI strategies' resources.
 
 ```typescript
 const result = await game.playMove(4);
@@ -242,6 +243,7 @@ must not dispose an instance that its next setup will use.
 | Property/Method | Description |
 | --------------- | ----------- |
 | `constructor(options)` | Select `pvp`, `singleplayer`, or `aivsai`; the returned instance type depends on the mode |
+| `TicTacToe.getCapabilities(options?)` | Read frozen variant/mode/engine metadata, optionally including `aiProviders`, without creating AI strategies |
 | `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only session state; `movesCount` counts occupied fields in the current position |
 | `snapshot` / `getSnapshot()` | Cached, deeply frozen `SnapshotFor<Mode>`; changes after a move, reset or phase change. `getSnapshot` is bound and stable |
 | `subscribe(callback)` | Subscribe to snapshot changes in any mode. The callback receives no arguments; returns an idempotent unsubscribe function. Safe to pass directly to `useSyncExternalStore` |
@@ -263,7 +265,9 @@ must not dispose an instance that its next setup will use.
 | `gameStatus` | Get current game status |
 | `board` | Get current board state as `readonly BoardField[]` |
 | `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
-| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` (`success`, `already_selected`, `game_not_running`, `invalid_index`) |
+| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` (`success`, `already_selected`, `game_not_running`, `invalid_index`, `illegal_move`) |
+| `validateMove(index)` / `isLegalMove(index)` | Check the current player's move through the same validation used by `savePlayerMove`, without mutation |
+| `getLegalMoves()` / `variant` / `rules` | Read legal indices, variant metadata and stateless simulation rules |
 | `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
 | `movesCount` | Number of recorded moves, including retained future history after `backToMove` |
 | `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` (`success`, `invalid_history_index`) |
@@ -327,6 +331,9 @@ export type { PvPInstance, SinglePlayerInstance, AivsAiInstance, TicTacToeConstr
 export type { GameSessionEventType, GameSessionEventPayload } from 't3core';
 export type { ActionResult, PlayMoveResult, StartResult, RunResult, StepResult, RestartResult, StopResult, UndoResult } from 't3core';
 export type { SessionSnapshot, SnapshotFor, SessionMode, EngineError } from 't3core';
+export type { AIProvider, AIStrategy, AIInput, AIRequest, AIEngineMetadata } from 't3core';
+export type { GameCapabilities, CapabilitiesOptions, VariantDescriptor, VariantId, GameRules } from 't3core';
+export { AIProviderError } from 't3core';
 ```
 
 ## Single Player (AI)
@@ -369,7 +376,22 @@ console.log(result);
 
 All sessions emit `move`, `turn`, and `finished`; AI sessions also emit `ai-thinking`. Use `restart()` for a new game, `stop()` for pause and `undo()` to restore a move/decision. Concurrent operations return `rejected` with reason `busy`; invalidated operations return `aborted`.
 
-For custom AI, implement `MoveStrategy.calculateMove(board, context): Promise<number>` and pass it to `SinglePlayerGame` or pass two strategies to `AIGame`, together with a `Game` instance. Strategies must return an empty cell's index. Invalid AI moves and strategy failures return an `error` action and publish error state; a strategy reporting `no_legal_moves` during a running game is an error, not a completed game. Direct strategy calls still reject on failure.
+For custom AI, pass an `AIProvider<'engine-id', Options>` through `aiProviders`
+and select it with `ai: { engine: 'engine-id', ...options }` (or in either
+`aiPlayers` entry). Options stay tied to the provider's ID. Use
+`TicTacToe.getCapabilities({ variant: 'classic-3x3', aiProviders })` to discover
+compatible engines without creating strategies. See the [provider guide](docs/ai-providers.md)
+for a complete example, read-only simulation rules, cancellation and cleanup.
+
+The built-in `alphabeta` accepts `difficulty: 'normal' | 'hard'` and an optional
+finite numeric `seed`. `random` accepts only `seed`, with no `difficulty` field.
+Unknown configuration fields, incompatible engines and invalid options throw
+during construction, before any move or AI calculation.
+
+Direct session constructors still accept `MoveStrategy` during the staged
+migration. Invalid AI moves and calculation failures return an `error` action
+and publish error state; `no_legal_moves` during a running game is also an error.
+Direct strategy calls still reject on failure.
 
 ### `getBestMove` — stateless helper
 

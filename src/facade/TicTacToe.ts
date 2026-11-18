@@ -1,29 +1,13 @@
+import type { CapabilitiesOptions, GameCapabilities } from "./catalog/types";
 import type { TicTacToeConstructor, TicTacToeOptions } from "./types";
-import type { MoveStrategy } from "@/ai";
-import type { PlayerSymbol } from "@/game/types/Symbol.types";
+import type { AIProvider } from "@/ai/providers/types";
+import type { PvPGame } from "@/sessions/PvPGame";
+import type { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
-import { AlphaBetaStrategy } from "@/ai";
-import { RandomStrategy } from "@/ai";
-import { AIDifficulty } from "@/ai";
-import { DEFAULT_GAME_SYMBOLS } from "@/constants/gameConstants";
-import { Game } from "@/game/Game";
 import { AIGame } from "@/sessions/AIGame";
-import { PvPGame } from "@/sessions/PvPGame";
-import { SinglePlayerGame } from "@/sessions/SinglePlayerGame";
 
-function buildStrategy(config: {
-  engine?: "alphabeta" | "random";
-  difficulty?: AIDifficulty;
-  seed?: number;
-}): MoveStrategy {
-  const engine = config.engine ?? "alphabeta";
-  if (engine === "random") return new RandomStrategy({ seed: config.seed });
-
-  return new AlphaBetaStrategy({
-    difficulty: config.difficulty ?? AIDifficulty.NORMAL,
-    seed: config.seed,
-  });
-}
+import { buildSession } from "./buildSession";
+import { ProviderCatalog } from "./catalog/ProviderCatalog";
 
 /**
  * Implementation of the `TicTacToe` facade. The exported `TicTacToe` constant
@@ -35,47 +19,25 @@ class TicTacToeImpl {
   private readonly _session: PvPGame | SinglePlayerGame | AIGame;
   private readonly _mode: "pvp" | "singleplayer" | "aivsai";
 
-  constructor(options: TicTacToeOptions) {
-    const game = new Game({ variant: options.variant });
-    const symbols = DEFAULT_GAME_SYMBOLS;
+  constructor(options: TicTacToeOptions<readonly AIProvider[]>) {
+    this._session = buildSession(options);
+    this._mode = options.mode;
+  }
 
-    switch (options.mode) {
-      case "pvp": {
-        this._session = new PvPGame({ game });
-        this._mode = "pvp";
-        break;
-      }
-      case "singleplayer": {
-        const humanSymbol: PlayerSymbol = options.humanSymbol ?? symbols[0];
-        const aiSymbol = humanSymbol === symbols[0] ? symbols[1] : symbols[0];
-        const strategy = buildStrategy(options.ai ?? {});
-        this._session = new SinglePlayerGame({
-          game,
-          strategy,
-          humanSymbol,
-          aiSymbol,
-        });
-        this._mode = "singleplayer";
-        break;
-      }
-      case "aivsai": {
-        const strategies: [MoveStrategy, MoveStrategy] = [
-          buildStrategy(options.aiPlayers[0]),
-          buildStrategy(options.aiPlayers[1]),
-        ];
-        this._session = new AIGame({ game, strategies });
-        this._mode = "aivsai";
-        break;
-      }
-      default: {
-        // Exhaustiveness check — if a new mode is added without handling it
-        // here, TypeScript flags this branch as non-never.
-        const _exhaustive: never = options;
-        throw new Error(
-          `Unsupported mode: ${String((_exhaustive as { mode: string }).mode)}`,
-        );
-      }
+  static getCapabilities(options: CapabilitiesOptions = {}): GameCapabilities {
+    if (typeof options !== "object" || options === null || Array.isArray(options)) {
+      throw new TypeError("Capabilities options must be an object.");
     }
+    for (const key of Object.keys(options)) {
+      if (key !== "variant" && key !== "aiProviders") throw new TypeError("Unsupported capabilities option: " + key);
+    }
+    if (options.variant !== undefined && typeof options.variant !== "string") {
+      throw new TypeError("Variant must be a string identifier.");
+    }
+    if (options.aiProviders !== undefined && !Array.isArray(options.aiProviders)) {
+      throw new TypeError("aiProviders must be an array.");
+    }
+    return new ProviderCatalog(options.variant, options.aiProviders).capabilities();
   }
 
   get board() {

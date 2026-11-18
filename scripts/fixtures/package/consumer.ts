@@ -1,4 +1,8 @@
 import type {
+  AIProvider,
+  AIRequest,
+  GameCapabilities,
+  GameRules,
   AivsAiInstance,
   GameEventPayload,
   IGame,
@@ -21,7 +25,52 @@ import {
   TicTacToe,
 } from "t3core";
 
+let providerFactories = 0;
+let providerDisposals = 0;
+let observedSignal: AbortSignal | undefined;
+const choiceProvider: AIProvider<"choice", { prefer: "first" | "last" }> = {
+  id: "choice", version: "1.0.0", supportedVariants: ["classic-3x3"],
+  difficulties: [], defaultDifficulty: null,
+  validateOptions(options) {
+    if (typeof options !== "object" || options === null || !("prefer" in options) ||
+        (options.prefer !== "first" && options.prefer !== "last")) {
+      throw new TypeError("Expected prefer: first or last");
+    }
+    return { prefer: options.prefer };
+  },
+  create({ prefer }) {
+    providerFactories++;
+    return {
+      async calculateMove(input, request: AIRequest) {
+        observedSignal = request.signal;
+        const moves = input.rules.getLegalMoves(input.board, input.aiSymbol);
+        const index = prefer === "first" ? moves[0] : moves[moves.length - 1];
+        if (index === undefined) throw new Error("No legal moves");
+        return index;
+      },
+      dispose() { providerDisposals++; },
+    };
+  },
+};
+
 async function verifyConsumer() {
+  const capabilities: GameCapabilities = TicTacToe.getCapabilities({ aiProviders: [choiceProvider] });
+  if (providerFactories !== 0 || !Object.isFrozen(capabilities.aiEngines) ||
+      !capabilities.aiEngines.some((engine) => engine.id === "choice")) {
+    throw new Error("Capabilities must expose metadata without creating an engine");
+  }
+  const custom = new TicTacToe({
+    mode: "singleplayer", humanSymbol: "X", aiProviders: [choiceProvider],
+    ai: { engine: "choice", prefer: "last" },
+  });
+  if ((await custom.start()).status !== "success" || custom.board[8] !== "O" ||
+      observedSignal === undefined || observedSignal.aborted) {
+    throw new Error("Typed custom provider or rule input does not work");
+  }
+  custom.dispose();
+  custom.dispose();
+  if (providerDisposals !== 1) throw new Error("Provider resources must be disposed once");
+
   const game: IGame = new Game();
   let observed: GameEventPayload | undefined;
   game.on(GameEvent.STATE_CHANGE, (snapshot) => { observed = snapshot; });
@@ -102,6 +151,15 @@ async function verifyConsumer() {
 
 // These calls must be rejected during type checking, without executing them.
 export function checkInvalidCalls() {
+  const rules: GameRules = new Game().rules;
+  // @ts-expect-error Simulation rules are read-only, including their operations.
+  rules.getLegalMoves = () => [];
+  // @ts-expect-error Provider options are tied to the registered engine identifier.
+  new TicTacToe({ mode: "singleplayer", aiProviders: [choiceProvider], ai: { engine: "choice", prefer: 12 } });
+  // @ts-expect-error Custom engines must be registered for this instance.
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "choice", prefer: "last" } });
+  // @ts-expect-error The random engine has no difficulty setting.
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: "hard" } });
   const pvp = new TicTacToe({ mode: "pvp" });
   const state = pvp.getSnapshot();
   // @ts-expect-error Snapshots and their nested arrays are immutable.

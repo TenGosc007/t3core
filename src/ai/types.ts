@@ -47,7 +47,13 @@ export type MoveContext = {
  * - The strategy MUST NOT mutate `board` (the snapshot is readonly).
  */
 export interface MoveStrategy {
-  calculateMove(board: BoardSnapshot, context: MoveContext): Promise<number>;
+  calculateMove(
+    board: BoardSnapshot,
+    context: MoveContext,
+    request?: { readonly signal: AbortSignal },
+  ): Promise<number>;
+  /** Ownership transfers to the direct session; release resources on disposal. */
+  dispose?(): void;
 }
 
 /**

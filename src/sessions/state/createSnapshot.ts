@@ -4,19 +4,11 @@ import type {
   BoardSnapshot,
   GameStatus,
   PlayerSymbol,
-  VariantDescriptor,
 } from "@/game/contracts";
 import type { Game } from "@/game/Game";
 
 import { getUndoTarget } from "./getUndoTarget";
 
-const CLASSIC_VARIANT: VariantDescriptor = Object.freeze({
-  id: "classic-3x3",
-  rows: 3,
-  columns: 3,
-  winLength: 3,
-  lineRule: "at-least",
-});
 const NO_MOVES: readonly [] = Object.freeze([]);
 const RUNNING = Object.freeze({ status: "running" as const });
 
@@ -26,7 +18,7 @@ export function parsePlayerSymbol(value: string): PlayerSymbol {
 }
 
 function isSessionBoard(board: readonly (number | string)[]): board is BoardSnapshot {
-  return board.length === 9 && board.every(
+  return board.every(
     (field) => typeof field === "number" || field === "O" || field === "X",
   );
 }
@@ -55,16 +47,16 @@ export function createSnapshot(
   previous?: SessionSnapshot,
 ): SessionSnapshot {
   const board = game.board;
-  if (!isSessionBoard(board)) throw new RangeError("Sessions support only classic 3x3 with O/X symbols.");
+  if (!isSessionBoard(board)) throw new RangeError("Sessions require O/X symbols.");
   const currentPlayer = parsePlayerSymbol(game.currentPlayer);
   const gameStatus = readStatus(game, previous);
   const movesCount = board.filter((field) => typeof field === "string").length;
   const legalMoves = previous?.board === board
     ? previous.legalMoves
-    : Object.freeze(board.flatMap((field, index) => typeof field === "number" ? [index] : []));
+    : game.getLegalMoves();
   const common = {
     board,
-    variant: CLASSIC_VARIANT,
+    variant: game.variant,
     currentPlayer,
     movesCount,
     legalMoves,

@@ -2,7 +2,8 @@
 
 This branch contains staged breaking changes intended for v2. It has not changed
 the package version or published a release. Stages 2 and 3 change session
-observation, lifecycle and action results.
+observation, lifecycle and action results. Stage 4 adds shared rule validation,
+provider configuration, capability discovery and cooperative cancellation.
 
 ## Session snapshots
 
@@ -109,9 +110,49 @@ restart or a valid undo clears the failure.
 
 Cancellation settles an old action as `aborted` without waiting for an unresolved
 strategy promise. Late success, illegal indices and rejections are ignored;
-they cannot change a newer game or release its lock. This is logical cancellation:
-the current strategy contract still has no AbortSignal or resource cleanup hook.
-It cannot preempt synchronous JavaScript or terminate a custom Worker.
-Provider signals and resource ownership arrive in stage 4.
+they cannot change a newer game or release its lock. Stage 4 also aborts the
+active request's `AbortSignal`. Cancellation cannot preempt synchronous
+JavaScript; providers must stop their own background work when signalled.
+
+## Custom AI and configuration
+
+Use `AIProvider<'engine-id', Options>` through `aiProviders`, then select the
+provider with `ai.engine` or either `aiPlayers` configuration. Each provider
+supplies metadata, `validateOptions(unknown): Options`, and a synchronous
+`create(options): AIStrategy`. See the [provider guide](ai-providers.md) for
+a complete example. Keep each engine ID as a literal generic argument to retain
+engine-specific option inference. Broad `AIProvider[]` annotations erase that
+relationship; prefer inferred provider tuples.
+
+The target strategy receives `(input, { signal })`, with frozen board, O/X
+symbols, status, variant metadata and stateless rules for simulation. It must
+return a legal index and implement `dispose()`. Initialize expensive resources
+lazily during calculation. Resources belong privately to each player/session;
+disposal releases them once, including when a subscriber throws. Stop/restart/undo
+preserve resources and RNG sequence. A new request may start immediately after
+cancellation, so providers must distinguish pending background requests.
+
+Direct `MoveStrategy` constructors remain transitional: implementations with two
+arguments still work; an optional third `{ signal }` argument enables cooperative
+cancellation and optional `dispose()` transfers cleanup to the session.
+
+`TicTacToe.getCapabilities({ variant, aiProviders })` returns frozen compatible
+engine and mode metadata without validating player options, creating engines or
+loading resources. Only `classic-3x3` is public. Larger variants stay deferred.
+
+Configuration now rejects unknown top-level and built-in AI fields, fields
+belonging to another mode, unknown/duplicate engine IDs, incompatible variants,
+unsupported difficulties and non-finite seeds. Remove `difficulty` entirely from
+`engine: 'random'` configurations, even when its value was `undefined`.
+Alpha-beta still defaults to `normal`; normal/hard behavior and seeds are
+preserved. Both AI player configurations are validated before factories run.
+Invalid options and synchronous factory failures throw from construction.
+
+Game now exposes `variant`, `rules`, `validateMove`, `isLegalMove` and
+`getLegalMoves`. Human and AI answers pass through the same legality gate.
+`illegal_move` is an additional human refusal / `PlayerMoveStatus`; AI rule
+violations use `illegal_ai_move`. Providers can throw `AIProviderError` with
+`ai_initialization_failed` or `ai_timeout`; sessions expose these codes as
+serializable error actions. Other calculation failures remain `ai_failed`.
 
 Worker/WASM execution and framework adapters remain later work.
