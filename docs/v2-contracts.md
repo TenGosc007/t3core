@@ -1,0 +1,193 @@
+# V2 contracts: stage 1 review
+
+This document describes the proposed `2.0.0` API, not the currently exported
+`TicTacToe` implementation. Stage 1 adds internal, type-checked contracts and
+usage scenarios. It does not implement the new session lifecycle or change
+package exports, runtime behavior, or the package version.
+
+Use the [README](../README.md) for the working 1.x API. In particular,
+`getSnapshot`, `restart`, `stop`, `undo`, and `dispose` in the examples below
+are future methods; they cannot yet be called on the exported constructor.
+
+## Contract ownership
+
+| File | Responsibility |
+| --- | --- |
+| [game/contracts.ts](../src/game/contracts.ts) | Fixed O/X symbols, immutable position types, implemented variant metadata, and running/terminal results. |
+| [sessions/contracts/snapshot.ts](../src/sessions/contracts/snapshot.ts) | Mode-aware session snapshots and valid phase/result/input combinations. |
+| [sessions/contracts/results.ts](../src/sessions/contracts/results.ts) | Action results, method-specific refusals, and serializable AI errors. |
+| [facade/contracts/options.ts](../src/facade/contracts/options.ts) | Mode-specific configuration and built-in AI options. |
+| [facade/contracts/instance.ts](../src/facade/contracts/instance.ts) | Proposed constructor and per-mode instance interfaces. |
+
+These modules are internal review scaffolding. Consumers must not import their
+source paths. Later stages will adopt these contracts in their owning layers
+and consolidate the existing types; they will not introduce a second permanent
+public API. Custom providers and capability discovery belong to stage 4.
+
+Only `classic-3x3` is accepted. Future 9x9/Gomoku identifiers are not added to
+the type union or variant registry. The random engine does not accept a
+difficulty; alpha-beta accepts `normal` or `hard` and remains the default.
+
+## Future JavaScript usage
+
+These snippets assume the future `TicTacToe` implementation is available.
+`render` is supplied by the application. Subscribe before starting, perform an
+initial render explicitly, and release the instance when removing the view.
+The compiled [usage scenarios](../src/tests/contracts/examples.ts) verify the
+same flows against an injected proposed constructor, without pretending that
+the existing implementation already supports them.
+
+### Local PvP
+
+```js
+const game = new TicTacToe({ mode: 'pvp', variant: 'classic-3x3' });
+const unsubscribe = game.subscribe(() => render(game.getSnapshot()));
+render(game.getSnapshot());
+
+const started = await game.start();
+if (started.status === 'success') {
+  const moved = await game.playMove(4); // O; the next accepted move belongs to X.
+  handleResult(moved);
+} else {
+  handleResult(started);
+}
+
+// The new-game button calls await game.restart().
+// On view removal:
+unsubscribe();
+game.dispose();
+```
+
+### Human vs AI
+
+```js
+const game = new TicTacToe({
+  mode: 'singleplayer',
+  variant: 'classic-3x3',
+  humanSymbol: 'O',
+  ai: { engine: 'alphabeta', difficulty: 'hard', seed: 123 },
+});
+
+const unsubscribe = game.subscribe(() => {
+  const state = game.getSnapshot();
+  render(state); // Read phase for the thinking indicator and canPlay for input.
+});
+render(game.getSnapshot());
+
+const started = await game.start();
+if (started.status === 'success') {
+  const state = game.getSnapshot();
+  const index = state.legalMoves[0];
+  if (state.canPlay && index !== undefined) {
+    handleResult(await game.playMove(index)); // Includes the AI reply.
+  }
+} else {
+  handleResult(started);
+}
+
+// Setting humanSymbol to X makes start() perform the AI opening first.
+// restart() also performs that opening without another start() call.
+unsubscribe();
+game.dispose();
+```
+
+Snapshots show the human move with `ai-thinking`, then the AI reply with
+`human-turn` or `finished`. No AI reply occurs after a terminal human move.
+The UI must not maintain its own authoritative copy of the thinking state.
+
+### AI vs AI
+
+```js
+const game = new TicTacToe({
+  mode: 'aivsai',
+  variant: 'classic-3x3',
+  aiPlayers: [
+    { engine: 'alphabeta', difficulty: 'hard', seed: 1 }, // O
+    { engine: 'random', seed: 2 },                        // X
+  ],
+});
+const unsubscribe = game.subscribe(() => render(game.getSnapshot()));
+render(game.getSnapshot());
+
+const stepped = await game.step();
+if (stepped.status === 'success') {
+  handleResult(await game.run()); // Finish the remaining game.
+} else {
+  handleResult(stepped);
+}
+
+// restart() returns to ai-ready; step() or run() explicitly resumes play.
+unsubscribe();
+game.dispose();
+```
+
+There is no `start` or `playMove` on an AI-vs-AI instance. `step` and `run`
+start/resume it themselves. `ai-ready` means no calculation is active;
+`ai-thinking` identifies an active AI calculation. Human input stays disabled.
+
+### Handle action outcomes
+
+```js
+function handleResult(result) {
+  switch (result.status) {
+    case 'success':
+      // run() supplies a terminal game result in value; other actions use undefined.
+      break;
+    case 'rejected':
+      console.log('Action refused:', result.reason);
+      break;
+    case 'aborted':
+      // An old operation was invalidated; render the current snapshot.
+      break;
+    case 'error':
+      console.error(result.error.code, result.error.message);
+      break;
+  }
+}
+```
+
+Ordinary refusals do not put the session in its error phase. An active AI
+failure does; a stale failure after cancellation must not overwrite a new game.
+Invalid constructor options and application listener exceptions still throw.
+
+## Method outcomes
+
+| Method | Return type | Possible refusal reasons |
+| --- | --- | --- |
+| `start` | `Promise<StartResult>` | `busy`, `session_error`, `disposed` |
+| `playMove` | `Promise<PlayMoveResult>` | `not_started`, `paused`, `game_finished`, `busy`, `invalid_index`, `already_selected`, `session_error`, `disposed` |
+| `step` | `Promise<StepResult>` | `game_finished`, `busy`, `session_error`, `disposed` |
+| `run` | `Promise<RunResult>` | `busy`, `session_error`, `disposed` |
+| `restart` | `Promise<RestartResult>` | `disposed` |
+| `stop` | `StopResult` | `disposed` |
+| `undo` | `UndoResult` | `no_history`, `disposed` |
+| `dispose` | `void` | None; repeated disposal is safe. |
+
+Success contains `value: undefined`, except `run`, whose value is a win or draw.
+Repeated `start` on an active or finished session is a successful no-op unless
+another incompatible operation owns the lock. Repeated `run` after completion
+returns the existing terminal outcome. Restart and undo cancel pending AI work
+instead of reporting busy. A completed stop/undo can report aborted when a
+reentrant callback invalidates it; neither operation runs AI or returns an AI error.
+
+## Snapshot guarantees and validation boundaries
+
+- Narrowing on `phase` determines input availability and the game result.
+  `finished` cannot coexist with `running` or `canPlay: true`.
+- PvP cannot enter AI phases; AI-vs-AI cannot enter `human-turn`.
+- The error phase carries an AI error and a still-running position. Disposed
+  snapshots retain the last result/error but disable play and undo.
+- Arrays, variant metadata, results and error descriptions are readonly.
+- Types cannot prove board length, numeric bounds, occupancy, turn ownership,
+  or correspondence between a board and its result. Runtime validation and
+  freezing will implement those guarantees in later stages.
+- Cached snapshot identity, bound methods, publication ordering, and independent
+  unsubscribe cleanup are runtime obligations for stage 2, not claims that
+  type declarations can enforce.
+
+Contract tests run through both `yarn ts:check` and Vitest. Type checking also
+verifies negative consumer examples marked with `@ts-expect-error`; Vitest
+alone does not validate those compiler diagnostics.
+
+After stage 1 review, stage 2 implements the observable session state. Lifecycle
+actions follow in stage 3, providers in stage 4, and package migration in stage 5.

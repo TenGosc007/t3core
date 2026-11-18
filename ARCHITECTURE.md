@@ -14,6 +14,11 @@ source paths and internal barrels are not supported package subpaths.
 An `export` inside an implementation file does not by itself make a symbol
 public to npm consumers.
 
+The [v2 contract review](docs/v2-contracts.md) describes staged internal type
+contracts under `game/contracts`, `sessions/contracts`, and `facade/contracts`.
+They are not package exports and are not yet implemented by the runtime facade.
+The module and behavior descriptions below continue to describe the working API.
+
 | Module | Responsibility | Boundary |
 | --- | --- | --- |
 | [`game`](src/game/Game.ts) | Owns board state, player turns, status, history, and synchronous state notifications. | `Game` and selected contracts are public; the `Board` implementation is internal. |
