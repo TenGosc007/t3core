@@ -290,3 +290,37 @@ test("a deferred action is aborted when restart supersedes the delivering operat
   expect(await restarted).toEqual({ status: "success", value: undefined });
   expect(session.snapshot).toMatchObject({ phase: "human-turn", movesCount: 0 });
 });
+
+test.each(["pvp move", "singleplayer move", "start", "step", "run"] as const)(
+  "a deferred %s aborts when restart runs after delivery but before the action resumes",
+  async (action) => {
+    const ai = action === "step" || action === "run";
+    const session = ai
+      ? new AIGame({ game: new Game(), strategies: [firstFree, firstFree] })
+      : action === "singleplayer move"
+        ? new SinglePlayerGame({ game: new Game(), strategy: firstFree, humanSymbol: "O", aiSymbol: "X" })
+        : new PvPGame({ game: new Game() });
+    if (!(session instanceof AIGame)) await session.start();
+
+    let nested: Promise<unknown> | undefined;
+    let restarted: ReturnType<typeof session.restart> | undefined;
+    const afterTurn = () => {
+      session.off("turn", afterTurn);
+      nested = session instanceof AIGame
+        ? action === "run" ? session.run() : session.step()
+        : action === "start" ? session.start() : session.playMove(4);
+      // Delivery releases the waiter after this callback returns. Restart
+      // between the wait helper's continuation and the deferred action's.
+      const restart = () => { restarted = session.restart(); };
+      const afterWait = () => queueMicrotask(restart);
+      // AI modes finish delivery in the caller of the async move helper.
+      queueMicrotask(session instanceof PvPGame ? afterWait : () => queueMicrotask(afterWait));
+    };
+    session.on("turn", afterTurn);
+
+    await (session instanceof AIGame ? session.step() : session.playMove(8));
+    expect(await nested).toEqual({ status: "aborted" });
+    expect(await restarted).toEqual({ status: "success", value: undefined });
+    expect(session.snapshot).toMatchObject({ phase: ai ? "ai-ready" : "human-turn", movesCount: 0 });
+  },
+);

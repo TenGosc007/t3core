@@ -16,7 +16,11 @@ export class AIGame extends BaseSession {
   }
 
   async step(): Promise<StepResult> {
-    if (this._delivering && !(await this._afterDelivery())) return { status: "aborted" };
+    if (this._delivering) {
+      const generation = this._generation;
+      await this._afterDelivery();
+      if (this._disposed || this._generation !== generation) return { status: "aborted" };
+    }
     const refusal = this._availability();
     if (refusal) return { status: "rejected", reason: refusal };
     if (this._game.gameStatus.status !== "running") return { status: "rejected", reason: "game_finished" };
@@ -30,7 +34,11 @@ export class AIGame extends BaseSession {
   }
 
   async run(): Promise<RunResult> {
-    if (this._delivering && !(await this._afterDelivery())) return { status: "aborted" };
+    if (this._delivering) {
+      const generation = this._generation;
+      await this._afterDelivery();
+      if (this._disposed || this._generation !== generation) return { status: "aborted" };
+    }
     const refusal = this._availability();
     if (refusal) return { status: "rejected", reason: refusal };
     if (this.snapshot.gameStatus.status !== "running") {
