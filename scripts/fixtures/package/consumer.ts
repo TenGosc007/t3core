@@ -133,15 +133,9 @@ export function checkInvalidCalls() {
   const createGame = (options: TicTacToeOptions) => new TicTacToe(options);
   const selected = createGame({ mode: "pvp", ai: undefined });
   if (selected.mode === "pvp") void selected.playMove(0);
+  // An explicit undefined difficulty is accepted like an omitted one.
   new TicTacToe({ mode: "singleplayer", ai: { engine: "random" } });
-  // @ts-expect-error The random engine requires the difficulty key to be absent.
   new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: undefined } });
-  new TicTacToe({ mode: "aivsai", aiPlayers: [{ difficulty: "hard" }, { engine: "random" }] });
-  // @ts-expect-error The same rule applies to either AI-vs-AI slot.
-  new TicTacToe({ mode: "aivsai", aiPlayers: [{ engine: "random", difficulty: undefined }, {}] });
-  const randomWithDifficulty = { engine: "random", difficulty: undefined } as const;
-  // @ts-expect-error Passing a variable does not hide the required difficulty key.
-  new TicTacToe({ mode: "aivsai", aiPlayers: [{}, randomWithDifficulty] });
   // Caller input may omit fields that the provider normalizes with defaults.
   type Deep = AIProvider<"deep", { depth: number }, { depth?: number }>;
   const deepDefault: AIConfig<readonly [Deep]> = { engine: "deep" };

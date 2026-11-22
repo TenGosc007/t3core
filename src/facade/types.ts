@@ -1,5 +1,5 @@
 import type { CapabilitiesOptions, GameCapabilities } from "./catalog/types";
-import type { PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions, CheckedAIOptions } from "./options";
+import type { PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions } from "./options";
 import type { AIProvider } from "@/ai/providers/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameStatus } from "@/game/types/Game.types";
@@ -192,9 +192,7 @@ export interface TicTacToeConstructor {
    * const game = new TicTacToe({ mode: "singleplayer", humanSymbol: "X" });
    * await game.start(); // AI plays O first.
    */
-  new <const Providers extends readonly AIProvider[] = readonly [], const AI = unknown>(
-    options: SinglePlayerOptions<Providers> & CheckedAIOptions<AI>,
-  ): SinglePlayerInstance;
+  new <const Providers extends readonly AIProvider[] = readonly []>(options: SinglePlayerOptions<Providers>): SinglePlayerInstance;
   /**
    * Creates an idle AI-vs-AI game. Call step() or run() to begin.
    * @param options - Two AI configurations, ordered O then X.
@@ -203,21 +201,14 @@ export interface TicTacToeConstructor {
    * const game = new TicTacToe({ mode: "aivsai", aiPlayers: [{}, { engine: "random" }] });
    * const result = await game.run();
    */
-  new <const Providers extends readonly AIProvider[] = readonly [], const O = unknown, const X = unknown>(
-    options: AivsAiOptions<Providers> & CheckedAIOptions<unknown, O, X>,
-  ): AivsAiInstance;
+  new <const Providers extends readonly AIProvider[] = readonly []>(options: AivsAiOptions<Providers>): AivsAiInstance;
   /**
    * Creates a game whose mode is known only at runtime. Literal modes match the
    * overloads above and keep their precise instance types; narrow this result by mode.
    * @param options - Any mode-specific configuration.
    * @throws Throws synchronously for invalid configuration or provider construction failure.
    */
-  new <
-    const Providers extends readonly AIProvider[] = readonly [],
-    const AI = unknown,
-    const O = unknown,
-    const X = unknown,
-  >(
-    options: TicTacToeOptions<Providers> & CheckedAIOptions<AI, O, X>,
+  new <const Providers extends readonly AIProvider[] = readonly []>(
+    options: TicTacToeOptions<Providers>,
   ): PvPInstance | SinglePlayerInstance | AivsAiInstance;
 }

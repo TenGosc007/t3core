@@ -91,20 +91,14 @@ There is no one-notification-per-move guarantee. A snapshot is committed before
 its subscribers and corresponding session events run. Session event payloads
 remain unchanged. Rejected moves and overlapping busy calls do not notify.
 
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:96e88acd136a572fd7a28d41b8d7b37f51ea7202710cb6345a1561ac27212953 -->
-
 Callbacks run synchronously and can unsubscribe, stop or restart. A nested state change
 supersedes the remaining notification delivery for the old snapshot. A move,
 step, run or start requested from a ready-state callback waits until the old
 operation has delivered its `move`/`turn` events. The deferred action then
 validates the current state and returns its own result: `success`, `rejected`,
-`error` or `aborted`. Restart, stop, undo or dispose during that wait aborts the
-deferred action. Only the owning operation releases its lock. Restart also
+`error` or `aborted`. Restart, stop, undo or dispose before the deferred action
+resumes aborts it. Only the owning operation releases its lock. Restart also
 invalidates late AI results and rejections.
-
-<!-- /coderabbit-ai-generated:v1 -->
 
 Application callback exceptions propagate without rollback. If a callback
 interrupts an AI turn before completion, the session publishes `paused` instead

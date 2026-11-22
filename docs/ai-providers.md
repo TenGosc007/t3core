@@ -85,15 +85,8 @@ JavaScript callers still receive runtime validation.
 resources. Each provider validates its own fields and defaults; it should copy
 mutable option data it retains. The catalog checks engine compatibility and
 difficulty membership first, supplying `defaultDifficulty` when omitted.
-<!-- coderabbit-ai-generated:v1 -->
-
-<!-- coderabbit-ai-generated-section:v1:3b1c4aa5344cf41f1fbac4fa32cf6ec980dcea80874385aa8ab2ff841274409e -->
-
-Omit the `difficulty` key from random engine options in typed constructor calls.
-For engines with no difficulty profiles, the catalog still removes an explicit
-`difficulty: undefined` at runtime before validation.
-
-<!-- /coderabbit-ai-generated:v1 -->
+An engine with no difficulty profiles uses `[]` and `null`; the catalog then
+removes an explicit `difficulty: undefined` before validation.
 
 When validation fills defaults, declare the caller input as a third generic so
 configurations may omit those fields while `create()` keeps the normalized type:

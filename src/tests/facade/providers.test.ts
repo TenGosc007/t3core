@@ -137,10 +137,7 @@ test("undefined fields of other modes are omitted, and an empty AI config select
 
 test("an explicit undefined difficulty is treated like an omitted one", () => {
   const custom = createProvider("choice");
-  const random = Reflect.construct(TicTacToe, [{
-    mode: "singleplayer", ai: { engine: "random", difficulty: undefined },
-  }]);
-  random.dispose();
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: undefined } }).dispose();
   const choice = { engine: "choice", prefer: "first", difficulty: undefined } as const;
   new TicTacToe({ mode: "singleplayer", aiProviders: [custom.provider], ai: choice }).dispose();
   expect(custom.validateOptions).toHaveBeenCalledWith({ prefer: "first" });

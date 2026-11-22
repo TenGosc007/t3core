@@ -168,11 +168,7 @@ export abstract class BaseSession {
   }
 
   protected async _startSession(): Promise<StartResult> {
-    if (this._delivering) {
-      const generation = this._generation;
-      await this._afterDelivery();
-      if (this._disposed || this._generation !== generation) return { status: "aborted" };
-    }
+    if (this._delivering && this._superseded(await this._afterDelivery())) return { status: "aborted" };
     const refusal = this._availability();
     if (refusal) return { status: "rejected", reason: refusal };
     if (this.snapshot.board === this._game.board &&
@@ -228,18 +224,27 @@ export abstract class BaseSession {
     return { status: "rejected", reason: status };
   }
 
-  /**
-   * Waits until the delivering operation has emitted its move/turn events, so a
-   * callback-initiated action cannot suppress them. Callers check `_delivering`
-   * first to keep the undelayed path synchronous.
-   * Callers must check disposal and generation after awaiting this helper.
-   */
   protected get _delivering(): boolean {
     return this._delivery !== null;
   }
 
-  protected async _afterDelivery(): Promise<void> {
+  /**
+   * Waits until the delivering operation has emitted its move/turn events, so a
+   * callback-initiated action cannot suppress them. Check `_delivering` first to
+   * keep the undelayed path synchronous, and pass the result to `_superseded()`
+   * in the caller: its own continuation resumes later than this helper returns.
+   * @example if (this._delivering && this._superseded(await this._afterDelivery())) return aborted;
+   * @returns The generation observed before waiting.
+   */
+  protected async _afterDelivery(): Promise<number> {
+    const generation = this._generation;
     while (this._delivery !== null) await this._delivery.done;
+    return generation;
+  }
+
+  /** Restart, stop, undo or dispose happened since `generation` was observed. */
+  protected _superseded(generation: number): boolean {
+    return this._disposed || this._generation !== generation;
   }
 
   private _startDelivery(operation: SessionOperation): void {

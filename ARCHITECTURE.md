@@ -267,8 +267,8 @@ A ready-state publication releases its lock before notifying, but the operation
 keeps delivering its `move`/`turn` events until its own `finally`. A
 `start`/`playMove`/`step`/`run` requested during that delivery is accepted and
 deferred until the events are delivered; it then validates the current state.
-If restart, stop, undo or dispose intervenes, the deferred action reports
-`aborted`. Those four actions still cancel immediately. Human moves are also
+If restart, stop, undo or dispose intervenes before the deferred action resumes
+(checked in its own continuation), it reports `aborted`. Those four actions still cancel immediately. Human moves are also
 validated before claiming an operation, so a rejected move never supersedes one.
 
 [`getUndoTarget`](src/sessions/state/getUndoTarget.ts) finds the previous decision
