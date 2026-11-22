@@ -54,13 +54,36 @@ for (const action of ["stop", "restart", "undo", "dispose"] as const) {
   }
 }
 
+test("an abort listener cannot play the AI's turn while stop() is cancelling it", async () => {
+  const custom = pendingProvider();
+  const game = new TicTacToe({
+    mode: "singleplayer", aiProviders: [custom.provider],
+    ai: { engine: "pending", prefer: "first" },
+  });
+  await game.start();
+  const pending = game.playMove(4);
+  const board = game.snapshot.board;
+  const moves = vi.fn();
+  game.on("move", moves);
+  let nested: ReturnType<typeof game.playMove> | undefined;
+  custom.requests[0]?.signal.addEventListener("abort", () => { nested = game.playMove(0); });
+  expect(game.stop()).toEqual({ status: "success", value: undefined });
+  expect(await nested).toEqual({ status: "rejected", reason: "busy" });
+  expect(await pending).toEqual({ status: "aborted" });
+  expect(game.snapshot).toMatchObject({ phase: "paused", movesCount: 1 });
+  expect(game.snapshot.board).toBe(board);
+  expect(moves).not.toHaveBeenCalled();
+  game.dispose();
+});
+
 test("each AI calculation receives a distinct signal, and completed requests are not aborted later", async () => {
   const custom = createProvider("choice");
   const game = new TicTacToe({
     mode: "aivsai", aiProviders: [custom.provider],
     aiPlayers: [{ engine: "choice", prefer: "first" }, { engine: "choice", prefer: "last" }],
   });
-  await game.run();
+  expect(await game.run()).toMatchObject({ status: "success" });
+  expect(custom.signals.length).toBeGreaterThanOrEqual(2);
   expect(custom.signals.length).toBe(game.movesCount);
   expect(new Set(custom.signals).size).toBe(game.movesCount);
   game.dispose();

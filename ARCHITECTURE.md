@@ -295,7 +295,9 @@ Cancellation combines the logical promise race with a cooperative `AbortSignal`.
 Only an active request is aborted; completed requests are detached first. The
 generation and lock are invalidated before abort dispatch, and checked again
 after it, because an abort listener may synchronously start newer work.
-Providers stop their own calculations; sessions discard stale answers even when
+A human move is still refused with `busy` while the snapshot reports
+`ai-thinking`, so a listener cannot play the AI's turn before stop publishes
+`paused`. Providers stop their own calculations; sessions discard stale answers even when
 the signal is ignored. Stop/restart/undo preserve engine resources; disposal
 releases them. Neither signals nor promises preempt synchronous JavaScript.
 Actual Worker/WASM execution is deferred.

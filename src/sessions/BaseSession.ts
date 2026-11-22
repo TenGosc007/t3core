@@ -207,6 +207,9 @@ export abstract class BaseSession {
       case "idle": return { status: "rejected", reason: "not_started" };
       case "paused": return { status: "rejected", reason: "paused" };
       case "finished": return { status: "rejected", reason: "game_finished" };
+      // The AI owns the turn even while a cancellation has released the lock
+      // and abort listeners run before the paused snapshot is published.
+      case "ai-thinking": return { status: "rejected", reason: "busy" };
       default: return null;
     }
   }
