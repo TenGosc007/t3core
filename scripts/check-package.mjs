@@ -87,6 +87,7 @@ try {
         module: resolution === "Bundler" ? ts.ModuleKind.ESNext : ts.ModuleKind[resolution],
         moduleResolution: ts.ModuleResolutionKind[resolution],
         strict: true,
+        exactOptionalPropertyTypes: false,
         skipLibCheck: false,
         types: [],
         outDir,

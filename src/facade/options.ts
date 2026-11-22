@@ -18,7 +18,7 @@ export type AIConfig<Providers extends readonly AIProvider[] = readonly []> =
   | {
     /** Chooses uniformly among legal cells without search. */
     readonly engine: "random";
-    /** Random selection does not accept a difficulty. */
+    /** Omit this key for random selection. */
     readonly difficulty?: never;
     /** Finite numeric seed; omitted means Math.random. Restart keeps the sequence. */
     readonly seed?: number
@@ -65,3 +65,19 @@ export type AivsAiOptions<Providers extends readonly AIProvider[] = readonly []>
 /** Mode-specific game configuration accepted by the TicTacToe constructor. */
 export type TicTacToeOptions<Providers extends readonly AIProvider[] = readonly []> =
   | PvpOptions<Providers> | SinglePlayerOptions<Providers> | AivsAiOptions<Providers>;
+
+// Infer only these keys, so constructor calls still check for unknown option names.
+type EngineSelection<Config> = {
+  readonly [Key in keyof Config & ("engine" | "difficulty")]?: Config[Key];
+} | { readonly engine?: string; readonly difficulty?: unknown };
+
+type RandomWithDifficulty<Config> =
+  Config extends { readonly engine: "random"; readonly difficulty: unknown } ? Config : never;
+
+/** Checks key presence even when optional properties allow explicit undefined. */
+export type CheckedAIOptions<Single, O = unknown, X = unknown> = {
+  readonly ai?: EngineSelection<Single>;
+  readonly aiPlayers?: { readonly 0: EngineSelection<O>; readonly 1: EngineSelection<X> };
+} & ([RandomWithDifficulty<NoInfer<Single>> |
+      RandomWithDifficulty<NoInfer<O>> |
+      RandomWithDifficulty<NoInfer<X>>] extends [never] ? unknown : never);
