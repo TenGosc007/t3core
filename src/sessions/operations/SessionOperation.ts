@@ -24,6 +24,8 @@ export class SessionOperation {
     if (this._request?.signal === signal) this._request = null;
   }
 
+  // Called by BaseSession through its `_latestOperation` field, which fallow does not trace.
+  // fallow-ignore-next-line unused-class-member
   cancel(): void {
     this._cancelled = true;
     this._cancel();

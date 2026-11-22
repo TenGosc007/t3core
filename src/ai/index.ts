@@ -7,12 +7,11 @@
 // - `engines/<name>/` — one folder per algorithm, each with its own barrel.
 
 // Contract + errors.
-export type { MoveStrategy, MoveContext, GameView } from "./types";
+export type { MoveStrategy, MoveContext } from "./types";
 export { MoveStrategyError } from "./types";
 
-// Difficulty + functional-API options.
+// Difficulty.
 export { AIDifficulty } from "./difficulty";
-export type { AIOptions, AIMoveResult } from "./difficulty";
 
 // Shared RNG.
 export { mulberry32 } from "./rng";
@@ -24,8 +23,6 @@ export {
   ALPHA_BETA_CONFIG,
   alphaBeta,
   MOVE_ORDER_3X3,
-  type AlphaBetaOptions,
-  type Score,
   WIN_SCORE,
   LOSS_SCORE,
   DRAW_SCORE,

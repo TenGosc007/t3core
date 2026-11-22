@@ -33,6 +33,8 @@ export class ProviderMoveStrategy implements MoveStrategy {
     }), Object.freeze({ signal: request.signal }));
   }
 
+  // Called structurally through MoveStrategy.dispose by disposeStrategies().
+  // fallow-ignore-next-line unused-class-member
   dispose(): void {
     if (this._disposed) return;
     this._disposed = true;

@@ -2,7 +2,6 @@ import type { SessionOperation } from "./BaseSession";
 import type { OperationResult, RunResult, StepResult } from "./results";
 import type { MoveStrategy } from "@/ai";
 import type { Game } from "@/game/Game";
-import type { GameEventPayload } from "@/game/types/Game.types";
 
 import { BaseSession } from "./BaseSession";
 import { parsePlayerSymbol } from "./state/createSnapshot";
@@ -74,5 +73,3 @@ export class AIGame extends BaseSession {
     return this._outcome(operation);
   }
 }
-
-export type { GameEventPayload };

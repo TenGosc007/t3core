@@ -69,7 +69,24 @@ export function createSnapshot(
   if (gameStatus.status !== "running") {
     return Object.freeze({ ...common, ...identity, phase: "finished", gameStatus, error: null, canPlay: false, legalMoves: NO_MOVES });
   }
-  const running = { ...common, gameStatus, error: null };
+  const snapshot = createRunningSnapshot({ ...common, gameStatus, error: null }, identity, phase, error);
+  if (snapshot === null) throw new Error(`Invalid session phase ${phase} for mode ${identity.mode}.`);
+  return snapshot;
+}
+
+/** Fields shared by every running-game snapshot, before identity and phase. */
+type RunningFields = Omit<
+  Extract<SessionSnapshot, { readonly phase: "paused" }>,
+  "mode" | "humanSymbol" | "phase" | "canPlay"
+>;
+
+/** Return null for a phase that the session mode cannot report. */
+function createRunningSnapshot(
+  running: RunningFields,
+  identity: SessionIdentity,
+  phase: SessionSnapshot["phase"],
+  error: EngineError | null,
+): SessionSnapshot | null {
   switch (phase) {
     case "idle":
       return Object.freeze({ ...running, ...identity, phase, canPlay: false });
@@ -86,9 +103,10 @@ export function createSnapshot(
       return Object.freeze({ ...running, ...identity, phase, canPlay: false });
     case "error":
       if (identity.mode === "pvp" || error === null) break;
-      return Object.freeze({ ...common, ...identity, phase, gameStatus, error: Object.freeze({ ...error }), canPlay: false });
+      return Object.freeze({ ...running, ...identity, phase, error: Object.freeze({ ...error }), canPlay: false });
     case "finished":
+    case "disposed":
       break;
   }
-  throw new Error(`Invalid session phase ${phase} for mode ${identity.mode}.`);
+  return null;
 }

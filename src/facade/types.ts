@@ -17,7 +17,7 @@ import type {
   StartResult,
 } from "@/sessions/types";
 
-export type { AIConfig, PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions } from "./options";
+export type { PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions } from "./options";
 
 /** Common read-only accessors shared by all instance interfaces. */
 type InstanceAccessors<Mode extends SessionMode> = {

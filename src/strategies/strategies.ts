@@ -3,7 +3,7 @@ import type { GameStrategy } from "./strategies.types";
 import { classic3x3Strategy } from "./variants/classic3x3";
 
 /** Internal immutable catalog; tests may supply an isolated catalog. */
-export const GAME_STRATEGIES: ReadonlyMap<string, GameStrategy> = new Map([
+const GAME_STRATEGIES: ReadonlyMap<string, GameStrategy> = new Map([
   ["classic-3x3", classic3x3Strategy],
 ]);
 

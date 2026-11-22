@@ -40,7 +40,6 @@ export const GameEvent = {
   /** Emitted after every state-changing action: `savePlayerMove`, `backToMove`, and `reset`. */
   STATE_CHANGE: "STATE_CHANGE",
 } as const;
-export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
 /** Stable snapshot of the game state, returned by `Game.snapshot` and event payloads. */
 export type GameEventPayload = {

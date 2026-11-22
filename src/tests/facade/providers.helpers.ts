@@ -2,7 +2,7 @@ import type { AIInput, AIProvider, AIStrategy } from "@/index";
 
 import { vi } from "vitest";
 
-export type ChoiceOptions = { readonly prefer: "first" | "last" };
+type ChoiceOptions = { readonly prefer: "first" | "last" };
 
 export function createProvider<Id extends string>(id: Id) {
   const inputs: AIInput[] = [];

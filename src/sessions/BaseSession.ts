@@ -1,4 +1,3 @@
-import type { SessionOperation } from "./operations/SessionOperation";
 import type {
   ActionAborted,
   ActionError,
@@ -27,7 +26,7 @@ import { MoveStrategyError } from "@/ai";
 import { AIProviderError } from "@/ai/providers/AIProviderError";
 import { disposeStrategies } from "@/ai/providers/disposeStrategies";
 
-import { SessionOperation as Operation } from "./operations/SessionOperation";
+import { SessionOperation } from "./operations/SessionOperation";
 import { getUndoTarget } from "./state/getUndoTarget";
 import { SessionStore } from "./state/SessionStore";
 
@@ -213,7 +212,7 @@ export abstract class BaseSession {
   }
 
   protected _beginOperation(): SessionOperation {
-    const operation = new Operation(this._generation);
+    const operation = new SessionOperation(this._generation);
     this._busyOperation = operation;
     this._latestOperation = operation;
     return operation;

@@ -43,7 +43,7 @@ const shared = {
   supportedVariants: Object.freeze(["classic-3x3"]),
 };
 
-export const alphaBetaProvider: AIProvider<"alphabeta", { seed?: number; difficulty?: AIDifficulty }> =
+const alphaBetaProvider: AIProvider<"alphabeta", { seed?: number; difficulty?: AIDifficulty }> =
   Object.freeze({
     ...shared,
     id: "alphabeta",
@@ -53,7 +53,7 @@ export const alphaBetaProvider: AIProvider<"alphabeta", { seed?: number; difficu
     create: (options: { seed?: number; difficulty?: AIDifficulty }) => adapt(new AlphaBetaStrategy(options)),
   });
 
-export const randomProvider: AIProvider<"random", { seed?: number }> = Object.freeze({
+const randomProvider: AIProvider<"random", { seed?: number }> = Object.freeze({
   ...shared,
   id: "random",
   difficulties: Object.freeze([]),

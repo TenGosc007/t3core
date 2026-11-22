@@ -19,7 +19,9 @@ import type {
 } from "@/sessions/results";
 import type { SessionSnapshot, SnapshotFor } from "@/sessions/state/types";
 
-import { expectTypeOf, test } from "vitest";
+import { expect, expectTypeOf, test } from "vitest";
+
+import { TicTacToe } from "@/index";
 
 import { aiVsAiExample, pvpExample, singlePlayerExample } from "./examples";
 
@@ -75,6 +77,21 @@ test("usage scenarios share the runtime constructor and lifecycle types", () => 
   expectTypeOf(pvpExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(singlePlayerExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
   expectTypeOf(aiVsAiExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
+});
+
+test("usage scenarios complete against the runtime facade", async () => {
+  const phases: string[] = [];
+  const render = (state: SessionSnapshot) => { phases.push(state.phase); };
+
+  await expect(pvpExample(TicTacToe, render)).resolves.toEqual({ status: "success", value: undefined });
+  for (const humanSymbol of ["O", "X"] as const) {
+    await expect(singlePlayerExample(TicTacToe, render, humanSymbol))
+      .resolves.toEqual({ status: "success", value: undefined });
+  }
+  const aiVsAi = await aiVsAiExample(TicTacToe, render);
+  expect(aiVsAi).toMatchObject({ restarted: { status: "success" } });
+  expect(phases).toContain("ai-thinking");
+  expect(phases).toContain("finished");
 });
 
 test("invalid consumer calls and mutation attempts are rejected by tsc", () => {

@@ -5,6 +5,19 @@ import type { GameStrategy } from "@/strategies/strategies.types";
 import { BUILTIN_PROVIDERS } from "@/ai/providers/builtins";
 import { resolveGameStrategy } from "@/strategies/strategies";
 
+function isOptionsObject(value: unknown): value is object {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Return the requested or default difficulty; undefined when the engine has none. */
+function resolveDifficulty(provider: AIProvider, requested: unknown): string | undefined {
+  if (requested === undefined) return provider.defaultDifficulty ?? undefined;
+  if (typeof requested !== "string" || !provider.difficulties.includes(requested)) {
+    throw new TypeError("Unsupported difficulty for AI engine " + provider.id);
+  }
+  return requested;
+}
+
 /** Per-construction catalog. No global registrations or engine initialization. */
 export class ProviderCatalog {
   readonly rules: GameStrategy;
@@ -47,12 +60,22 @@ export class ProviderCatalog {
 
   /** Validate every player's configuration before any factory is invoked. */
   prepare(config: object = {}): () => AIStrategy {
-    if (typeof config !== "object" || config === null || Array.isArray(config)) {
-      throw new TypeError("AI configuration must be an object.");
-    }
+    if (!isOptionsObject(config)) throw new TypeError("AI configuration must be an object.");
+    const provider = this._resolveProvider("engine" in config ? config.engine : undefined);
     const options: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(config)) if (key !== "engine") options[key] = value;
-    const selectedEngine = "engine" in config ? config.engine : undefined;
+    // Leave the key absent when there is no default; some providers reject it.
+    const difficulty = resolveDifficulty(provider, options.difficulty);
+    if (difficulty !== undefined) options.difficulty = difficulty;
+    const normalized = provider.validateOptions(options);
+    if (!isOptionsObject(normalized)) {
+      throw new TypeError("AI option validation must return an options object.");
+    }
+    return () => provider.create(normalized);
+  }
+
+  /** Resolve an explicit or default engine that supports this catalog's variant. */
+  private _resolveProvider(selectedEngine: unknown): AIProvider {
     const engine = selectedEngine === undefined ? this.capabilities().defaultAIEngine : selectedEngine;
     if (typeof engine !== "string") throw new TypeError("No default AI engine for this variant.");
     const provider = this._providers.get(engine);
@@ -60,18 +83,7 @@ export class ProviderCatalog {
     if (!provider.supportedVariants.includes(this.rules.descriptor.id)) {
       throw new RangeError("AI engine " + engine + " does not support " + this.rules.descriptor.id);
     }
-    if (options.difficulty !== undefined &&
-        (typeof options.difficulty !== "string" || !provider.difficulties.includes(options.difficulty))) {
-      throw new TypeError("Unsupported difficulty for AI engine " + engine);
-    }
-    if (options.difficulty === undefined && provider.defaultDifficulty !== null) {
-      options.difficulty = provider.defaultDifficulty;
-    }
-    const normalized = provider.validateOptions(options);
-    if (typeof normalized !== "object" || normalized === null || Array.isArray(normalized)) {
-      throw new TypeError("AI option validation must return an options object.");
-    }
-    return () => provider.create(normalized);
+    return provider;
   }
 
   private _validateMetadata(provider: AIProvider): void {

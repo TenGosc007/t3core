@@ -16,7 +16,6 @@ export type SessionHandler = (payload: Record<string, unknown>) => void;
 export type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
 
 export type {
-  ActionResult,
   PlayMoveResult,
   RestartResult,
   RunResult,
