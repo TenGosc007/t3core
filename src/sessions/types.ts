@@ -26,11 +26,18 @@ export type {
   UndoResult,
 } from "./results";
 
-/** Events emitted by sessions. */
+/**
+ * Gameplay event union. on()/off() handlers receive the payload without type.
+ * Events describe effects; subscribe() supplies complete render state first.
+ */
 export type GameSessionEvent =
+  /** A move has been applied and its snapshot published. */
   | { type: "move"; player: PlayerSymbol; position: number }
+  /** AI calculation is about to begin, after the thinking snapshot is published. */
   | { type: "ai-thinking"; player: PlayerSymbol }
+  /** Control passes to the next player, or start() announces the human opening. */
   | { type: "turn"; player: PlayerSymbol }
+  /** A terminal move has produced a win or draw. */
   | { type: "finished"; result: GameStatus };
 
 /** Event type — used as the key in `on`/`off` for typed dispatch. */

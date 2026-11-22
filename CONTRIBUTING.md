@@ -53,7 +53,10 @@ the use case, proposed API, alternatives, and compatibility concerns.
 The [pull request template](.github/PULL_REQUEST_TEMPLATE.md) covers user
 impact, compatibility and migration, verification results, and documentation
 updates. Mark checks you ran and explain skipped ones; use a Conventional
-Commit PR title as described below.
+Commit PR title as described below. In Claude Code, the
+[`/pr-description`](.claude/skills/pr-description/SKILL.md) skill drafts the
+title and an English description from this template for the current branch
+as Markdown to copy into GitHub (`/pr-description [base] [--run-checks]`).
 
 ## Local Git checks and commit messages
 

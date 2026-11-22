@@ -31,8 +31,18 @@ class TicTacToeImpl {
 }
 
 /**
- * TypeScript cannot express a constructor whose return type depends on options.
- * Keep that single overload boundary here; instances are checked by consumer tests.
+ * Creates a framework-independent Tic Tac Toe game with mode-specific actions.
+ * Construction makes no moves. Subscribe and render once before calling start()
+ * in human modes, or step()/run() in AI-vs-AI. O always starts; symbols are O and X.
+ * Call dispose() when permanently removing the game.
+ * @example
+ * const game = new TicTacToe({ mode: "singleplayer" });
+ * const unsubscribe = game.subscribe(() => render(game.getSnapshot()));
+ * render(game.getSnapshot());
+ * await game.start();
+ * // On permanent removal: unsubscribe(); game.dispose();
  */
+// TypeScript needs this overload boundary for mode-dependent constructor results.
+// Source and installed-consumer tests verify the concrete instance types.
 export const TicTacToe: TicTacToeConstructor =
   TicTacToeImpl as unknown as TicTacToeConstructor;
