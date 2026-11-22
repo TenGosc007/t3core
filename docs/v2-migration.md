@@ -191,8 +191,10 @@ adapters remain implementation details.
 engine and mode metadata without validating player options, creating engines or
 loading resources. Only `classic-3x3` is public. Larger variants stay deferred.
 
-Configuration now rejects unknown top-level and built-in AI fields, fields
-belonging to another mode, unknown/duplicate engine IDs, incompatible variants,
+Configuration now rejects unknown top-level and built-in AI fields, defined
+fields belonging to another mode (`undefined` is treated as omitted), missing
+or `undefined` AI-vs-AI player slots (use `{}` for the default engine),
+unknown/duplicate engine IDs, incompatible variants,
 unsupported difficulties and non-finite seeds. Remove `difficulty` from
 `engine: 'random'` configurations; an explicit `undefined` is treated as omitted.
 Alpha-beta still defaults to `normal`; normal/hard behavior and seeds are

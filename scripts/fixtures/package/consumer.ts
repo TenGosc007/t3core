@@ -10,6 +10,7 @@ import type {
   SessionSnapshot,
   SnapshotFor,
   StopResult,
+  TicTacToeOptions,
   UndoResult,
 } from "t3core";
 
@@ -128,6 +129,10 @@ async function verifyConsumer() {
 export function checkInvalidCalls() {
   const pvp = new TicTacToe({ mode: "pvp" });
   const state = pvp.getSnapshot();
+  // A runtime-selected mode yields the instance union; narrow it by mode.
+  const createGame = (options: TicTacToeOptions) => new TicTacToe(options);
+  const selected = createGame({ mode: "pvp", ai: undefined });
+  if (selected.mode === "pvp") void selected.playMove(0);
   // An explicit undefined difficulty is accepted like an omitted one.
   new TicTacToe({ mode: "singleplayer", ai: { engine: "random" } });
   new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: undefined } });

@@ -79,6 +79,16 @@ test("usage scenarios share the runtime constructor and lifecycle types", () => 
   expectTypeOf(aiVsAiExample).parameter(0).toEqualTypeOf<TicTacToeConstructor>();
 });
 
+test("a runtime-selected options union constructs an instance union, while literal modes stay precise", () => {
+  const create = (options: TicTacToeOptions) => new TicTacToe(options);
+  expectTypeOf(create).returns.toEqualTypeOf<PvPInstance | SinglePlayerInstance | AivsAiInstance>();
+  expectTypeOf(new TicTacToe({ mode: "pvp" })).toEqualTypeOf<PvPInstance>();
+  const game = create({ mode: "aivsai", aiPlayers: [{}, { engine: "random" }] });
+  expect(game.mode).toBe("aivsai");
+  if (game.mode === "aivsai") expectTypeOf(game.run).returns.toEqualTypeOf<Promise<RunResult>>();
+  game.dispose();
+});
+
 test("usage scenarios complete against the runtime facade", async () => {
   const phases: string[] = [];
   const render = (state: SessionSnapshot) => { phases.push(state.phase); };

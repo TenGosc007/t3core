@@ -66,6 +66,8 @@ The facade constructs either a human-driven wrapper or an AI-vs-AI wrapper
 at runtime as well as in types. Common observation/lifecycle delegation is shared.
 The overloaded constructor type is attached at a single documented TypeScript
 boundary; source and installed-consumer tests check its mode-specific guarantees.
+A final overload accepts the `TicTacToeOptions` union and returns the instance
+union, after the literal-mode overloads that keep precise instance types.
 The constructor returns a concrete facade object; consumers identify its mode
 through `mode`, not class identity.
 

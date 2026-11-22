@@ -89,6 +89,8 @@ game.dispose();
 ```
 
 The instance exposes only its mode's actions, in both JavaScript and TypeScript.
+Options typed as `TicTacToeOptions`, with the mode chosen at runtime, return a
+union of instance types; narrow it with `game.mode`.
 
 ## Observe and control a game
 

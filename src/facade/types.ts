@@ -1,5 +1,5 @@
 import type { CapabilitiesOptions, GameCapabilities } from "./catalog/types";
-import type { PvpOptions, SinglePlayerOptions, AivsAiOptions } from "./options";
+import type { PvpOptions, SinglePlayerOptions, AivsAiOptions, TicTacToeOptions } from "./options";
 import type { AIProvider } from "@/ai/providers/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { GameStatus } from "@/game/types/Game.types";
@@ -202,4 +202,13 @@ export interface TicTacToeConstructor {
    * const result = await game.run();
    */
   new <const Providers extends readonly AIProvider[] = readonly []>(options: AivsAiOptions<Providers>): AivsAiInstance;
+  /**
+   * Creates a game whose mode is known only at runtime. Literal modes match the
+   * overloads above and keep their precise instance types; narrow this result by mode.
+   * @param options - Any mode-specific configuration.
+   * @throws Throws synchronously for invalid configuration or provider construction failure.
+   */
+  new <const Providers extends readonly AIProvider[] = readonly []>(
+    options: TicTacToeOptions<Providers>,
+  ): PvPInstance | SinglePlayerInstance | AivsAiInstance;
 }

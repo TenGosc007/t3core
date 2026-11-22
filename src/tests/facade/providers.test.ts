@@ -113,6 +113,10 @@ for (const invalid of [
   { mode: "singleplayer", humanSymbol: "Y" },
   { mode: "pvp", ai: {} },
   { mode: "aivsai", aiPlayers: [{}] },
+  { mode: "aivsai", aiPlayers: [{ engine: "random" }, undefined] },
+  { mode: "aivsai", aiPlayers: [undefined, {}] },
+  { mode: "aivsai", aiPlayers: Object.assign(new Array<object>(2), { 0: { engine: "random" } }) },
+  { mode: "pvp", ignored: undefined },
   { mode: "pvp", variant: "connect-9x9-5" },
   { mode: "pvp", variant: "toString" },
   { mode: "pvp", aiProviders: {} },
@@ -122,6 +126,14 @@ for (const invalid of [
     expect(() => Reflect.construct(TicTacToe, [invalid])).toThrow();
   });
 }
+
+test("undefined fields of other modes are omitted, and an empty AI config selects the default", () => {
+  new TicTacToe({ mode: "pvp", humanSymbol: undefined, ai: undefined, aiPlayers: undefined }).dispose();
+  new TicTacToe({ mode: "singleplayer", ai: undefined, aiPlayers: undefined }).dispose();
+  const game = new TicTacToe({ mode: "aivsai", aiPlayers: [{}, {}], humanSymbol: undefined, ai: undefined });
+  expect(game.mode).toBe("aivsai");
+  game.dispose();
+});
 
 test("an explicit undefined difficulty is treated like an omitted one", () => {
   const custom = createProvider("choice");
