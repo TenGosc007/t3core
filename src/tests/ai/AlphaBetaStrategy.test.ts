@@ -1,4 +1,5 @@
 import type { MoveContext } from "@/ai";
+import type { BoardSnapshot } from "@/game/contracts";
 
 import { expect, test } from "vitest";
 
@@ -51,7 +52,7 @@ test("throws MoveStrategyError('no_legal_moves') on a full board", async () => {
   // O X X
   // X O O
   // O X O
-  const drawBoard: (string | number)[] = [
+  const drawBoard: BoardSnapshot = [
     "O",
     "X",
     "X",
@@ -65,7 +66,7 @@ test("throws MoveStrategyError('no_legal_moves') on a full board", async () => {
   const strategy = new AlphaBetaStrategy({ difficulty: AIDifficulty.HARD });
   await expect(
     strategy.calculateMove(
-      drawBoard as unknown as readonly (number | string)[],
+      drawBoard,
       ctx(),
     ),
   ).rejects.toMatchObject({
@@ -114,7 +115,7 @@ test("throws RangeError on a non-9-cell board", async () => {
   // Pass a fake 4-cell board.
   await expect(
     strategy.calculateMove(
-      [0, 1, 2, 3] as unknown as readonly (number | string)[],
+      [0, 1, 2, 3],
       ctx(),
     ),
   ).rejects.toThrow(RangeError);

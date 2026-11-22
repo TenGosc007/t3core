@@ -1,73 +1,157 @@
 import type {
+  ActionAborted,
+  ActionError,
+  ActionSuccess,
+  OperationResult,
+  PlayMoveResult,
+  RestartResult,
+  StartResult,
+  StopResult,
+  UndoResult,
+} from "./results";
+import type { SessionIdentity, SessionSnapshot } from "./state/types";
+import type {
   GameSessionEventPayload,
   GameSessionEventType,
   SessionEmitter,
   SessionHandler,
 } from "./types";
+import type { MoveStrategy } from "@/ai";
+import type { PlayerSymbol } from "@/game/contracts";
 import type { Game } from "@/game/Game";
-import type { BoardSnapshot } from "@/game/types/Board.types";
-import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
-import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
 import { EventEmitter } from "eventemitter3";
 
-/**
- * Shared base for {@link PvPGame}, {@link SinglePlayerGame} and {@link AIGame}.
- *
- * Owns the common session machinery: the underlying {@link Game}, the typed
- * event emitter, the generation-based concurrency/reentrancy guard, and the
- * lifecycle state machine (`idle` → `started` → `finished`). Subclasses are
- * responsible for `start`/`playMove`/`step`/`run` — the parts that differ per
- * mode — and call {@link BaseSession#_emit} / {@link BaseSession#_beginTurn}
- * to drive the shared event/lifecycle plumbing.
- *
- * Not exported: only the per-mode session classes are part of the public API.
- */
+import { MoveStrategyError } from "@/ai";
+import { AIProviderError } from "@/ai/providers/AIProviderError";
+import { disposeStrategies } from "@/ai/providers/disposeStrategies";
+import { PlayerMoveStatus } from "@/game/types/Game.types";
+
+import { SessionOperation } from "./operations/SessionOperation";
+import { getUndoTarget } from "./state/getUndoTarget";
+import { SessionStore } from "./state/SessionStore";
+
+export type { SessionOperation } from "./operations/SessionOperation";
+
+/** Shared lifecycle, operation ownership, state publication and session events. */
 export abstract class BaseSession {
   protected readonly _game: Game;
   protected readonly _emitter: SessionEmitter = new EventEmitter();
-
-  /**
-   * Bumped on every `reset()`. In-flight async work captures the generation
-   * at start and bails out as `aborted` if it changes — this is how `reset()`
-   * cancels a pending AI move without unawaitable side effects.
-   */
   protected _generation = 0;
-  protected _busyGeneration: number | null = null;
-  protected _lifecycle: "idle" | "started" | "finished" = "idle";
+  protected _busyOperation: SessionOperation | null = null;
+  protected _disposed = false;
+  private _latestOperation: SessionOperation | null = null;
+  /** An operation that released its lock and is still delivering its events. */
+  private _delivery: { operation: SessionOperation; done: Promise<void>; finish: () => void } | null = null;
+  private readonly _store: SessionStore;
 
-  constructor(game: Game) {
+  constructor(
+    game: Game,
+    private readonly _identity: SessionIdentity,
+    private readonly _ownedStrategies: readonly MoveStrategy[] = [],
+  ) {
     this._game = game;
+    this._store = new SessionStore(game, _identity);
   }
 
-  get board(): BoardSnapshot {
-    return this._game.board;
+  get board() {
+    return this.snapshot.board;
   }
-  get currentPlayer(): PlayerSymbol {
-    return this._game.currentPlayer;
+  get currentPlayer() {
+    return this.snapshot.currentPlayer;
   }
-  get gameStatus(): GameStatus {
-    return this._game.gameStatus;
+  get gameStatus() {
+    return this.snapshot.gameStatus;
   }
-  get snapshot(): GameEventPayload {
-    return this._game.snapshot;
+  get snapshot(): SessionSnapshot {
+    return this._store.getSnapshot();
   }
   get movesCount(): number {
-    return this._game.movesCount;
+    return this.snapshot.movesCount;
   }
 
-  reset(): void {
-    this._generation++;
-    this._busyGeneration = null;
-    this._lifecycle = "idle";
-    this._game.reset();
+  readonly getSnapshot = (): SessionSnapshot => this._store.getSnapshot();
+  readonly subscribe = (callback: () => void): (() => void) =>
+    this._disposed ? () => {} : this._store.subscribe(callback);
+
+  async restart(): Promise<RestartResult> {
+    if (this._disposed) return { status: "rejected", reason: "disposed" };
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
+    const operation = this._beginOperation();
+    try {
+      this._game.reset();
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (this._identity.mode !== "aivsai" && !this._publish(operation, "idle")) {
+        return { status: "aborted" };
+      }
+      const result = await this._resume(operation);
+      return this._isCurrent(operation) ? result : { status: "aborted" };
+    } finally {
+      this._endOperation(operation);
+    }
+  }
+
+  stop(): StopResult {
+    if (this._disposed) return { status: "rejected", reason: "disposed" };
+    const phase = this.snapshot.phase;
+    const inactive = phase === "idle" || phase === "paused" ||
+      phase === "finished" || phase === "error";
+    if (this._busyOperation === null && inactive) {
+      return { status: "success", value: undefined };
+    }
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
+    const operation = this._beginOperation();
+    try {
+      return this._complete(operation, "paused");
+    } finally {
+      this._endOperation(operation);
+    }
+  }
+
+  undo(): UndoResult {
+    if (this._disposed) return { status: "rejected", reason: "disposed" };
+    const target = getUndoTarget(this._game, this._identity);
+    if (target === null) return { status: "rejected", reason: "no_history" };
+    const paused = this.snapshot.phase === "paused";
+    const generation = this._invalidateOperations();
+    if (!this._canBegin(generation)) return { status: "aborted" };
+    const operation = this._beginOperation();
+    try {
+      this._game.backToMove(target);
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      return this._complete(operation, paused ? "paused" : this._readyPhase);
+    } finally {
+      this._endOperation(operation);
+    }
+  }
+
+  dispose(): void {
+    if (this._disposed) return;
+    this._disposed = true;
+    this._invalidateOperations();
+    let failure: { cause: unknown } | undefined;
+    try {
+      this._store.publish("disposed", this.snapshot.error);
+    } catch (cause) {
+      failure = { cause };
+    }
+    this._store.clear();
+    this._emitter.removeAllListeners();
+    try {
+      disposeStrategies(this._ownedStrategies);
+    } catch (cause) {
+      failure ??= { cause };
+    }
+    if (failure) throw failure.cause;
   }
 
   on<K extends GameSessionEventType>(
     event: K,
     handler: (payload: GameSessionEventPayload<K>) => void,
   ): this {
-    this._emitter.on(event, handler as SessionHandler);
+    if (!this._disposed) this._emitter.on(event, handler as SessionHandler);
     return this;
   }
 
@@ -79,10 +163,231 @@ export abstract class BaseSession {
     return this;
   }
 
+  protected get _readyPhase(): "human-turn" | "ai-ready" {
+    return this._identity.mode === "aivsai" ? "ai-ready" : "human-turn";
+  }
+
+  protected async _startSession(): Promise<StartResult> {
+    if (this._delivering && this._superseded(await this._afterDelivery())) return { status: "aborted" };
+    const refusal = this._availability();
+    if (refusal) return { status: "rejected", reason: refusal };
+    if (this.snapshot.board === this._game.board &&
+        (this.snapshot.phase === "human-turn" || this.snapshot.phase === "finished")) {
+      return { status: "success", value: undefined };
+    }
+    const operation = this._beginOperation();
+    try {
+      const result = await this._resume(operation);
+      return this._isCurrent(operation) ? result : { status: "aborted" };
+    } finally {
+      this._endOperation(operation);
+    }
+  }
+
+  protected async _resume(operation: SessionOperation): Promise<OperationResult> {
+    const finished = this._game.gameStatus.status !== "running";
+    if (!this._publish(operation, finished ? "finished" : this._readyPhase, true)) {
+      return { status: "aborted" };
+    }
+    if (!finished && this._identity.mode !== "aivsai") {
+      this._emit("turn", { player: this._game.currentPlayer });
+    }
+    return this._outcome(operation);
+  }
+
+  protected _availability(): "disposed" | "busy" | "session_error" | null {
+    if (this._disposed) return "disposed";
+    if (this._busyOperation !== null) return "busy";
+    if (this.snapshot.phase === "error" && this.snapshot.board === this._game.board) {
+      return "session_error";
+    }
+    return null;
+  }
+
+  protected _playRefusal(index: number): Extract<PlayMoveResult, { status: "rejected" }> | null {
+    const unavailable = this._availability();
+    if (unavailable) return { status: "rejected", reason: unavailable };
+    switch (this.snapshot.phase) {
+      case "idle": return { status: "rejected", reason: "not_started" };
+      case "paused": return { status: "rejected", reason: "paused" };
+      case "finished": return { status: "rejected", reason: "game_finished" };
+      // The AI owns the turn even while a cancellation has released the lock
+      // and abort listeners run before the paused snapshot is published.
+      case "ai-thinking": return { status: "rejected", reason: "busy" };
+      default: break;
+    }
+    // Validate before claiming an operation, so a rejected move from a callback
+    // cannot supersede the operation that is still delivering its events.
+    const status = this._game.validateMove(index);
+    if (status === PlayerMoveStatus.SUCCESS) return null;
+    if (status === PlayerMoveStatus.GAME_NOT_RUNNING) return { status: "rejected", reason: "game_finished" };
+    return { status: "rejected", reason: status };
+  }
+
+  protected get _delivering(): boolean {
+    return this._delivery !== null;
+  }
+
+  /**
+   * Waits until the delivering operation has emitted its move/turn events, so a
+   * callback-initiated action cannot suppress them. Check `_delivering` first to
+   * keep the undelayed path synchronous, and pass the result to `_superseded()`
+   * in the caller: its own continuation resumes later than this helper returns.
+   * @example if (this._delivering && this._superseded(await this._afterDelivery())) return aborted;
+   * @returns The generation observed before waiting.
+   */
+  protected async _afterDelivery(): Promise<number> {
+    const generation = this._generation;
+    while (this._delivery !== null) await this._delivery.done;
+    return generation;
+  }
+
+  /** Restart, stop, undo or dispose happened since `generation` was observed. */
+  protected _superseded(generation: number): boolean {
+    return this._disposed || this._generation !== generation;
+  }
+
+  private _startDelivery(operation: SessionOperation): void {
+    if (this._delivery?.operation === operation) return;
+    this._finishDelivery();
+    let finish = () => {};
+    const done = new Promise<void>((resolve) => { finish = resolve; });
+    this._delivery = { operation, done, finish };
+  }
+
+  private _finishDelivery(operation?: SessionOperation): void {
+    const delivery = this._delivery;
+    if (delivery === null || (operation !== undefined && delivery.operation !== operation)) return;
+    this._delivery = null;
+    delivery.finish();
+  }
+
+  protected _beginOperation(): SessionOperation {
+    const operation = new SessionOperation(this._generation);
+    this._busyOperation = operation;
+    this._latestOperation = operation;
+    return operation;
+  }
+
+  protected _invalidateOperations(): number {
+    const generation = ++this._generation;
+    const previous = this._latestOperation;
+    this._latestOperation = null;
+    this._busyOperation = null;
+    // Abort listeners run synchronously and may initiate newer work.
+    previous?.cancel();
+    return generation;
+  }
+
+  private _canBegin(generation: number): boolean {
+    return !this._disposed && this._generation === generation && this._latestOperation === null;
+  }
+
+  protected _isCurrent(operation: SessionOperation): boolean {
+    return !this._disposed && this._generation === operation.generation &&
+      this._latestOperation === operation;
+  }
+
+  protected _release(operation: SessionOperation): void {
+    if (this._busyOperation === operation) this._busyOperation = null;
+  }
+
+  protected _outcome(operation: SessionOperation): ActionSuccess | ActionAborted {
+    return this._isCurrent(operation)
+      ? { status: "success", value: undefined }
+      : { status: "aborted" };
+  }
+
+  protected _complete(
+    operation: SessionOperation,
+    phase: SessionSnapshot["phase"],
+  ): ActionSuccess | ActionAborted {
+    return this._publish(operation, phase, true)
+      ? { status: "success", value: undefined }
+      : { status: "aborted" };
+  }
+
+  protected _publish(
+    operation: SessionOperation,
+    phase: SessionSnapshot["phase"],
+    complete = false,
+  ): boolean {
+    if (!this._isCurrent(operation)) return false;
+    if (complete) {
+      this._release(operation);
+      this._startDelivery(operation);
+    }
+    this._store.publish(phase);
+    return this._isCurrent(operation);
+  }
+
+  protected async _selectMove(
+    operation: SessionOperation,
+    strategy: MoveStrategy,
+    aiSymbol: PlayerSymbol,
+    opponentSymbol: PlayerSymbol,
+  ): Promise<ActionSuccess<number> | ActionAborted | ActionError> {
+    const signal = operation.beginRequest();
+    try {
+      const selected = await operation.waitFor(strategy.calculateMove(this._game.board, {
+        aiSymbol, opponentSymbol, gameStatus: this._game.gameStatus,
+      }, { signal }));
+      operation.finishRequest(signal);
+      if (!this._isCurrent(operation) || selected.status === "aborted") {
+        return { status: "aborted" };
+      }
+      if (!this._game.isLegalMove(selected.value)) {
+        throw new MoveStrategyError("illegal_move", "Strategy returned an illegal index: " + selected.value);
+      }
+      return selected;
+    } catch (error) {
+      operation.finishRequest(signal);
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      return this._failAI(operation, error);
+    }
+  }
+
+  /** Callback errors thrown during publication escape this strategy-error handler. */
+  private _failAI(operation: SessionOperation, cause: unknown): ActionError | ActionAborted {
+    const error = Object.freeze({
+      code: cause instanceof AIProviderError ? cause.code
+        : cause instanceof MoveStrategyError && cause.code === "illegal_move"
+          ? "illegal_ai_move" as const
+          : "ai_failed" as const,
+      message: cause instanceof Error ? cause.message : "AI strategy failed.",
+    });
+    this._release(operation);
+    this._store.publish("error", error);
+    return this._isCurrent(operation) ? { status: "error", error } : { status: "aborted" };
+  }
+
+  protected _endOperation(operation: SessionOperation): void {
+    this._finishDelivery(operation);
+    if (this._busyOperation !== operation) return;
+    this._release(operation);
+    const interrupted = this.snapshot.phase === "ai-thinking" ||
+      this.snapshot.board !== this._game.board;
+    if (this._isCurrent(operation) && interrupted) {
+      try {
+        this._store.publish("paused");
+      } catch {
+        // Preserve the original callback exception.
+      }
+    }
+  }
+
   protected _emit<K extends GameSessionEventType>(
     event: K,
     payload: GameSessionEventPayload<K>,
   ): void {
-    this._emitter.emit(event, payload as Record<string, unknown>);
+    const generation = this._generation;
+    const operation = this._latestOperation;
+    for (const handler of this._emitter.listeners(event)) {
+      if (this._disposed || this._generation !== generation ||
+          this._latestOperation !== operation) break;
+      if (this._emitter.listeners(event).includes(handler)) {
+        handler(payload as Record<string, unknown>);
+      }
+    }
   }
 }

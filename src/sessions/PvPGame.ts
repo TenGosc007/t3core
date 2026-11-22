@@ -5,66 +5,42 @@ import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 import { BaseSession } from "./BaseSession";
 
-/**
- * Local two-player session. No AI — each `playMove` applies one human move and
- * emits `move` + (`turn` | `finished`).
- */
+/** Local two-player orchestration; rules and state mutations belong to Game. */
 export class PvPGame extends BaseSession implements GameSession {
   constructor(options: { game: Game }) {
-    super(options.game);
+    super(options.game, { mode: "pvp", humanSymbol: null });
   }
 
-  async start(): Promise<StartResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
-    if (this._lifecycle === "started") {
-      throw new Error("start() called twice without reset().");
-    }
-    const gen = this._generation;
-    this._busyGeneration = gen;
-    try {
-      this._lifecycle = "started";
-      this._emit("turn", { player: this._game.currentPlayer });
-      if (this._generation !== gen) return { status: "aborted" };
-      return { status: "success" };
-    } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
-    }
+  start(): Promise<StartResult> {
+    return this._startSession();
   }
 
   async playMove(index: number): Promise<PlayMoveResult> {
-    if (this._busyGeneration !== null) return { status: "busy" };
-    if (this._lifecycle !== "started") return { status: "game_not_running" };
-
-    const gen = this._generation;
-    this._busyGeneration = gen;
+    if (this._delivering && this._superseded(await this._afterDelivery())) return { status: "aborted" };
+    const refusal = this._playRefusal(index);
+    if (refusal) return refusal;
+    const operation = this._beginOperation();
     try {
       const player = this._game.currentPlayer;
       const status = this._game.savePlayerMove(index);
-      if (this._generation !== gen) return { status: "aborted" };
-
-      if (status === PlayerMoveStatus.INVALID_INDEX) {
-        return { status: "invalid_index" };
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (status !== PlayerMoveStatus.SUCCESS) {
+        if (status === PlayerMoveStatus.GAME_NOT_RUNNING) {
+          return { status: "rejected", reason: "game_finished" };
+        }
+        return { status: "rejected", reason: status };
       }
-      if (status === PlayerMoveStatus.ALREADY_SELECTED) {
-        return { status: "already_selected" };
+      const finished = this._game.gameStatus.status !== "running";
+      if (!this._publish(operation, finished ? "finished" : "human-turn", true)) {
+        return { status: "aborted" };
       }
-      if (status === PlayerMoveStatus.GAME_NOT_RUNNING) {
-        return { status: "game_not_running" };
-      }
-
       this._emit("move", { player, position: index });
-      if (this._generation !== gen) return { status: "aborted" };
-
-      if (this._game.gameStatus.status !== "running") {
-        this._lifecycle = "finished";
-        this._emit("finished", { result: this._game.gameStatus });
-        return { status: this._generation === gen ? "success" : "aborted" };
-      }
-
-      this._emit("turn", { player: this._game.currentPlayer });
-      return { status: this._generation === gen ? "success" : "aborted" };
+      if (!this._isCurrent(operation)) return { status: "aborted" };
+      if (finished) this._emit("finished", { result: this._game.gameStatus });
+      else this._emit("turn", { player: this._game.currentPlayer });
+      return this._outcome(operation);
     } finally {
-      if (this._busyGeneration === gen) this._busyGeneration = null;
+      this._endOperation(operation);
     }
   }
 }

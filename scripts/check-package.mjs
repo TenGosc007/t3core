@@ -11,6 +11,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -47,6 +48,11 @@ try {
   ], directory);
 
   const installedRoot = path.join(directory, "node_modules/t3core");
+  const consumerRequire = createRequire(path.join(directory, "package.json"));
+  for (const subpath of ["t3core/src/game/Game", "t3core/dist/index.js", "t3core/react", "t3core/legacy"]) {
+    assert.throws(() => consumerRequire.resolve(subpath), { code: "ERR_PACKAGE_PATH_NOT_EXPORTED" });
+  }
+  console.log("Package OK: internal and unimplemented subpaths are not exported");
   for (const filename of ["index.js", "index.mjs", "index.d.ts", "index.d.mts"]) {
     assert(existsSync(path.join(installedRoot, "dist", filename)), `Missing dist/${filename} in npm archive`);
   }

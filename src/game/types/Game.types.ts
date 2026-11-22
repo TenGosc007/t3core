@@ -1,14 +1,10 @@
+import type { GameStatus, VariantDescriptor } from "../contracts";
 import type { BoardSnapshot } from "./Board.types";
 import type { PlayerSymbol } from "./Symbol.types";
+import type { GameRules } from "@/strategies/strategies.types";
 
-type GameStatusWin = { status: "win"; winner: PlayerSymbol };
-type GameStatusDraw = { status: "draw" };
-type GameStatusRunning = { status: "running" };
+export type { GameStatus } from "../contracts";
 
-/** Union of all possible game states. */
-export type GameStatus = GameStatusWin | GameStatusDraw | GameStatusRunning;
-
-/** Predefined game variants. New variants are added here as the library grows. */
 export const GameVariant = {
   CLASSIC_3X3: "classic-3x3",
 } as const;
@@ -26,6 +22,7 @@ export const PlayerMoveStatus = {
   ALREADY_SELECTED: "already_selected",
   GAME_NOT_RUNNING: "game_not_running",
   INVALID_INDEX: "invalid_index",
+  ILLEGAL_MOVE: "illegal_move",
 } as const;
 export type PlayerMoveStatus =
   (typeof PlayerMoveStatus)[keyof typeof PlayerMoveStatus];
@@ -43,7 +40,6 @@ export const GameEvent = {
   /** Emitted after every state-changing action: `savePlayerMove`, `backToMove`, and `reset`. */
   STATE_CHANGE: "STATE_CHANGE",
 } as const;
-export type GameEvent = (typeof GameEvent)[keyof typeof GameEvent];
 
 /** Stable snapshot of the game state, returned by `Game.snapshot` and event payloads. */
 export type GameEventPayload = {
@@ -64,12 +60,12 @@ export type EventEmit<T> = <K extends keyof GameEventMap>(
   fn: (...args: GameEventMap[K]) => void,
 ) => T;
 
-/** Public contract for the `Game` class. */
+/** Internal contract for game state, rules, history and domain events. */
 export interface IGame {
   on: EventEmit<this>;
   off: EventEmit<this>;
 
-  /** Stable snapshot for external stores (e.g. `useSyncExternalStore`). */
+  /** Cached domain snapshot; UI consumers observe the full session snapshot. */
   readonly snapshot: GameEventPayload;
 
   /** Current game status. */
@@ -81,8 +77,13 @@ export interface IGame {
   /** Current board state as a read-only snapshot. */
   readonly board: BoardSnapshot;
 
-  /** Number of moves made in the current game. */
+  /** Number of moves retained in history, including future moves after restore. */
   readonly movesCount: number;
+  readonly variant: VariantDescriptor;
+  readonly rules: GameRules;
+  validateMove(index: number): PlayerMoveStatus;
+  isLegalMove(index: number): boolean;
+  getLegalMoves(): readonly number[];
 
   /** Resets the game to its initial state. */
   reset: () => void;

@@ -1,5 +1,4 @@
-/** A single player symbol (e.g. `'O'` or `'X'`). */
-export type PlayerSymbol = string;
+import type { PlayerSymbol } from "../contracts";
 
-/** Tuple of symbols for the two players, `[firstPlayer, secondPlayer]`. */
+export type { PlayerSymbol } from "../contracts";
 export type PlayerSymbols = readonly [PlayerSymbol, PlayerSymbol];

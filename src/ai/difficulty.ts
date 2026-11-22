@@ -1,6 +1,6 @@
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 
-/** Selectable AI difficulty levels for Single Player mode. */
+/** Built-in alpha-beta difficulty levels for human-vs-AI and AI-vs-AI modes. */
 export const AIDifficulty = {
   /**
    * Casual level. The AI sees only its immediate move (depth 1) and blunders
@@ -11,18 +11,16 @@ export const AIDifficulty = {
 
   /**
    * Strong level. The AI looks 4 plies ahead and blunders rarely (~10% random
-   * moves). On 3x3 this is intentionally not full-depth: a perfect AI would be
-   * unbeatable (best result for a perfect opponent is a draw), which would make
-   * Single Player pointless. With the 10% mistake rate the player always has a
-   * small but real chance to win by capitalizing on a blunder.
+   * moves). Search depth and random mistakes keep this level beatable;
+   * it does not guarantee perfect play on 3x3.
    */
   HARD: "hard",
 } as const;
 export type AIDifficulty = (typeof AIDifficulty)[keyof typeof AIDifficulty];
 
-/** Options for configuring an AI player or a single `getBestMove` call. */
+/** Internal options for the stateless `getBestMove` helper. */
 export type AIOptions = {
-  /** Difficulty level. Defaults to {@link AIDifficulty.HARD}. */
+  /** Helper default: `hard`. The public facade's alpha-beta provider defaults to `normal`. */
   difficulty?: AIDifficulty;
 
   /**

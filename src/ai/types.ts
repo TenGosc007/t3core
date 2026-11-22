@@ -41,14 +41,19 @@ export type MoveContext = {
  * - If there are no legal moves (full board) → throws
  *   {@link MoveStrategyError} with code `no_legal_moves`.
  * - The returned index MUST be legal (empty field, within board range).
- *   The session validates the result defensively — if a strategy returns an
- *   illegal move, the session throws {@link MoveStrategyError} with code
- *   `illegal_move` and does not apply it. This protects against buggy or
- *   custom strategies.
+ *   Sessions validate results defensively and return an illegal_ai_move
+ *   error action without applying an invalid move. Direct strategy failures
+ *   still reject; session actions convert them into serializable error data.
  * - The strategy MUST NOT mutate `board` (the snapshot is readonly).
  */
 export interface MoveStrategy {
-  calculateMove(board: BoardSnapshot, context: MoveContext): Promise<number>;
+  calculateMove(
+    board: BoardSnapshot,
+    context: MoveContext,
+    request?: { readonly signal: AbortSignal },
+  ): Promise<number>;
+  /** Ownership transfers to the direct session; release resources on disposal. */
+  dispose?(): void;
 }
 
 /**

@@ -1,6 +1,6 @@
 import type { BoardSnapshot } from "@/game/types/Board.types";
 import type { PlayerSymbol, PlayerSymbols } from "@/game/types/Symbol.types";
-import type { GameStrategy } from "@/strategies";
+import type { GameRules, GameStrategy } from "@/strategies";
 
 import { EventEmitter } from "eventemitter3";
 
@@ -20,11 +20,11 @@ import { resolveGameStrategy } from "@/strategies";
 import { Board } from "./Board";
 
 /**
- * Main public facade for a Tic Tac Toe game.
+ * Internal game state, rules and history used by sessions.
  *
  * Manages the board, current player, win/draw detection, move history, and
- * emits typed events that can be consumed by UI frameworks such as React via
- * `useSyncExternalStore`.
+ * emits synchronous domain events. Sessions expose the complete lifecycle
+ * snapshot used by the public TicTacToe facade and UI integrations.
  */
 export class Game implements IGame {
   private _currentPlayer: PlayerSymbol = DEFAULT_GAME_SYMBOLS[0];
@@ -76,23 +76,9 @@ export class Game implements IGame {
   }
 
   private _updateGameStatus() {
-    const board = this._board;
-    const winner = this._strategy.getWinner(board.fields);
-
-    if (winner) {
-      this._gameStatus = { status: "win", winner };
-      return;
-    }
-
-    if (board.isFull()) {
-      this._gameStatus = { status: "draw" };
-      return;
-    }
-
-    // Preserve the existing reference if the game is already running to avoid
-    // unnecessary object allocations and maintain referential stability.
-    if (this._gameStatus.status !== "running") {
-      this._gameStatus = { status: "running" };
+    const status = this._strategy.getStatus(this._board.fields);
+    if (status.status !== "running" || this._gameStatus.status !== "running") {
+      this._gameStatus = status;
     }
   }
 
@@ -111,9 +97,8 @@ export class Game implements IGame {
   }
 
   /**
-   * Returns a stable snapshot of the current game state.
-   * The same object reference is returned between moves, making it safe
-   * as a `getSnapshot` argument for `useSyncExternalStore`.
+   * Returns the cached domain snapshot until a successful move, history
+   * restore or reset. UI consumers use the facade's full session snapshot.
    */
   get snapshot(): GameEventPayload {
     return this._snapshot;
@@ -130,7 +115,6 @@ export class Game implements IGame {
   /**
    * Returns the current game status.
    * @returns The current game status.
-   * @type {GameStatus<PlayerSymbol>}
    */
   get gameStatus(): GameStatus {
     return this._gameStatus;
@@ -139,15 +123,14 @@ export class Game implements IGame {
   /**
    * Returns the current board state.
    * @returns The current board state.
-   * @type {BoardSnapshot}
    */
   get board(): BoardSnapshot {
     return this._board.fields;
   }
 
   /**
-   * Returns the number of moves made in the current game.
-   * @returns The number of moves made.
+   * Returns the number of moves retained in history, including future moves
+   * after a history restore. Sessions count occupied fields instead.
    */
   get movesCount() {
     return this._board.snapshotCount;
@@ -199,17 +182,8 @@ export class Game implements IGame {
    * @returns The status of the move.
    */
   savePlayerMove(index: number): PlayerMoveStatus {
-    if (!this._isBoardIndexValid(index)) {
-      return PlayerMoveStatus.INVALID_INDEX;
-    }
-
-    if (this.isFieldSelectedByIndex(index)) {
-      return PlayerMoveStatus.ALREADY_SELECTED;
-    }
-
-    if (this._gameStatus.status !== "running") {
-      return PlayerMoveStatus.GAME_NOT_RUNNING;
-    }
+    const status = this.validateMove(index);
+    if (status !== PlayerMoveStatus.SUCCESS) return status;
 
     this._board.setFieldByIndex(index, this._currentPlayer);
     this._togglePlayer();
@@ -217,6 +191,27 @@ export class Game implements IGame {
 
     return PlayerMoveStatus.SUCCESS;
   }
+
+  /** The same validation gate is used by human input and AI results. */
+  validateMove(index: number): PlayerMoveStatus {
+    if (!this._isBoardIndexValid(index)) return PlayerMoveStatus.INVALID_INDEX;
+    if (this.isFieldSelectedByIndex(index)) return PlayerMoveStatus.ALREADY_SELECTED;
+    if (this._gameStatus.status !== "running") return PlayerMoveStatus.GAME_NOT_RUNNING;
+    return this._strategy.isLegalMove(this.board, index, this._currentPlayer)
+      ? PlayerMoveStatus.SUCCESS
+      : PlayerMoveStatus.ILLEGAL_MOVE;
+  }
+
+  isLegalMove(index: number): boolean {
+    return this.validateMove(index) === PlayerMoveStatus.SUCCESS;
+  }
+
+  getLegalMoves(): readonly number[] {
+    return this._strategy.getLegalMoves(this.board, this._currentPlayer);
+  }
+
+  get variant() { return this._strategy.descriptor; }
+  get rules(): GameRules { return this._strategy; }
 
   /**
    * Restores the game to a previous state by index.

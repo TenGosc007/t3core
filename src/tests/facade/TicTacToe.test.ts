@@ -1,5 +1,3 @@
-import type { AivsAiInstance, PvPInstance } from "@/facade/types";
-
 import { expect, test } from "vitest";
 
 import { TicTacToe } from "@/facade/TicTacToe";
@@ -9,9 +7,8 @@ test("pvp mode returns a PvPInstance with playMove + start, no step/run", () => 
   expect(game.mode).toBe("pvp");
   expect(typeof game.playMove).toBe("function");
   expect(typeof game.start).toBe("function");
-  // TypeScript prevents these, but at runtime they throw.
-  expect(() => (game as unknown as AivsAiInstance).step()).toThrow();
-  expect(() => (game as unknown as AivsAiInstance).run()).toThrow();
+  expect("step" in game).toBe(false);
+  expect("run" in game).toBe(false);
 });
 
 test("singleplayer mode returns a SinglePlayerInstance", () => {
@@ -23,7 +20,7 @@ test("singleplayer mode returns a SinglePlayerInstance", () => {
   expect(game.mode).toBe("singleplayer");
   expect(typeof game.playMove).toBe("function");
   expect(typeof game.start).toBe("function");
-  expect(() => (game as unknown as AivsAiInstance).step()).toThrow();
+  expect("step" in game).toBe(false);
 });
 
 test("singleplayer with random engine works end-to-end", async () => {
@@ -49,8 +46,8 @@ test("aivsai mode returns an AivsAiInstance with step + run, no playMove/start",
   expect(game.mode).toBe("aivsai");
   expect(typeof game.step).toBe("function");
   expect(typeof game.run).toBe("function");
-  expect(() => (game as unknown as PvPInstance).playMove(0)).toThrow();
-  expect(() => (game as unknown as PvPInstance).start()).toThrow();
+  expect("playMove" in game).toBe(false);
+  expect("start" in game).toBe(false);
 });
 
 test("aivsai run() reaches a terminal state", async () => {
@@ -62,9 +59,9 @@ test("aivsai run() reaches a terminal state", async () => {
     ],
   });
   const result = await game.run();
-  expect(result.status).toBe("completed");
-  if (result.status === "completed") {
-    expect(["win", "draw"]).toContain(result.result.status);
+  expect(result.status).toBe("success");
+  if (result.status === "success") {
+    expect(["win", "draw"]).toContain(result.value.status);
   }
 });
 
@@ -83,22 +80,14 @@ test("pvp end-to-end: start, playMove, events", async () => {
   expect(events).toEqual(["turn:O", "move:O:0", "turn:X"]);
 });
 
-test("reset() allows a new game", async () => {
+test("restart() clears the board and immediately allows a new game", async () => {
   const game = new TicTacToe({ mode: "pvp" });
   await game.start();
   await game.playMove(0);
-  expect(game.movesCount).toBe(1);
-
-  game.reset();
+  await game.restart();
   expect(game.movesCount).toBe(0);
-
-  // playMove before start() after reset → game_not_running
-  const r = await game.playMove(0);
-  expect(r.status).toBe("game_not_running");
-
-  await game.start();
-  const r2 = await game.playMove(0);
-  expect(r2.status).toBe("success");
+  expect(game.snapshot.phase).toBe("human-turn");
+  expect((await game.playMove(0)).status).toBe("success");
 });
 
 test("singleplayer AI starts: start() triggers AI move", async () => {

@@ -1,48 +1,42 @@
+import type { PlayMoveResult, RestartResult, StartResult, StopResult, UndoResult } from "./results";
+import type { SessionSnapshot } from "./state/types";
 import type { BoardSnapshot } from "@/game/types/Board.types";
-import type { GameEventPayload, GameStatus } from "@/game/types/Game.types";
+import type { GameStatus } from "@/game/types/Game.types";
 import type { PlayerSymbol } from "@/game/types/Symbol.types";
 import type { EventEmitter } from "eventemitter3";
 
 /**
  * Untyped event handler used internally by sessions to back the typed
- * `on`/`off` API. `eventemitter3` requires a homogeneous handler map, so we
- * erase the per-event payload type at the emitter boundary and restore it via
- * casts in each session's `on`/`off`/`_emit`.
+ * `on`/`off` API. BaseSession isolates payload casts at the emitter boundary;
+ * callers retain event-specific payload types through `on`/`off`/`_emit`.
  */
 export type SessionHandler = (payload: Record<string, unknown>) => void;
 
-/** Internal emitter type shared by `PvPGame`, `SinglePlayerGame`, `AIGame`. */
+/** Internal emitter owned by BaseSession and shared by all session modes. */
 export type SessionEmitter = EventEmitter<Record<string, SessionHandler>>;
 
-/** Lifecycle of a session — independent of `GameStatus`. */
-export type SessionLifecycle = "idle" | "started" | "finished";
+export type {
+  PlayMoveResult,
+  RestartResult,
+  RunResult,
+  StartResult,
+  StepResult,
+  StopResult,
+  UndoResult,
+} from "./results";
 
-/** Result of `playMove(index)` on a session. */
-export type PlayMoveResult =
-  | { status: "success" }
-  | { status: "invalid_index" }
-  | { status: "already_selected" }
-  | { status: "game_not_running" }
-  | { status: "busy" } // playMove called while another playMove is in flight
-  | { status: "aborted" }; // playMove aborted by reset() during AI computation
-
-/** Result of `start()` on a session. */
-export type StartResult =
-  | { status: "success" }
-  | { status: "busy" }
-  | { status: "aborted" };
-
-/** Result of `run()` on `AIGame`. */
-export type RunResult =
-  | { status: "completed"; result: GameStatus }
-  | { status: "busy" }
-  | { status: "aborted" };
-
-/** Events emitted by sessions. */
+/**
+ * Gameplay event union. on()/off() handlers receive the payload without type.
+ * Events describe effects; subscribe() supplies complete render state first.
+ */
 export type GameSessionEvent =
+  /** A move has been applied and its snapshot published. */
   | { type: "move"; player: PlayerSymbol; position: number }
+  /** AI calculation is about to begin, after the thinking snapshot is published. */
   | { type: "ai-thinking"; player: PlayerSymbol }
+  /** Control passes to the next player, or start() announces the human opening. */
   | { type: "turn"; player: PlayerSymbol }
+  /** A terminal move has produced a win or draw. */
   | { type: "finished"; result: GameStatus };
 
 /** Event type — used as the key in `on`/`off` for typed dispatch. */
@@ -64,21 +58,14 @@ export type GameSessionEventPayload<K extends GameSessionEventType> = Omit<
  * instead of `playMove()`/`start()`.
  */
 export interface GameSession {
-  /**
-   * Starts the game. Called ONCE after listeners are registered via `on`.
-   * - PvP: emits `turn` for player 1 ('O').
-   * - Single Player, human starts: emits `turn` for the human.
-   * - Single Player, AI starts: emits `ai-thinking`, performs the AI move,
-   *   then emits `turn` for the human (or `finished` if the AI won).
-   *
-   * The constructor does NOT perform moves — it is sync and cannot safely
-   * run async AI before the UI registers listeners. `start()` solves this:
-   * the UI calls `on()` after the constructor, then `await start()`.
-   */
+  /** Starts or resumes play; repeated starts do not replay opening events. */
   start(): Promise<StartResult>;
 
   playMove(index: number): Promise<PlayMoveResult>;
-  reset(): void;
+  restart(): Promise<RestartResult>;
+  stop(): StopResult;
+  undo(): UndoResult;
+  dispose(): void;
   on<K extends GameSessionEventType>(
     event: K,
     handler: (payload: GameSessionEventPayload<K>) => void,
@@ -91,6 +78,8 @@ export interface GameSession {
   readonly board: BoardSnapshot;
   readonly currentPlayer: PlayerSymbol;
   readonly gameStatus: GameStatus;
-  readonly snapshot: GameEventPayload;
+  readonly snapshot: SessionSnapshot;
+  getSnapshot(): SessionSnapshot;
+  subscribe(callback: () => void): () => void;
   readonly movesCount: number;
 }

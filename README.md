@@ -1,338 +1,219 @@
-# TIC-TAC-TOE-CORE (t3core)
+# t3core
 
-A reusable TypeScript core library for Tic Tac Toe games.
+A framework-independent TypeScript engine for Tic Tac Toe. Use one facade to
+create a game, observe its state and manage human or AI turns.
 
-> **Looking for the interactive CLI game?**  
-> See [t3core-cli](https://github.com/TenGosc007/t3core-cli) — `npx t3core-cli`
+> This branch implements the **v2 API**. The package version is still `1.6.0`;
+> these breaking changes must ship in a major release. See the
+> [migration guide](docs/v2-migration.md). No release has been published here.
+>
+> Looking for the CLI? See [t3core-cli](https://github.com/TenGosc007/t3core-cli).
 
 ## Installation
 
-```bash
+This command installs the published 1.x package. The examples below need the
+v2 API, which is not published yet.
+
+```sh
 npm install t3core
 ```
 
-## Usage as a Library
+The examples below describe this branch's v2 API. TypeScript consumers need
+TypeScript 5.4 or newer. ESM and CommonJS are supported; importing the package
+requires no DOM, React or Worker globals.
 
-Use `TicTacToe` for session-based gameplay. Its instance type depends on the selected mode: `pvp` and `singleplayer` expose `start()` / `playMove()`, while `aivsai` exposes `step()` / `run()`.
+## Human vs AI
 
-```typescript
-import { TicTacToe, AIDifficulty } from 't3core';
+```js
+import { TicTacToe } from 't3core';
 
 const game = new TicTacToe({
   mode: 'singleplayer',
+  variant: 'classic-3x3',
   humanSymbol: 'O',
-  ai: { difficulty: AIDifficulty.HARD, seed: 12345 },
+  ai: { engine: 'alphabeta', difficulty: 'hard', seed: 123 },
 });
 
-game.on('move', ({ player, position }) => {
-  console.log(player, position);
-});
-game.on('finished', ({ result }) => {
-  console.log(result);
-});
+// render is supplied by your application.
+const renderGame = () => render(game.getSnapshot());
+const unsubscribe = game.subscribe(renderGame);
+renderGame();
 
 await game.start();
-await game.playMove(4);
+const result = await game.playMove(4); // Human move and AI reply.
+if (result.status === 'error') console.error(result.error);
+
+await game.restart(); // Clears the board and starts the next game.
+
+// When permanently removing the board:
+unsubscribe();
+game.dispose();
 ```
 
-Register listeners before calling `start()`. In single-player mode, one `await playMove(index)` applies the human move and the AI reply, unless the human move ends the game. The default AI uses alpha-beta with `NORMAL` difficulty; use `humanSymbol: 'X'` to let the AI start.
+Symbols are fixed to `O` and `X`; `O` starts. With `humanSymbol: 'X'`, `start()`
+performs the AI opening. Construction performs no moves, so subscribe before
+starting. A human move ending the game does not trigger an AI reply.
 
-### Low-level `Game` API
+Only `classic-3x3` is currently implemented. Omitted AI configuration selects
+alpha-beta at `normal` difficulty. `normal` searches one ply with a 30% mistake
+rate; `hard` searches four plies with a 10% mistake rate. Neither is unbeatable.
+The random engine takes `{ engine: 'random', seed?: number }`, with no difficulty.
+Seeds must be finite numbers. Restart preserves the engine's RNG sequence;
+create a fresh instance with the same seed to replay it from the beginning.
 
-Use `Game` directly when you want to manage turns and AI orchestration yourself.
+## PvP
 
-```typescript
-import { Game, GameVariant } from 't3core';
-
-// Create a game with default symbols 'O' and 'X'
-const game = new Game({ variant: GameVariant.CLASSIC_3X3 });
-
-// Make a move (index 0-8)
-game.savePlayerMove(4); // Places 'O' at center (index 4)
-
-// Check game status
-console.log(game.gameStatus); // { status: 'running' } | { status: 'win', winner: 'O' } | { status: 'draw' }
-console.log(game.currentPlayer); // 'O' or 'X'
-
-// Check if field is already selected
-console.log(game.isFieldSelectedByIndex(4)); // true
-
-// Access the board
-console.log(game.board); // [1, 2, 3, 4, 'O', 6, 7, 8, 9]
-
-// Reset the game
-game.reset();
-```
-
-### Next.js / Server Components
-
-> **Note:** `TicTacToe` and `Game` instances are not serializable — do not pass them as props across the server → client boundary. Create one instance per board inside a Client Component (for example, with a lazy `useState` initializer), rather than a shared module-level singleton. Pass only plain snapshot data across the boundary:
->
-> ```tsx
-> // ✅ pass plain state
-> <GameBoard state={game.snapshot} />
->
-> // ❌ will throw — class instances are not serializable
-> <GameBoard game={game} />
-> ```
-
-### React Integration with `useSyncExternalStore`
-
-`TicTacToe.subscribe(callback)` is a stable, bound function that returns an unsubscribe function. It notifies synchronously after every human move, AI move, and reset, once the new `snapshot` is available. It does not notify immediately when subscribing, or for session-only events such as `ai-thinking`. Read `snapshot` for board state; use `on` / `off` separately for gameplay events.
-
-```tsx
-'use client';
-
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { TicTacToe, AIDifficulty } from 't3core';
-
-function useTicTacToe() {
-  // Create one stable game instance per mounted board
-  const [{ game, getSnapshot, getServerSnapshot }] = useState(() => {
-    const game = new TicTacToe({
-      mode: 'singleplayer',
-      humanSymbol: 'O',
-      ai: { difficulty: AIDifficulty.HARD },
-    });
-    const initialSnapshot = game.snapshot;
-
-    return {
-      game,
-      getSnapshot: () => game.snapshot,
-      getServerSnapshot: () => initialSnapshot,
-    };
-  });
-  const [error, setError] = useState<string | null>(null);
-  const reportError = useCallback((error: unknown) => {
-    setError(String(error));
-  }, []);
-
-  const state = useSyncExternalStore(
-    // Subscribe function
-    game.subscribe,
-    // Get snapshot function
-    getSnapshot,
-    getServerSnapshot
-  );
-
-  useEffect(() => {
-    void game.start().catch(reportError);
-    return () => game.reset();
-  }, [game, reportError]);
-
-  return {
-    board: state.board,
-    currentPlayer: state.currentPlayer,
-    gameStatus: state.gameStatus,
-    error,
-    makeMove: (index: number) => {
-      void game.playMove(index).catch(reportError);
-    },
-    reset: () => {
-      setError(null);
-      game.reset();
-      void game.start().catch(reportError);
-    },
-  };
-}
-
-// Component usage
-export default function TicTacToeBoard() {
-  const { board, currentPlayer, gameStatus, error, makeMove, reset } = useTicTacToe();
-
-  return (
-    <div>
-      <p>Current Player: {currentPlayer}</p>
-      {error && <p role="alert">{error}</p>}
-      <div className="board">
-        {board.map((cell, index) => (
-          <button
-            key={index}
-            onClick={() => makeMove(index)}
-            disabled={
-              typeof cell === 'string' ||
-              gameStatus.status !== 'running' ||
-              currentPlayer !== 'O' ||
-              Boolean(error)
-            }
-          >
-            {typeof cell === 'string' ? cell : ''}
-          </button>
-        ))}
-      </div>
-      {gameStatus.status === 'win' && <p>Winner: {gameStatus.winner}!</p>}
-      {gameStatus.status === 'draw' && <p>It's a draw!</p>}
-      <button onClick={reset}>Reset Game</button>
-    </div>
-  );
-}
-```
-
-The effect starts the session only after mounting. Its cleanup resets the game and cancels pending AI work, so React Strict Mode's extra setup–cleanup–setup cycle does not call `start()` twice without a reset. The captured initial snapshot is used for server rendering and hydration; this example always starts from the same empty board on both sides. `reset()` restarts the session explicitly, and buttons are disabled during the AI's turn.
-
-### API
-
-#### `TicTacToe`
-
-| Property/Method | Description |
-| --------------- | ----------- |
-| `constructor(options)` | Select `pvp`, `singleplayer`, or `aivsai`; the returned instance type depends on the mode |
-| `board`, `currentPlayer`, `gameStatus`, `movesCount` | Read-only access to the current game state |
-| `snapshot` | Cached `GameEventPayload`; its reference changes after a move or reset, and remains stable between state changes |
-| `subscribe(callback)` | Subscribe to snapshot changes in any mode. The callback receives no arguments; returns an idempotent unsubscribe function. Safe to pass directly to `useSyncExternalStore` |
-| `start()` / `playMove(index)` | Async lifecycle and move methods for `pvp` and `singleplayer`; register listeners before starting |
-| `step()` / `run()` | Perform one AI move or play to completion in `aivsai` mode |
-| `on(event, handler)` / `off(event, handler)` | Subscribe to or unsubscribe from typed session events; use the same handler reference when removing it |
-| `reset()` | Reset the board, notify subscribers, and abort stale work; call `start()` again in human-driven modes |
-
-#### `Game`
-
-| Property/Method | Description |
-| --------------- | ----------- |
-| `constructor(options?)` | Create a new game. `options.variant` selects a predefined variant (default: `classic-3x3`) |
-| `currentPlayer` | Get the current player's symbol |
-| `gameStatus` | Get current game status |
-| `board` | Get current board state as `readonly BoardField[]` |
-| `snapshot` | Stable snapshot for `useSyncExternalStore` (returns `GameEventPayload`) |
-| `savePlayerMove(index: number)` | Place current player's symbol at index 0-8. Returns `PlayerMoveStatus` (`success`, `already_selected`, `game_not_running`, `invalid_index`) |
-| `isFieldSelectedByIndex(index: number)` | Check if a field is already occupied |
-| `movesCount` | Number of moves made in the current game |
-| `backToMove(index: number)` | Restore the board to a previous history state at the given index. Returns `BackToMoveStatus` (`success`, `invalid_history_index`) |
-| `on(event, fn)` | Subscribe to events (`STATE_CHANGE`). Returns `this` for chaining |
-| `off(event, fn)` | Unsubscribe from events. **Requires the same function reference passed to `on()`** — store listeners in named variables, not inline arrow functions |
-| `reset()` | Reset the game to initial state. Emits `STATE_CHANGE` |
-
-### Events
-
-Subscribe to game events with typed payloads:
-
-```typescript
-import { Game, GameEvent } from 't3core';
-
-const game = new Game();
-
-// STATE_CHANGE — emitted after every savePlayerMove, backToMove, and reset
-game.on(GameEvent.STATE_CHANGE, ({ board, currentPlayer, gameStatus }) => {
-  console.log('State changed:', { board, currentPlayer, gameStatus });
-});
-
-// Remember to use named functions (not arrow functions) if you need to unsubscribe later
-function onStateChange(payload) {
-  console.log('State changed:', payload);
-}
-game.on(GameEvent.STATE_CHANGE, onStateChange);
-game.off(GameEvent.STATE_CHANGE, onStateChange); // works
-```
-
-## Exports
-
-```typescript
-// Core class
-export { Game } from 't3core';
-
-// Constants
-export { DEFAULT_GAME_SYMBOLS } from 't3core';
-
-// Variants
-export { GameVariant } from 't3core';
-
-// Types
-export type { GameOptions, IGame, GameStatus, GameVariantType, PlayerSymbol, PlayerSymbols } from 't3core';
-export type { GameEventMap, GameEventPayload } from 't3core';
-export type { BoardField, BoardSnapshot, IBoard } from 't3core';
-export type { BackToMoveStatusType, PlayerMoveStatus } from 't3core';
-
-// Events
-export { GameEvent } from 't3core';
-
-// Statuses
-export { BackToMoveStatus, PlayerMoveStatus } from 't3core';
-
-// AI (Single Player)
-export { TicTacToe, getBestMove, AIDifficulty, AlphaBetaStrategy, RandomStrategy, MoveStrategyError } from 't3core';
-export type { AIOptions, AIMoveResult } from 't3core';
-export { PvPGame, SinglePlayerGame, AIGame } from 't3core';
-export type { MoveStrategy, MoveContext, GameView, GameSession, GameSessionEvent } from 't3core';
-export type { TicTacToeOptions, PvpOptions, SinglePlayerOptions, AivsAiOptions, AIConfig } from 't3core';
-export type { PvPInstance, SinglePlayerInstance, AivsAiInstance, TicTacToeConstructor } from 't3core';
-export type { GameSessionEventType, GameSessionEventPayload, PlayMoveResult, StartResult, RunResult } from 't3core';
-```
-
-## Single Player (AI)
-
-`t3core` ships an AI opponent for the classic 3x3 variant, based on Alfa-Beta pruning with difficulty knobs (depth limit + mistake rate). Two difficulty levels are available — no unbeatable level, so the player always has a chance to win.
-
-| Level | Depth | Mistake rate | Behavior |
-|-------|-------|--------------|----------|
-| `AIDifficulty.NORMAL` | 1 | 30% | Sees only immediate moves; often plays randomly. Very beatable. |
-| `AIDifficulty.HARD` | 4 | 10% | Looks 4 plies ahead; occasional blunders. Strong, but beatable. |
-
-### PvP
-
-```typescript
-import { TicTacToe } from 't3core';
-
+```js
 const game = new TicTacToe({ mode: 'pvp' });
-
 await game.start();
-await game.playMove(4);
-await game.playMove(0);
+await game.playMove(4); // O
+await game.playMove(0); // X
+// Subscribe and dispose as in the example above.
 ```
 
-### AI vs AI
+## AI vs AI
 
-```typescript
-import { TicTacToe, AIDifficulty } from 't3core';
-
+```js
 const game = new TicTacToe({
   mode: 'aivsai',
   aiPlayers: [
-    { difficulty: AIDifficulty.HARD, seed: 1 },
-    { engine: 'random', seed: 2 },
+    { engine: 'alphabeta', difficulty: 'hard', seed: 1 }, // O
+    { engine: 'random', seed: 2 },                        // X
   ],
 });
 
-const result = await game.run();
-console.log(result);
+await game.step(); // One move; no start() required.
+const result = await game.run(); // Remaining moves to a terminal result.
+if (result.status === 'success') console.log(result.value); // Win or draw.
+game.dispose();
 ```
 
-All sessions emit `move`, `turn`, and `finished`; AI sessions also emit `ai-thinking`. `reset()` clears the board and aborts in-flight work. Call `start()` again after reset in human-driven modes. Concurrent operations return `busy`; operations invalidated by reset return `aborted`.
+The instance exposes only its mode's actions, in both JavaScript and TypeScript.
+Options typed as `TicTacToeOptions`, with the mode chosen at runtime, return a
+union of instance types; narrow it with `game.mode`.
 
-For custom AI, implement `MoveStrategy.calculateMove(board, context): Promise<number>` and pass it to `SinglePlayerGame` or pass two strategies to `AIGame`, together with a `Game` instance. Strategies must return an empty cell's index. Invalid moves and strategy failures reject the operation; a strategy reporting `no_legal_moves` during a running game is an error, not a completed game.
+## Observe and control a game
 
-### `getBestMove` — stateless helper
+`getSnapshot()` and `subscribe(callback)` are stable, bound functions. The full
+snapshot is frozen and cached until a state change. Repeated reads return the
+same reference. A phase change preserves the board and legal-moves references.
+Subscription registration does not notify immediately; render once explicitly.
+Each registration returns independent, idempotent cleanup.
 
-```typescript
-import { Game, getBestMove, AIDifficulty } from 't3core';
+| Snapshot data | Purpose |
+| --- | --- |
+| `board`, `currentPlayer`, `gameStatus` | Frozen position, current O/X symbol, running/win/draw result |
+| `phase` | `idle`, `human-turn`, `ai-ready`, `ai-thinking`, `paused`, `finished`, `error`, `disposed`; narrowed by mode |
+| `canPlay`, `legalMoves` | Human input availability and legal zero-based indices |
+| `mode`, `humanSymbol`, `variant` | Mode, human symbol or null, and resolved variant descriptor |
+| `movesCount`, `canUndo`, `error` | Moves in the current position, undo availability, serializable AI failure or null |
 
-const game = new Game();
-const result = getBestMove(game, {
-  difficulty: AIDifficulty.HARD,
-  symbol: 'O',
-  opponentSymbol: 'X',
-  seed: 12345,            // optional — for reproducible behavior
-});
-if (result.status === 'success') {
-  game.savePlayerMove(result.index);  // caller applies the move
+Show a thinking indicator when `phase === 'ai-thinking'`, and disable input
+unless `canPlay` is true. Subscribers see the human move with `ai-thinking`,
+then the AI reply with `human-turn` or `finished`. A snapshot is published before
+its gameplay event. Short 3×3 calculations may finish before the browser paints;
+future costly providers will need background execution or cooperative scheduling.
+
+| Method | Behavior |
+| --- | --- |
+| `start()` / `playMove(index)` | Start/resume and human input in PvP/singleplayer |
+| `step()` / `run()` | One AI move or autoplay in AI-vs-AI |
+| `restart()` | Cancel old work, clear history and start human-driven modes; AI-vs-AI returns to `ai-ready` |
+| `stop()` | Synchronously pause while preserving the board; resume through start/step/run |
+| `undo()` | Synchronously restore one ply in PvP/AI-vs-AI or the last human decision including its AI reply |
+| `dispose()` | Permanently close, cancel work, release AI resources and remove listeners |
+| `getSnapshot()` / `snapshot` | Read the same complete session snapshot |
+| `board`, `currentPlayer`, `gameStatus`, `movesCount`, `mode` | Convenient read-only accessors |
+| `subscribe(callback)` | Observe all snapshot changes, including phase-only changes |
+| `on(event, handler)` / `off(event, handler)` | Optional gameplay effects; use the same handler reference for removal |
+
+Repeated start on an active or finished game succeeds without replaying turns.
+Undo cancels a pending reply, clears an AI error when history permits, preserves
+pause and never starts AI. An AI opening alone cannot be undone. Stop/restart/undo
+retain engine resources; dispose releases them once. The final snapshot remains
+readable after disposal, while later actions refuse with `disposed`.
+
+Events are `move: { player, position }`, `turn: { player }`,
+`ai-thinking: { player }`, and `finished: { result }`. They describe gameplay;
+snapshot subscriptions supply render state.
+
+## Action results and errors
+
+```js
+const result = await game.playMove(4);
+switch (result.status) {
+  case 'success': break; // value is undefined; run() supplies a terminal result.
+  case 'rejected': console.log(result.reason); break; // busy, invalid_index, etc.
+  case 'aborted': break; // Newer work superseded this operation.
+  case 'error': console.error(result.error.code, result.error.message); break;
 }
 ```
 
-### AI API
+| Method | Return type | Possible refusal reasons |
+| --- | --- | --- |
+| `start()` | `Promise<StartResult>` | `busy`, `session_error`, `disposed` |
+| `playMove(index)` | `Promise<PlayMoveResult>` | `not_started`, `paused`, `game_finished`, `busy`, `invalid_index`, `already_selected`, `illegal_move`, `session_error`, `disposed` |
+| `step()` | `Promise<StepResult>` | `game_finished`, `busy`, `session_error`, `disposed` |
+| `run()` | `Promise<RunResult>` | `busy`, `session_error`, `disposed` |
+| `restart()` | `Promise<RestartResult>` | `disposed` |
+| `stop()` | `StopResult` | `disposed` |
+| `undo()` | `UndoResult` | `no_history`, `disposed` |
+| `dispose()` | `void` | None; repeated disposal is safe. |
 
-| Export | Description |
-| ------ | ----------- |
-| `TicTacToe` | Typed facade for `pvp`, `singleplayer`, and `aivsai` sessions |
-| `PvPGame`, `SinglePlayerGame`, `AIGame` | Sessions wrapping a low-level `Game`, with lifecycle controls and typed events |
-| `AlphaBetaStrategy`, `RandomStrategy` | Asynchronous move strategies with persistent seeded RNG |
-| `MoveStrategy`, `MoveContext`, `GameView` | Contracts for custom strategies and read-only AI state |
-| `MoveStrategyError` | Strategy failure with a `no_legal_moves` or `illegal_move` code |
-| `getBestMove(game, options?)` | Stateless helper. Returns `success` with an index, `no_moves`, or `invalid_state`. Does not mutate the game |
-| `AIDifficulty` | Enum: `NORMAL`, `HARD` |
-| `AIOptions` | Type: `{ difficulty?, symbol?, opponentSymbol?, seed? }` |
-| `AIMoveResult` | Type: discriminated union on `status` |
+Success contains `value: undefined`, except `run()`, whose value is a win or draw.
+Repeating `run()` after completion returns the existing terminal result without
+notifications. Restart and valid undo cancel pending work instead of refusing
+with `busy`. Stop and undo can report `aborted` when a reentrant callback
+supersedes them; neither runs AI or returns an AI error. A move, step or run
+called from a subscriber waits until the current move's events are delivered.
 
-> **Note:** `getBestMove` and `AlphaBetaStrategy` support only the 3x3 variant (9-cell board). Passing a different board size throws `RangeError`. `getBestMove` defaults to `game.currentPlayer`; supplying a different `symbol` returns `invalid_state`. When using this helper on an empty board, provide `opponentSymbol` explicitly. Sessions supply the strategy context automatically.
+Ordinary refusals do not enter the error phase.
+AI failures are data and also appear in the snapshot.
+The error phase blocks new moves until restart or a valid undo. Constructor
+validation failures and application callback exceptions still throw; applied
+moves are not rolled back when a callback throws.
+
+Stop, restart, valid undo and disposal signal cancellation immediately. Old
+actions settle as `aborted` even if a provider ignores its signal or never
+resolves. Late answers cannot alter the current game. Signals cannot preempt
+synchronous JavaScript.
+
+## Custom AI and availability
+
+```js
+const capabilities = TicTacToe.getCapabilities({ variant: 'classic-3x3' });
+console.log(capabilities.modes, capabilities.aiEngines);
+```
+
+This returns frozen metadata without creating strategies or initializing AI.
+Register your own `AIProvider<'engine-id', Options>` through `aiProviders` and
+select it with `ai.engine` or either `aiPlayers` entry. Options are tied to the
+registered engine ID. See the [provider guide](docs/ai-providers.md) for the full
+contract, simulation rules, cancellation, failures and cleanup.
+
+The only runtime exports are `TicTacToe` and `AIProviderError`. Configuration,
+instances, snapshots, domain data, action results, events, rules and provider
+contracts are `export type` entries in [src/index.ts](src/index.ts). Internal
+classes and source paths are not supported consumer imports.
+
+## Framework integration
+
+The core has no UI dependency. Its bound `subscribe` and stable `getSnapshot`
+provide the external-store contract needed by React's `useSyncExternalStore`.
+Create one instance per mounted board. A reusable effect cleanup should call
+`stop()` so React Strict Mode can resume the same instance; its permanent owner
+calls `dispose()`. Selectors and a dedicated `t3core/react` entry remain future
+work; this change adds no framework hooks.
+
+For SSR, retain a suitable initial snapshot as `getServerSnapshot`. Pass plain
+snapshot data across server/client boundaries, never game class instances.
+Create browser-side instances in the client; avoid shared module-level games.
+
+For contributor setup, checks and package verification, see
+[CONTRIBUTING.md](CONTRIBUTING.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
+Larger boards, actual Worker/WASM execution and framework adapters remain
+outside this 3×3 implementation.
 
 ## License
 
-Licensed under the [ISC License](LICENSE).
+[ISC](LICENSE).

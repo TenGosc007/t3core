@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/main/schema.json",
-  "entry": ["src/index.{ts,tsx,js,jsx}", "src/main.{ts,tsx,js,jsx}"],
+  "entry": ["src/index.{ts,tsx,js,jsx}", "src/main.{ts,tsx,js,jsx}", "scripts/*.test.mjs"],
   "ignoreDependencies": ["jiti", "eslint-import-resolver-typescript"],
   "ignorePatterns": [
     "scripts/fixtures/**",
@@ -19,6 +19,7 @@
     "unused-exports": "warn"
   },
   "health": {
-    "coverage": "./coverage/coverage-final.json"
+    "coverage": "./coverage/coverage-final.json",
+    "ignore": ["scripts/**"]
   }
 }
