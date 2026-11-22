@@ -92,10 +92,12 @@ its subscribers and corresponding session events run. Session event payloads
 remain unchanged. Rejected moves and overlapping busy calls do not notify.
 
 Callbacks run synchronously and can unsubscribe, stop or restart. A nested state change
-supersedes the remaining notification delivery for the old snapshot. An action
-started from a ready-state callback is accepted; it supersedes the old operation's
-remaining events and result (`aborted`). Only the owning operation releases its
-lock. Restart also invalidates late AI results and rejections.
+supersedes the remaining notification delivery for the old snapshot. A move,
+step, run or start requested from a ready-state callback is accepted but waits
+until the old operation has delivered its `move`/`turn` events; both actions then
+succeed. Restart, stop, undo or dispose during that wait aborts the deferred
+action. Only the owning operation releases its lock. Restart also invalidates
+late AI results and rejections.
 
 Application callback exceptions propagate without rollback. If a callback
 interrupts an AI turn before completion, the session publishes `paused` instead

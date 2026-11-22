@@ -263,8 +263,13 @@ Every asynchronous continuation checks generation and operation identity before
 validation or mutation and after helpers/callbacks. Old actions promptly report
 `aborted` even if a strategy never resolves. Late rejections are consumed without
 changing the current position/error. Only a lock's owner can release it.
-A ready-state publication releases its lock before notifying, so a reentrant
-action can start immediately; it supersedes the old event/result continuation.
+A ready-state publication releases its lock before notifying, but the operation
+keeps delivering its `move`/`turn` events until its own `finally`. A
+`start`/`playMove`/`step`/`run` requested during that delivery is accepted and
+deferred until the events are delivered; it then validates the current state.
+If restart, stop, undo or dispose intervenes, the deferred action reports
+`aborted`. Those four actions still cancel immediately. Human moves are also
+validated before claiming an operation, so a rejected move never supersedes one.
 
 [`getUndoTarget`](src/sessions/state/getUndoTarget.ts) finds the previous decision
 using the current number of plies and fixed alternating O/X turns. PvP/AI-vs-AI

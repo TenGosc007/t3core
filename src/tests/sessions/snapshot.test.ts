@@ -211,7 +211,7 @@ test("AI-vs-AI steps publish readiness, while continuous play has no intermediat
   expect(snapshots.map((state) => state.movesCount)).toEqual([1, 2, 3, 4, 5, 6, 7]);
 });
 
-test("a ready-state subscriber can start a new operation without the old finally unlocking it", async () => {
+test("a ready-state subscriber's action waits for event delivery and keeps its own lock", async () => {
   const first = deferredMove();
   const second = deferredMove();
   let calls = 0;
@@ -222,6 +222,8 @@ test("a ready-state subscriber can start a new operation without the old finally
   await session.start();
   let next: ReturnType<typeof session.playMove> | undefined;
   let launched = false;
+  const moves: number[] = [];
+  session.on("move", ({ position }) => moves.push(position));
   session.subscribe(() => {
     if (session.snapshot.canPlay && !launched) {
       launched = true;
@@ -230,11 +232,13 @@ test("a ready-state subscriber can start a new operation without the old finally
   });
   const previous = session.playMove(0);
   first.resolve(4);
-  expect(await previous).toEqual({ status: "aborted" });
-  expect(second.calculateMove).toHaveBeenCalledTimes(1);
+  expect(await previous).toEqual({ status: "success", value: undefined });
+  expect(moves).toEqual([0, 4]);
+  await vi.waitFor(() => expect(second.calculateMove).toHaveBeenCalledTimes(1));
   expect(await session.playMove(2)).toEqual({ status: "rejected", reason: "busy" });
   second.resolve(5);
   expect(await next).toEqual({ status: "success", value: undefined });
+  expect(moves).toEqual([0, 4, 1, 5]);
   expect(session.snapshot).toMatchObject({ phase: "human-turn", movesCount: 4 });
 });
 

@@ -25,6 +25,7 @@ import { EventEmitter } from "eventemitter3";
 import { MoveStrategyError } from "@/ai";
 import { AIProviderError } from "@/ai/providers/AIProviderError";
 import { disposeStrategies } from "@/ai/providers/disposeStrategies";
+import { PlayerMoveStatus } from "@/game/types/Game.types";
 
 import { SessionOperation } from "./operations/SessionOperation";
 import { getUndoTarget } from "./state/getUndoTarget";
@@ -40,6 +41,8 @@ export abstract class BaseSession {
   protected _busyOperation: SessionOperation | null = null;
   protected _disposed = false;
   private _latestOperation: SessionOperation | null = null;
+  /** An operation that released its lock and is still delivering its events. */
+  private _delivery: { operation: SessionOperation; done: Promise<void>; finish: () => void } | null = null;
   private readonly _store: SessionStore;
 
   constructor(
@@ -165,6 +168,7 @@ export abstract class BaseSession {
   }
 
   protected async _startSession(): Promise<StartResult> {
+    if (this._delivering && !(await this._afterDelivery())) return { status: "aborted" };
     const refusal = this._availability();
     if (refusal) return { status: "rejected", reason: refusal };
     if (this.snapshot.board === this._game.board &&
@@ -200,7 +204,7 @@ export abstract class BaseSession {
     return null;
   }
 
-  protected _playRefusal(): Extract<PlayMoveResult, { status: "rejected" }> | null {
+  protected _playRefusal(index: number): Extract<PlayMoveResult, { status: "rejected" }> | null {
     const unavailable = this._availability();
     if (unavailable) return { status: "rejected", reason: unavailable };
     switch (this.snapshot.phase) {
@@ -210,8 +214,45 @@ export abstract class BaseSession {
       // The AI owns the turn even while a cancellation has released the lock
       // and abort listeners run before the paused snapshot is published.
       case "ai-thinking": return { status: "rejected", reason: "busy" };
-      default: return null;
+      default: break;
     }
+    // Validate before claiming an operation, so a rejected move from a callback
+    // cannot supersede the operation that is still delivering its events.
+    const status = this._game.validateMove(index);
+    if (status === PlayerMoveStatus.SUCCESS) return null;
+    if (status === PlayerMoveStatus.GAME_NOT_RUNNING) return { status: "rejected", reason: "game_finished" };
+    return { status: "rejected", reason: status };
+  }
+
+  /**
+   * Waits until the delivering operation has emitted its move/turn events, so a
+   * callback-initiated action cannot suppress them. Callers check `_delivering`
+   * first to keep the undelayed path synchronous.
+   * @returns False when restart, stop, undo or dispose superseded the wait.
+   */
+  protected get _delivering(): boolean {
+    return this._delivery !== null;
+  }
+
+  protected async _afterDelivery(): Promise<boolean> {
+    const generation = this._generation;
+    while (this._delivery !== null) await this._delivery.done;
+    return !this._disposed && this._generation === generation;
+  }
+
+  private _startDelivery(operation: SessionOperation): void {
+    if (this._delivery?.operation === operation) return;
+    this._finishDelivery();
+    let finish = () => {};
+    const done = new Promise<void>((resolve) => { finish = resolve; });
+    this._delivery = { operation, done, finish };
+  }
+
+  private _finishDelivery(operation?: SessionOperation): void {
+    const delivery = this._delivery;
+    if (delivery === null || (operation !== undefined && delivery.operation !== operation)) return;
+    this._delivery = null;
+    delivery.finish();
   }
 
   protected _beginOperation(): SessionOperation {
@@ -265,7 +306,10 @@ export abstract class BaseSession {
     complete = false,
   ): boolean {
     if (!this._isCurrent(operation)) return false;
-    if (complete) this._release(operation);
+    if (complete) {
+      this._release(operation);
+      this._startDelivery(operation);
+    }
     this._store.publish(phase);
     return this._isCurrent(operation);
   }
@@ -311,6 +355,7 @@ export abstract class BaseSession {
   }
 
   protected _endOperation(operation: SessionOperation): void {
+    this._finishDelivery(operation);
     if (this._busyOperation !== operation) return;
     this._release(operation);
     const interrupted = this.snapshot.phase === "ai-thinking" ||

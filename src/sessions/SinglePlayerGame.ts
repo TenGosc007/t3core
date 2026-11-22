@@ -44,7 +44,8 @@ export class SinglePlayerGame extends BaseSession implements GameSession {
   }
 
   async playMove(index: number): Promise<PlayMoveResult> {
-    const refusal = this._playRefusal();
+    if (this._delivering && !(await this._afterDelivery())) return { status: "aborted" };
+    const refusal = this._playRefusal(index);
     if (refusal) return refusal;
     const operation = this._beginOperation();
     try {

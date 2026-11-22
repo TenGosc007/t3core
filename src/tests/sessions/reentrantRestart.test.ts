@@ -209,3 +209,84 @@ for (const mode of ["singleplayer", "aivsai"] as const) {
     expect(session.movesCount).toBe(0);
   });
 }
+
+test("a rejected move from a subscriber does not supersede the move that committed the mark", async () => {
+  const session = new PvPGame({ game: new Game() });
+  await session.start();
+  const events: string[] = [];
+  session.on("move", ({ position }) => events.push("move:" + position));
+  session.on("turn", ({ player }) => events.push("turn:" + player));
+  let nested: ReturnType<PvPGame["playMove"]> | undefined;
+  const unsubscribe = session.subscribe(() => {
+    if (nested === undefined && session.snapshot.board[0] === "O") nested = session.playMove(0);
+  });
+  expect(await session.playMove(0)).toEqual({ status: "success", value: undefined });
+  expect(await nested).toEqual({ status: "rejected", reason: "already_selected" });
+  expect(events).toEqual(["move:0", "turn:X"]);
+  unsubscribe();
+  expect(await session.playMove(1)).toEqual({ status: "success", value: undefined });
+});
+
+const firstFree: MoveStrategy = {
+  calculateMove: async (board) => board.findIndex((field) => typeof field === "number"),
+};
+
+function record(session: PvPGame | SinglePlayerGame | AIGame): string[] {
+  const events: string[] = [];
+  session.on("move", ({ player, position }) => events.push(`move:${player}${position}`));
+  session.on("turn", ({ player }) => events.push("turn:" + player));
+  return events;
+}
+
+test("PvP: a valid move from a human-turn subscriber runs after the previous move's events", async () => {
+  const session = new PvPGame({ game: new Game() });
+  await session.start();
+  const events = record(session);
+  let nested: ReturnType<PvPGame["playMove"]> | undefined;
+  session.subscribe(() => {
+    if (nested === undefined && session.snapshot.phase === "human-turn") nested = session.playMove(1);
+  });
+  expect(await session.playMove(0)).toEqual({ status: "success", value: undefined });
+  expect(await nested).toEqual({ status: "success", value: undefined });
+  expect(events).toEqual(["move:O0", "turn:X", "move:X1", "turn:O"]);
+});
+
+test("singleplayer: a human-turn subscriber's next move waits for the AI reply events", async () => {
+  const session = new SinglePlayerGame({ game: new Game(), strategy: firstFree, humanSymbol: "O", aiSymbol: "X" });
+  await session.start();
+  const events = record(session);
+  let nested: ReturnType<SinglePlayerGame["playMove"]> | undefined;
+  session.subscribe(() => {
+    if (nested === undefined && session.snapshot.phase === "human-turn") nested = session.playMove(4);
+  });
+  expect(await session.playMove(8)).toEqual({ status: "success", value: undefined });
+  expect(await nested).toEqual({ status: "success", value: undefined });
+  expect(events).toEqual(["move:O8", "move:X0", "turn:O", "move:O4", "move:X1", "turn:O"]);
+});
+
+test("AI-vs-AI: a step requested at ai-ready runs after the previous step's events", async () => {
+  const session = new AIGame({ game: new Game(), strategies: [firstFree, firstFree] });
+  const events = record(session);
+  let nested: ReturnType<AIGame["step"]> | undefined;
+  session.subscribe(() => {
+    if (nested === undefined && session.snapshot.phase === "ai-ready") nested = session.step();
+  });
+  expect(await session.step()).toEqual({ status: "success", value: undefined });
+  expect(await nested).toEqual({ status: "success", value: undefined });
+  expect(events).toEqual(["move:O0", "turn:X", "move:X1", "turn:O"]);
+});
+
+test("a deferred action is aborted when restart supersedes the delivering operation", async () => {
+  const session = new PvPGame({ game: new Game() });
+  await session.start();
+  let nested: ReturnType<PvPGame["playMove"]> | undefined;
+  let restarted: ReturnType<PvPGame["restart"]> | undefined;
+  session.on("move", () => { restarted ??= session.restart(); });
+  session.subscribe(() => {
+    if (nested === undefined && session.snapshot.board[0] === "O") nested = session.playMove(1);
+  });
+  expect(await session.playMove(0)).toEqual({ status: "aborted" });
+  expect(await nested).toEqual({ status: "aborted" });
+  expect(await restarted).toEqual({ status: "success", value: undefined });
+  expect(session.snapshot).toMatchObject({ phase: "human-turn", movesCount: 0 });
+});

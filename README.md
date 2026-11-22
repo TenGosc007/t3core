@@ -164,7 +164,8 @@ Success contains `value: undefined`, except `run()`, whose value is a win or dra
 Repeating `run()` after completion returns the existing terminal result without
 notifications. Restart and valid undo cancel pending work instead of refusing
 with `busy`. Stop and undo can report `aborted` when a reentrant callback
-supersedes them; neither runs AI or returns an AI error.
+supersedes them; neither runs AI or returns an AI error. A move, step or run
+called from a subscriber waits until the current move's events are delivered.
 
 Ordinary refusals do not enter the error phase.
 AI failures are data and also appear in the snapshot.
