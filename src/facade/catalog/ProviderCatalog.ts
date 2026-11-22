@@ -64,9 +64,11 @@ export class ProviderCatalog {
     const provider = this._resolveProvider("engine" in config ? config.engine : undefined);
     const options: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(config)) if (key !== "engine") options[key] = value;
-    // Leave the key absent when there is no default; some providers reject it.
+    // Without a default, treat an explicit undefined like an omitted key, as the
+    // optional TypeScript property allows; providers without difficulties reject it.
     const difficulty = resolveDifficulty(provider, options.difficulty);
-    if (difficulty !== undefined) options.difficulty = difficulty;
+    if (difficulty === undefined) delete options.difficulty;
+    else options.difficulty = difficulty;
     const normalized = provider.validateOptions(options);
     if (!isOptionsObject(normalized)) {
       throw new TypeError("AI option validation must return an options object.");

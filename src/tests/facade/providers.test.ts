@@ -105,7 +105,6 @@ test("factories create separate players and sessions, with independently typed c
 for (const invalid of [
   { mode: "singleplayer", ai: { engine: "missing" } },
   { mode: "singleplayer", ai: { engine: "random", difficulty: "hard" } },
-  { mode: "singleplayer", ai: { engine: "random", difficulty: undefined } },
   { mode: "singleplayer", ai: { difficulty: "easy" } },
   { mode: "singleplayer", ai: { seed: Infinity } },
   { mode: "singleplayer", ai: { budget: 20 } },
@@ -123,6 +122,41 @@ for (const invalid of [
     expect(() => Reflect.construct(TicTacToe, [invalid])).toThrow();
   });
 }
+
+test("an explicit undefined difficulty is treated like an omitted one", () => {
+  const custom = createProvider("choice");
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: undefined } }).dispose();
+  const choice = { engine: "choice", prefer: "first", difficulty: undefined } as const;
+  new TicTacToe({ mode: "singleplayer", aiProviders: [custom.provider], ai: choice }).dispose();
+  expect(custom.validateOptions).toHaveBeenCalledWith({ prefer: "first" });
+});
+
+test("provider caller input can omit fields that validation normalizes with defaults", () => {
+  type DeepOptions = { readonly depth: number };
+  const choice = createProvider("choice");
+  const created: DeepOptions[] = [];
+  const deep: AIProvider<"deep", DeepOptions, { readonly depth?: number }> = {
+    id: "deep", version: "1.0.0", supportedVariants: ["classic-3x3"],
+    difficulties: [], defaultDifficulty: null,
+    validateOptions(options) {
+      const depth = typeof options === "object" && options !== null && "depth" in options ? options.depth : 3;
+      if (typeof depth !== "number") throw new TypeError("Expected a numeric depth.");
+      return { depth };
+    },
+    create(options) {
+      created.push(options);
+      return choice.create({ prefer: "first" });
+    },
+  };
+  expectTypeOf<{ engine: "deep" }>().toExtend<AIConfig<readonly [typeof deep]>>();
+  expectTypeOf<{ engine: "deep"; depth: "3" }>().not.toExtend<AIConfig<readonly [typeof deep]>>();
+  expectTypeOf(deep.create).parameter(0).toEqualTypeOf<DeepOptions>();
+  const game = new TicTacToe({
+    mode: "aivsai", aiProviders: [deep], aiPlayers: [{ engine: "deep" }, { engine: "deep", depth: 5 }],
+  });
+  expect(created).toEqual([{ depth: 3 }, { depth: 5 }]);
+  game.dispose();
+});
 
 test("both AI configurations are validated before any factory is called", () => {
   const custom = createProvider("choice");

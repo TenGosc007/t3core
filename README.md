@@ -11,6 +11,9 @@ create a game, observe its state and manage human or AI turns.
 
 ## Installation
 
+This command installs the published 1.x package. The examples below need the
+v2 API, which is not published yet.
+
 ```sh
 npm install t3core
 ```

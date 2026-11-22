@@ -85,7 +85,13 @@ JavaScript callers still receive runtime validation.
 resources. Each provider validates its own fields and defaults; it should copy
 mutable option data it retains. The catalog checks engine compatibility and
 difficulty membership first, supplying `defaultDifficulty` when omitted.
-An engine with no difficulty profiles uses `[]` and `null`.
+An engine with no difficulty profiles uses `[]` and `null`; the catalog then
+removes an explicit `difficulty: undefined` before validation.
+
+When validation fills defaults, declare the caller input as a third generic so
+configurations may omit those fields while `create()` keeps the normalized type:
+`AIProvider<'deep', { depth: number }, { depth?: number }>`. The input type
+defaults to the options type. Leave the type-only `~types` member unset.
 Both AI-vs-AI configurations are validated before either factory runs.
 
 `create(options)` is synchronous and must return a fresh, privately owned

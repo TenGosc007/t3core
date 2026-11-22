@@ -193,8 +193,8 @@ loading resources. Only `classic-3x3` is public. Larger variants stay deferred.
 
 Configuration now rejects unknown top-level and built-in AI fields, fields
 belonging to another mode, unknown/duplicate engine IDs, incompatible variants,
-unsupported difficulties and non-finite seeds. Remove `difficulty` entirely from
-`engine: 'random'` configurations, even when its value was `undefined`.
+unsupported difficulties and non-finite seeds. Remove `difficulty` from
+`engine: 'random'` configurations; an explicit `undefined` is treated as omitted.
 Alpha-beta still defaults to `normal`; normal/hard behavior and seeds are
 preserved. Both AI player configurations are validated before factories run.
 Invalid options and synchronous factory failures throw from construction.

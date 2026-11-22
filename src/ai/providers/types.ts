@@ -64,8 +64,16 @@ export type AIEngineMetadata = {
  * Registers a custom engine through aiProviders. Keep Id a string literal so
  * configuration types associate engine IDs with the correct options.
  * Metadata discovery never calls validateOptions() or create().
+ *
+ * Options is the normalized type passed to create(). Input is the type callers
+ * write in configuration; supply it when validateOptions() fills defaults, for
+ * example `AIProvider<"deep", { depth: number }, { depth?: number }>`.
  */
-export interface AIProvider<Id extends string = string, Options extends object = object> {
+export interface AIProvider<
+  Id extends string = string,
+  Options extends object = object,
+  Input extends object = Options,
+> {
   /** Nonempty engine ID, unique within the game, including built-in IDs. */
   readonly id: Id;
   /** Nonempty engine behavior version, independent of the t3core package version. */
@@ -93,9 +101,20 @@ export interface AIProvider<Id extends string = string, Options extends object =
    * @throws Clean up partially allocated resources before throwing; construction errors propagate.
    */
   create(options: Options): AIStrategy;
+  /**
+   * Type-only marker that keeps Input inferable when a provider object is
+   * spread or not annotated. Leave it unset; the catalog never reads it.
+   */
+  readonly "~types"?: { readonly input: Input };
 }
 
+/** Caller-facing options: Input when the provider declares it, otherwise Options. */
+type ProviderInput<Provider, Options> =
+  Provider extends { readonly "~types"?: { readonly input: infer Input } }
+    ? unknown extends Input ? Options : Input
+    : Options;
+
 export type ProviderConfig<Provider> =
-  Provider extends AIProvider<infer Id, infer Options>
-    ? Readonly<Options> & { readonly engine: Id }
+  Provider extends AIProvider<infer Id, infer Options, object>
+    ? Readonly<ProviderInput<Provider, Options>> & { readonly engine: Id }
     : never;

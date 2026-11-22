@@ -1,4 +1,5 @@
 import type {
+  AIConfig,
   AIProvider,
   AIRequest,
   BoardSnapshot,
@@ -127,6 +128,16 @@ async function verifyConsumer() {
 export function checkInvalidCalls() {
   const pvp = new TicTacToe({ mode: "pvp" });
   const state = pvp.getSnapshot();
+  // An explicit undefined difficulty is accepted like an omitted one.
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "random" } });
+  new TicTacToe({ mode: "singleplayer", ai: { engine: "random", difficulty: undefined } });
+  // Caller input may omit fields that the provider normalizes with defaults.
+  type Deep = AIProvider<"deep", { depth: number }, { depth?: number }>;
+  const deepDefault: AIConfig<readonly [Deep]> = { engine: "deep" };
+  // @ts-expect-error Caller input fields keep their declared types.
+  const deepInvalid: AIConfig<readonly [Deep]> = { engine: "deep", depth: "3" };
+  void deepDefault;
+  void deepInvalid;
   // @ts-expect-error Provider options are tied to the registered engine identifier.
   new TicTacToe({ mode: "singleplayer", aiProviders: [choiceProvider], ai: { engine: "choice", prefer: 12 } });
   // @ts-expect-error Custom engines must be registered for this instance.
