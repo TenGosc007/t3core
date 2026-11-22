@@ -85,6 +85,11 @@ migration notes added in the branch.
   plus a link/accuracy review; code changes need lint, `ts:check`, tests and
   build; exports, declarations, dependencies, or packaging changes need
   `yarn package:check`. Record failures honestly.
+- `git diff --check` alone inspects only uncommitted changes, so it passes
+  on a clean tree even when committed PR changes contain whitespace errors.
+  With `--run-checks`, also run `git diff --check BASE...HEAD`. Check the
+  `git diff --check` box only when both pass, and report the two results
+  separately in the note (e.g. `working tree: clean; BASE...HEAD: passed`).
 - Under the boxes, replace the results comment with a short note: results
   (e.g. test counts), targeted commands, and a reason for each unchecked box
   (`not run`, `not needed: docs-only`, or the failure).

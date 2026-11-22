@@ -17,7 +17,7 @@ until the explicit release process.
 | --- | --- |
 | `Game`, `PvPGame`, `SinglePlayerGame`, `AIGame` | `new TicTacToe({ mode, ... })` |
 | `GameVariant.CLASSIC_3X3`, `AIDifficulty.HARD` | `'classic-3x3'`, `'hard'` configuration strings |
-| `AlphaBetaStrategy`, `RandomStrategy` | `ai: { engine: 'alphabeta' | 'random', ... }`, or separate `aiPlayers` entries |
+| `AlphaBetaStrategy`, `RandomStrategy` | `ai: { engine: 'alphabeta' \| 'random', ... }`, or separate `aiPlayers` entries |
 | `getBestMove`, `AIOptions`, `AIMoveResult`, `MoveStrategy`, `MoveContext`, `GameView` | Facade-owned AI turns; custom selection through `AIProvider` / `AIStrategy` |
 | `GameEvent.STATE_CHANGE`, `GameEventPayload`, `GameEventMap` | Bound `subscribe()` and full `getSnapshot()` |
 | `PlayerMoveStatus`, `BackToMoveStatus`, `BackToMoveStatusType` | Typed action results; use `playMove()` / `undo()` rather than domain mutation |
